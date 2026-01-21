@@ -3,10 +3,22 @@
   "version": "0.1.0",
   "description": "CLI tool for HIPAA compliance scanning and reporting",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "vlayer": "dist/cli.js"
   },
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -14,11 +26,31 @@
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": ["hipaa", "compliance", "healthcare", "security", "cli"],
-  "author": "",
+  "keywords": [
+    "hipaa",
+    "compliance",
+    "healthcare",
+    "security",
+    "cli",
+    "scanner",
+    "phi",
+    "audit",
+    "encryption",
+    "medical"
+  ],
+  "author": "Simon Franco",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Francosimon53/verification-layer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Francosimon53/verification-layer/issues"
+  },
+  "homepage": "https://github.com/Francosimon53/verification-layer#readme",
   "devDependencies": {
     "@types/node": "^20.0.0",
     "eslint": "^8.57.0",
