@@ -1,6 +1,6 @@
 import { writeFile } from 'fs/promises';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine } from '../types.js';
 
 function buildReport(result: ScanResult, targetPath: string): Report {
   const summary = {
@@ -24,6 +24,18 @@ function buildReport(result: ScanResult, targetPath: string): Report {
 
 function generateJson(report: Report): string {
   return JSON.stringify(report, null, 2);
+}
+
+function renderContextMarkdown(context?: ContextLine[]): string {
+  if (!context || context.length === 0) return '';
+
+  const lines = context.map(c => {
+    const prefix = c.isMatch ? '>' : ' ';
+    const lineNum = String(c.lineNumber).padStart(4, ' ');
+    return `${prefix} ${lineNum} | ${c.content}`;
+  });
+
+  return '\n```\n' + lines.join('\n') + '\n```\n';
 }
 
 function generateMarkdown(report: Report): string {
@@ -67,7 +79,15 @@ function generateMarkdown(report: Report): string {
           `**File:** \`${finding.file}\`${finding.line ? `:${finding.line}` : ''}`,
           '',
           finding.description,
-          '',
+          ''
+        );
+
+        // Add context if available
+        if (finding.context && finding.context.length > 0) {
+          lines.push(renderContextMarkdown(finding.context));
+        }
+
+        lines.push(
           `**Recommendation:** ${finding.recommendation}`,
           ''
         );
@@ -82,6 +102,18 @@ function generateMarkdown(report: Report): string {
   }
 
   return lines.join('\n');
+}
+
+function renderContextHtml(context?: ContextLine[]): string {
+  if (!context || context.length === 0) return '';
+
+  const lines = context.map(c => {
+    const lineNum = String(c.lineNumber).padStart(4, ' ');
+    const highlightClass = c.isMatch ? 'highlight' : '';
+    return `<div class="context-line ${highlightClass}"><span class="line-num">${lineNum}</span><span class="line-content">${escapeHtml(c.content)}</span></div>`;
+  });
+
+  return `<div class="context">${lines.join('')}</div>`;
 }
 
 function generateHtml(report: Report): string {
@@ -112,7 +144,12 @@ function generateHtml(report: Report): string {
     .finding { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid; }
     .finding h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
     .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: white; text-transform: uppercase; }
-    .file { font-family: monospace; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; }
+    .file { font-family: monospace; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; word-break: break-all; }
+    .context { margin: 1rem 0; background: #1e1e1e; border-radius: 6px; padding: 0.75rem; overflow-x: auto; }
+    .context-line { font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.8rem; line-height: 1.5; white-space: pre; color: #d4d4d4; }
+    .context-line.highlight { background: rgba(234, 88, 12, 0.2); color: #fff; }
+    .context-line .line-num { color: #6b7280; margin-right: 1rem; user-select: none; }
+    .context-line .line-content { }
     .recommendation { margin-top: 1rem; padding: 1rem; background: #eff6ff; border-radius: 4px; }
     .hipaa-ref { color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem; }
   </style>
@@ -155,6 +192,7 @@ function generateHtml(report: Report): string {
           </h3>
           <p class="file">${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}</p>
           <p>${escapeHtml(f.description)}</p>
+          ${renderContextHtml(f.context)}
           <div class="recommendation">
             <strong>Recommendation:</strong> ${escapeHtml(f.recommendation)}
           </div>

@@ -1,0 +1,24 @@
+{
+  "exclude": [
+    "**/test-project/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "ignorePaths": [
+    "sample-data",
+    "demo-data",
+    "__mocks__"
+  ],
+  "safeHttpDomains": [
+    "my-internal-cdn.com",
+    "assets.mycompany.com"
+  ],
+  "contextLines": 2,
+  "categories": [
+    "phi-exposure",
+    "encryption",
+    "audit-logging",
+    "access-control",
+    "data-retention"
+  ]
+}

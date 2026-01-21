@@ -35,10 +35,32 @@ node dist/cli.js scan <path> -c phi-exposure encryption
 | `access-control` | Finds CORS issues, hardcoded roles, auth bypass, session problems |
 | `data-retention` | Flags improper deletion, short retention periods, missing backups |
 
+## Configuration
+
+Create a `.vlayerrc.json` in your project root:
+
+```json
+{
+  "exclude": ["**/*.test.ts", "**/__mocks__/**"],
+  "ignorePaths": ["sample-data", "fixtures"],
+  "safeHttpDomains": ["my-cdn.com"],
+  "contextLines": 2
+}
+```
+
+| Option | Description |
+|--------|-------------|
+| `exclude` | Glob patterns to exclude from scanning |
+| `ignorePaths` | Path substrings to skip |
+| `safeHttpDomains` | HTTP domains to ignore (CDNs, namespaces) |
+| `contextLines` | Lines of context above/below findings (default: 2) |
+
+Built-in safe domains: w3.org, googleapis.com, jsdelivr.net, unpkg.com, cdnjs.cloudflare.com, etc.
+
 ## Report Formats
 
 - **JSON** (default): Machine-readable, ideal for CI/CD integration
-- **HTML**: Visual report with color-coded severity
+- **HTML**: Visual report with color-coded severity and code context
 - **Markdown**: Documentation-friendly format
 
 ## Exit Codes

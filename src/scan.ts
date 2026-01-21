@@ -1,5 +1,6 @@
 import { glob } from 'glob';
 import type { ScanOptions, ScanResult, Finding, ComplianceCategory } from './types.js';
+import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
 import { auditScanner } from './scanners/audit/index.js';
@@ -24,7 +25,12 @@ const scanners = {
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startTime = Date.now();
-  const categories = options.categories ?? ALL_CATEGORIES;
+
+  // Load configuration
+  const config = await loadConfig(options.path, options.configFile);
+  const optionsWithConfig = { ...options, config };
+
+  const categories = options.categories ?? config.categories ?? ALL_CATEGORIES;
 
   // Get all files to scan
   const defaultExclude = [
@@ -35,7 +41,11 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     '**/coverage/**',
   ];
 
-  const excludePatterns = [...defaultExclude, ...(options.exclude ?? [])];
+  const excludePatterns = [
+    ...defaultExclude,
+    ...(options.exclude ?? []),
+    ...(config.exclude ?? []),
+  ];
 
   const files = await glob('**/*', {
     cwd: options.path,
@@ -44,13 +54,16 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     absolute: true,
   });
 
+  // Filter out ignored paths from config
+  const filteredFiles = files.filter(f => !isPathIgnored(f, config));
+
   // Run scanners for selected categories
   const findings: Finding[] = [];
 
   for (const category of categories) {
     const scanner = scanners[category];
     if (scanner) {
-      const categoryFindings = await scanner.scan(files, options);
+      const categoryFindings = await scanner.scan(filteredFiles, optionsWithConfig);
       findings.push(...categoryFindings);
     }
   }
@@ -61,7 +74,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   return {
     findings,
-    scannedFiles: files.length,
+    scannedFiles: filteredFiles.length,
     scanDuration: Date.now() - startTime,
   };
 }

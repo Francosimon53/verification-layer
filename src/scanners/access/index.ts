@@ -1,5 +1,7 @@
 import { readFile } from 'fs/promises';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
+import { DEFAULT_CONFIG } from '../../config.js';
+import { getContextLines } from '../../utils/context.js';
 
 const ACCESS_CONTROL_ISSUES = [
   {
@@ -60,51 +62,45 @@ const ACCESS_CONTROL_ISSUES = [
   },
 ];
 
-async function scanFile(filePath: string): Promise<Finding[]> {
-  const findings: Finding[] = [];
-
-  try {
-    const content = await readFile(filePath, 'utf-8');
-    const lines = content.split('\n');
-
-    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-      const line = lines[lineNum];
-
-      for (const issue of ACCESS_CONTROL_ISSUES) {
-        if (issue.regex.test(line)) {
-          findings.push({
-            id: `access-${issue.id}-${lineNum}`,
-            category: 'access-control',
-            severity: issue.severity,
-            title: issue.title,
-            description: issue.description,
-            file: filePath,
-            line: lineNum + 1,
-            recommendation: issue.recommendation,
-            hipaaReference: '§164.312(a)(1), §164.312(d)',
-          });
-        }
-      }
-    }
-  } catch {
-    // Skip files that can't be read
-  }
-
-  return findings;
-}
-
 export const accessScanner: Scanner = {
   name: 'Access Control Scanner',
   category: 'access-control',
 
-  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
+    const config = options.config ?? DEFAULT_CONFIG;
+    const contextSize = config.contextLines ?? 2;
     const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.sql'];
     const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
 
-    for (const file of codeFiles) {
-      const fileFindings = await scanFile(file);
-      findings.push(...fileFindings);
+    for (const filePath of codeFiles) {
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        const lines = content.split('\n');
+
+        for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+          const line = lines[lineNum];
+
+          for (const issue of ACCESS_CONTROL_ISSUES) {
+            if (issue.regex.test(line)) {
+              findings.push({
+                id: `access-${issue.id}-${lineNum}`,
+                category: 'access-control',
+                severity: issue.severity,
+                title: issue.title,
+                description: issue.description,
+                file: filePath,
+                line: lineNum + 1,
+                recommendation: issue.recommendation,
+                hipaaReference: '§164.312(a)(1), §164.312(d)',
+                context: getContextLines(lines, lineNum, contextSize),
+              });
+            }
+          }
+        }
+      } catch {
+        // Skip files that can't be read
+      }
     }
 
     return findings;

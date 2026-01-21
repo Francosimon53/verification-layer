@@ -9,4 +9,6 @@ export type {
   Scanner,
   Severity,
   ComplianceCategory,
+  VlayerConfig,
+  ContextLine,
 } from './types.js';
