@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name('vlayer')
   .description('HIPAA compliance scanner for healthcare applications')
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('scan')
