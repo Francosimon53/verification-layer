@@ -85,6 +85,45 @@ For each **manual review item**:
 
 The report hash can be used to verify document integrity for auditors.
 
+## Stack Detection
+
+vlayer automatically detects your project's technology stack and provides **personalized recommendations** with code examples specific to your setup.
+
+### Detected Technologies
+
+| Type | Technologies |
+|------|--------------|
+| **Frameworks** | Next.js, React, Vue, Nuxt, Angular, Express, Fastify, NestJS, Koa, Hono |
+| **Databases** | Supabase, Firebase, PostgreSQL, MySQL, MongoDB, Prisma, Drizzle |
+| **Auth** | NextAuth, Supabase Auth, Firebase Auth, Auth0, Clerk, Lucia, Passport |
+
+### Stack-Specific Recommendations
+
+The HTML report includes a "Stack Detected" section with:
+
+- **Detected stack cards** showing framework, database, and auth provider
+- **Tailored recommendations** based on your specific stack
+- **Code examples** customized for your technologies
+
+#### Example: Next.js + Supabase
+
+When vlayer detects a Next.js + Supabase project, it provides:
+
+**Session Management:**
+- Use Server Components to keep PHI server-side
+- Implement `middleware.ts` for route protection
+
+**Database Security:**
+- Enable Row Level Security (RLS) on PHI tables
+- Use Supabase server client for PHI operations
+- Configure database triggers for audit logging
+
+**Authentication:**
+- Configure 15-minute session timeout (HIPAA recommendation)
+- Use Supabase Auth middleware for protected routes
+
+Each recommendation includes production-ready code examples specific to your stack.
+
 ## Compliance Categories
 
 | Category | Description |
