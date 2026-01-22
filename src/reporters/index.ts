@@ -1,6 +1,7 @@
 import { writeFile } from 'fs/promises';
 import chalk from 'chalk';
 import type { ScanResult, Report, ReportOptions, Finding, ContextLine } from '../types.js';
+import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 
 function buildReport(result: ScanResult, targetPath: string): Report {
   const summary = {
@@ -116,6 +117,37 @@ function renderContextHtml(context?: ContextLine[]): string {
   return `<div class="context">${lines.join('')}</div>`;
 }
 
+function renderRemediationGuide(guide: RemediationGuide): string {
+  return `
+    <div class="remediation-guide">
+      <div class="hipaa-impact">
+        <h5>HIPAA Impact</h5>
+        <p>${escapeHtml(guide.hipaaImpact).replace(/\n/g, '<br>')}</p>
+      </div>
+
+      <div class="fix-options">
+        <h5>How to Fix</h5>
+        ${guide.options.map((option, index) => `
+          <details class="fix-option" ${index === 0 ? 'open' : ''}>
+            <summary>${escapeHtml(option.title)}</summary>
+            <p class="option-desc">${escapeHtml(option.description)}</p>
+            <pre class="code-block"><code class="language-${option.language}">${escapeHtml(option.code)}</code></pre>
+          </details>
+        `).join('')}
+      </div>
+
+      <div class="documentation-links">
+        <h5>Documentation</h5>
+        <ul>
+          ${guide.documentation.map(doc => `
+            <li><a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">${escapeHtml(doc.title)}</a></li>
+          `).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
 function generateHtml(report: Report): string {
   const severityColors = {
     critical: '#dc2626',
@@ -130,76 +162,134 @@ function generateHtml(report: Report): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HIPAA Compliance Report</title>
+  <title>HIPAA Compliance Report - vlayer</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; padding: 2rem; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { color: #111827; margin-bottom: 1rem; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: #111827; margin-bottom: 0.5rem; }
+    h2 { color: #374151; margin: 2rem 0 1rem; }
     .meta { color: #6b7280; margin-bottom: 2rem; }
     .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
     .summary-card { background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
     .summary-card .count { font-size: 2rem; font-weight: bold; }
-    .findings { display: flex; flex-direction: column; gap: 1rem; }
-    .finding { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid; }
-    .finding h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .findings { display: flex; flex-direction: column; gap: 1.5rem; }
+    .finding { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid; }
+    .finding h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
     .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: white; text-transform: uppercase; }
-    .file { font-family: monospace; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; word-break: break-all; }
+    .badge-fixable { background: #059669; margin-left: 0.5rem; }
+    .file { font-family: 'SF Mono', Monaco, 'Courier New', monospace; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; word-break: break-all; }
     .context { margin: 1rem 0; background: #1e1e1e; border-radius: 6px; padding: 0.75rem; overflow-x: auto; }
     .context-line { font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.8rem; line-height: 1.5; white-space: pre; color: #d4d4d4; }
-    .context-line.highlight { background: rgba(234, 88, 12, 0.2); color: #fff; }
+    .context-line.highlight { background: rgba(234, 88, 12, 0.3); color: #fff; }
     .context-line .line-num { color: #6b7280; margin-right: 1rem; user-select: none; }
-    .context-line .line-content { }
-    .recommendation { margin-top: 1rem; padding: 1rem; background: #eff6ff; border-radius: 4px; }
+    .recommendation { margin-top: 1rem; padding: 1rem; background: #eff6ff; border-radius: 6px; border-left: 3px solid #3b82f6; }
     .hipaa-ref { color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem; }
+
+    /* Remediation Guide Styles */
+    .guide-toggle { margin-top: 1rem; }
+    .guide-toggle summary { cursor: pointer; padding: 0.75rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+    .guide-toggle summary::-webkit-details-marker { display: none; }
+    .guide-toggle summary::before { content: '▶'; font-size: 0.75rem; transition: transform 0.2s; }
+    .guide-toggle[open] summary::before { transform: rotate(90deg); }
+    .guide-toggle summary:hover { opacity: 0.9; }
+
+    .remediation-guide { padding: 1.5rem; background: #fefefe; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 6px 6px; }
+    .remediation-guide h5 { color: #374151; margin: 1rem 0 0.5rem; font-size: 0.95rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
+    .remediation-guide h5:first-child { margin-top: 0; }
+
+    .hipaa-impact { background: #fef2f2; padding: 1rem; border-radius: 6px; border-left: 3px solid #dc2626; margin-bottom: 1rem; }
+    .hipaa-impact p { color: #7f1d1d; font-size: 0.9rem; }
+
+    .fix-options { margin: 1rem 0; }
+    .fix-option { margin: 0.75rem 0; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+    .fix-option summary { padding: 0.75rem 1rem; background: #f9fafb; cursor: pointer; font-weight: 500; color: #1f2937; }
+    .fix-option summary:hover { background: #f3f4f6; }
+    .fix-option[open] summary { border-bottom: 1px solid #e5e7eb; }
+    .option-desc { padding: 1rem; color: #4b5563; font-size: 0.9rem; background: #fff; }
+
+    .code-block { margin: 0; padding: 1rem; background: #1e1e1e; border-radius: 0 0 6px 6px; overflow-x: auto; }
+    .code-block code { font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.8rem; color: #d4d4d4; white-space: pre; }
+
+    .documentation-links { margin-top: 1rem; }
+    .documentation-links ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .documentation-links li a { display: inline-block; padding: 0.35rem 0.75rem; background: #e0e7ff; color: #3730a3; border-radius: 4px; text-decoration: none; font-size: 0.85rem; transition: background 0.2s; }
+    .documentation-links li a:hover { background: #c7d2fe; }
+
+    /* Syntax highlighting (basic) */
+    .code-block .keyword { color: #c586c0; }
+    .code-block .string { color: #ce9178; }
+    .code-block .comment { color: #6a9955; }
+    .code-block .function { color: #dcdcaa; }
+
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>HIPAA Compliance Report</h1>
+    <p style="color: #6b7280; margin-bottom: 1rem;">Generated by <strong>vlayer</strong> - HIPAA Compliance Scanner</p>
     <div class="meta">
-      <p>Generated: ${report.timestamp}</p>
-      <p>Target: ${report.targetPath}</p>
-      <p>Files Scanned: ${report.scannedFiles} | Duration: ${report.scanDuration}ms</p>
+      <p><strong>Generated:</strong> ${report.timestamp}</p>
+      <p><strong>Target:</strong> ${report.targetPath}</p>
+      <p><strong>Files Scanned:</strong> ${report.scannedFiles} | <strong>Duration:</strong> ${report.scanDuration}ms</p>
     </div>
 
     <div class="summary">
       <div class="summary-card" style="border-top: 4px solid ${severityColors.critical}">
-        <div class="count">${report.summary.critical}</div>
+        <div class="count" style="color: ${severityColors.critical}">${report.summary.critical}</div>
         <div>Critical</div>
       </div>
       <div class="summary-card" style="border-top: 4px solid ${severityColors.high}">
-        <div class="count">${report.summary.high}</div>
+        <div class="count" style="color: ${severityColors.high}">${report.summary.high}</div>
         <div>High</div>
       </div>
       <div class="summary-card" style="border-top: 4px solid ${severityColors.medium}">
-        <div class="count">${report.summary.medium}</div>
+        <div class="count" style="color: ${severityColors.medium}">${report.summary.medium}</div>
         <div>Medium</div>
       </div>
       <div class="summary-card" style="border-top: 4px solid ${severityColors.low}">
-        <div class="count">${report.summary.low}</div>
+        <div class="count" style="color: ${severityColors.low}">${report.summary.low}</div>
         <div>Low</div>
       </div>
     </div>
 
     <h2>Findings</h2>
     <div class="findings">
-      ${report.findings.map(f => `
+      ${report.findings.map(f => {
+        const guide = getRemediationGuide(f);
+        return `
         <div class="finding" style="border-left-color: ${severityColors[f.severity]}">
           <h3>
             <span class="badge" style="background: ${severityColors[f.severity]}">${f.severity}</span>
             ${escapeHtml(f.title)}
+            ${f.fixType ? '<span class="badge badge-fixable">Auto-fixable</span>' : ''}
           </h3>
           <p class="file">${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}</p>
-          <p>${escapeHtml(f.description)}</p>
+          <p style="margin-top: 0.5rem;">${escapeHtml(f.description)}</p>
           ${renderContextHtml(f.context)}
           <div class="recommendation">
-            <strong>Recommendation:</strong> ${escapeHtml(f.recommendation)}
+            <strong>Quick Recommendation:</strong> ${escapeHtml(f.recommendation)}
           </div>
-          ${f.hipaaReference ? `<p class="hipaa-ref">HIPAA Reference: ${escapeHtml(f.hipaaReference)}</p>` : ''}
+          ${f.hipaaReference ? `<p class="hipaa-ref"><strong>HIPAA Reference:</strong> ${escapeHtml(f.hipaaReference)}</p>` : ''}
+
+          ${guide ? `
+          <details class="guide-toggle">
+            <summary>View Detailed Remediation Guide</summary>
+            ${renderRemediationGuide(guide)}
+          </details>
+          ` : ''}
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
+
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
+      <p>Generated by <strong>vlayer</strong> v0.1.0 - HIPAA Compliance Scanner for Healthcare Applications</p>
+      <p>Run with <code>--fix</code> flag to automatically fix issues marked as "Auto-fixable"</p>
+    </footer>
   </div>
 </body>
 </html>`;
