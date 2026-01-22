@@ -23,7 +23,67 @@ node dist/cli.js scan <path> -f markdown -o report.md
 
 # Scan specific categories only
 node dist/cli.js scan <path> -c phi-exposure encryption
+
+# Auto-fix detected issues
+node dist/cli.js scan <path> --fix
 ```
+
+## Auto-Fix (`--fix`)
+
+Automatically remediate common security issues:
+
+| Issue Type | Fix Applied |
+|------------|-------------|
+| SQL injection (template literal) | Convert to parameterized query with `?` placeholders |
+| SQL injection (concatenation) | Convert to parameterized query |
+| Hardcoded password/secret | Replace with `process.env.VAR_NAME` |
+| Hardcoded API key | Replace with `process.env.API_KEY` |
+| HTTP URL | Upgrade to HTTPS |
+| innerHTML assignment | Replace with `textContent` |
+| PHI in console.log | Comment out with `// [VLAYER] PHI logging removed` |
+
+When `--fix` is used, an audit trail is automatically saved to `.vlayer/audit-trail.json`.
+
+## Audit Trail & Compliance Reports
+
+Generate professional audit reports for HIPAA compliance documentation:
+
+```bash
+# View audit trail summary
+node dist/cli.js audit <path> --summary
+
+# Generate PDF audit report
+node dist/cli.js audit <path> --generate-report
+
+# With organization details
+node dist/cli.js audit <path> --generate-report --org "Healthcare Inc" --auditor "John Smith"
+
+# Generate text report instead of PDF
+node dist/cli.js audit <path> --generate-report --text
+```
+
+### Audit Trail Contents
+
+For each **auto-fixed issue**:
+- Code before and after (with context lines)
+- Timestamp of the change
+- SHA256 hash of file before and after
+- Specific HIPAA reference resolved
+
+For each **manual review item**:
+- Status: "Pending human review"
+- Assignable responsible party field
+- Suggested deadline (based on severity)
+
+### PDF Report Includes
+
+1. **Cover Page** - Project info, scan statistics
+2. **Executive Summary** - Remediation rate, risk assessment
+3. **Fix Evidence** - Cryptographic proof of each change
+4. **Manual Reviews** - Pending items with deadlines
+5. **Verification Page** - Report hash, signature fields
+
+The report hash can be used to verify document integrity for auditors.
 
 ## Compliance Categories
 
