@@ -1,5 +1,5 @@
 import { readFile } from 'fs/promises';
-import type { Scanner, Finding, ScanOptions } from '../../types.js';
+import type { Scanner, Finding, ScanOptions, FixType } from '../../types.js';
 import { isSafeHttpUrl, DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
@@ -12,8 +12,14 @@ const WEAK_CRYPTO_PATTERNS = [
   { regex: /\bECB\b/, issue: 'ECB mode encryption', severity: 'high' as const },
 ];
 
-const MISSING_ENCRYPTION_PATTERNS = [
-  { regex: /http:\/\/(?!localhost|127\.0\.0\.1)/i, issue: 'Unencrypted HTTP URL', severity: 'high' as const, checkSafe: true },
+const MISSING_ENCRYPTION_PATTERNS: Array<{
+  regex: RegExp;
+  issue: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  checkSafe?: boolean;
+  fixType?: FixType;
+}> = [
+  { regex: /http:\/\/(?!localhost|127\.0\.0\.1)/i, issue: 'Unencrypted HTTP URL', severity: 'high' as const, checkSafe: true, fixType: 'http-url' },
   { regex: /ssl\s*[:=]\s*false/i, issue: 'SSL disabled', severity: 'critical' as const },
   { regex: /verify\s*[:=]\s*false.*ssl/i, issue: 'SSL verification disabled', severity: 'critical' as const },
   { regex: /rejectUnauthorized\s*:\s*false/i, issue: 'TLS certificate validation disabled', severity: 'critical' as const },
@@ -73,6 +79,7 @@ export const encryptionScanner: Scanner = {
                 recommendation: 'Enforce TLS 1.2+ for all data transmission containing PHI.',
                 hipaaReference: '§164.312(e)(1)',
                 context: getContextLines(lines, lineNum, contextSize),
+                fixType: pattern.fixType,
               });
             }
           }

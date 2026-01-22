@@ -1,4 +1,4 @@
-import type { Severity } from '../../types.js';
+import type { Severity, FixType } from '../../types.js';
 
 interface PHIPattern {
   id: string;
@@ -7,6 +7,7 @@ interface PHIPattern {
   title: string;
   description: string;
   recommendation: string;
+  fixType?: FixType;
 }
 
 export const PHI_PATTERNS: PHIPattern[] = [
@@ -60,6 +61,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'Patient name in console output',
     description: 'Patient names may be logged to console, exposing PHI.',
     recommendation: 'Remove patient identifiers from logs. Use anonymized IDs for debugging.',
+    fixType: 'phi-console-log',
   },
   {
     id: 'phi-console-log',
@@ -68,6 +70,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'PHI data in console output',
     description: 'Sensitive health information may be logged to console.',
     recommendation: 'Never log PHI to console. Use structured logging with PHI redaction.',
+    fixType: 'phi-console-log',
   },
   {
     id: 'phi-json-stringify-log',
@@ -76,6 +79,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'Patient object serialized to console',
     description: 'Patient objects are being serialized and logged, potentially exposing all PHI fields.',
     recommendation: 'Create a sanitized version of patient objects for logging, excluding PHI fields.',
+    fixType: 'phi-console-log',
   },
   {
     id: 'phi-template-log',
@@ -84,6 +88,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'PHI in template literal log',
     description: 'Template literal logging may expose PHI data.',
     recommendation: 'Avoid interpolating PHI into log messages.',
+    fixType: 'phi-console-log',
   },
 
   // === Insecure Storage Detection ===

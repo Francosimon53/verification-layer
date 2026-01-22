@@ -13,6 +13,16 @@ export interface ContextLine {
   isMatch: boolean;
 }
 
+export type FixType =
+  | 'sql-injection-template'
+  | 'sql-injection-concat'
+  | 'hardcoded-password'
+  | 'hardcoded-secret'
+  | 'api-key-exposed'
+  | 'phi-console-log'
+  | 'http-url'
+  | 'innerhtml-unsanitized';
+
 export interface Finding {
   id: string;
   category: ComplianceCategory;
@@ -25,6 +35,7 @@ export interface Finding {
   recommendation: string;
   hipaaReference?: string;
   context?: ContextLine[];
+  fixType?: FixType;
 }
 
 export interface ScanResult {
@@ -39,6 +50,7 @@ export interface ScanOptions {
   exclude?: string[];
   configFile?: string;
   config?: VlayerConfig;
+  fix?: boolean;
 }
 
 export interface Scanner {
@@ -74,4 +86,19 @@ export interface VlayerConfig {
   safeHttpDomains?: string[];
   contextLines?: number;
   categories?: ComplianceCategory[];
+}
+
+export interface FixResult {
+  finding: Finding;
+  fixed: boolean;
+  originalLine: string;
+  fixedLine: string;
+  fixType: FixType;
+}
+
+export interface FixReport {
+  totalFindings: number;
+  fixedCount: number;
+  skippedCount: number;
+  fixes: FixResult[];
 }

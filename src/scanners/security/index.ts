@@ -1,9 +1,17 @@
 import { readFile } from 'fs/promises';
-import type { Scanner, Finding, ScanOptions } from '../../types.js';
+import type { Scanner, Finding, ScanOptions, FixType } from '../../types.js';
 import { DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
-const SECURITY_PATTERNS = [
+const SECURITY_PATTERNS: Array<{
+  regex: RegExp;
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  title: string;
+  description: string;
+  recommendation: string;
+  fixType?: FixType;
+}> = [
   // === Hardcoded Passwords ===
   {
     regex: /password\s*[:=]\s*['"`][^'"`]{4,}['"`]/i,
@@ -12,6 +20,7 @@ const SECURITY_PATTERNS = [
     title: 'Hardcoded password detected',
     description: 'A password appears to be hardcoded in the source code.',
     recommendation: 'Use environment variables or a secrets manager for credentials. Never commit passwords to source control.',
+    fixType: 'hardcoded-password',
   },
   {
     regex: /pwd\s*[:=]\s*['"`][^'"`]{4,}['"`]/i,
@@ -20,6 +29,7 @@ const SECURITY_PATTERNS = [
     title: 'Hardcoded password (pwd) detected',
     description: 'A password appears to be hardcoded using "pwd" variable.',
     recommendation: 'Use environment variables or a secrets manager for credentials.',
+    fixType: 'hardcoded-password',
   },
   {
     regex: /secret\s*[:=]\s*['"`][^'"`]{8,}['"`]/i,
@@ -28,6 +38,7 @@ const SECURITY_PATTERNS = [
     title: 'Hardcoded secret detected',
     description: 'A secret value appears to be hardcoded in the source code.',
     recommendation: 'Use environment variables or a secrets manager for secrets.',
+    fixType: 'hardcoded-secret',
   },
   {
     regex: /credentials?\s*[:=]\s*\{[^}]*password\s*:/i,
@@ -46,6 +57,7 @@ const SECURITY_PATTERNS = [
     title: 'API key exposed in source',
     description: 'An API key appears to be hardcoded in the source code.',
     recommendation: 'Use environment variables for API keys. Add to .gitignore and use .env files.',
+    fixType: 'api-key-exposed',
   },
   {
     regex: /apikey\s*[:=]\s*['"`][A-Za-z0-9_\-]{20,}['"`]/i,
@@ -54,6 +66,7 @@ const SECURITY_PATTERNS = [
     title: 'API key (apikey) exposed in source',
     description: 'An API key appears to be hardcoded.',
     recommendation: 'Use environment variables for API keys.',
+    fixType: 'api-key-exposed',
   },
   {
     regex: /(sk|pk)[_-](live|test)[_-][A-Za-z0-9]{20,}/i,
@@ -130,6 +143,7 @@ const SECURITY_PATTERNS = [
     title: 'Unsanitized innerHTML assignment',
     description: 'Direct innerHTML assignment without sanitization can lead to XSS vulnerabilities.',
     recommendation: 'Use textContent for text, or sanitize HTML with DOMPurify before innerHTML assignment.',
+    fixType: 'innerhtml-unsanitized',
   },
   {
     regex: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:/i,
@@ -172,6 +186,7 @@ const SECURITY_PATTERNS = [
     title: 'SQL query string concatenation',
     description: 'Building SQL queries with string concatenation is vulnerable to SQL injection.',
     recommendation: 'Use parameterized queries or prepared statements. Never concatenate user input into SQL.',
+    fixType: 'sql-injection-concat',
   },
   {
     regex: /\$\{[^}]+\}\s*(FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|SELECT)/i,
@@ -180,6 +195,7 @@ const SECURITY_PATTERNS = [
     title: 'SQL query with template literal interpolation',
     description: 'Interpolating variables directly into SQL queries enables SQL injection.',
     recommendation: 'Use parameterized queries. Pass variables as parameters, not interpolated strings.',
+    fixType: 'sql-injection-template',
   },
   {
     regex: /query\s*\(\s*['"`].*\$\{/i,
@@ -188,6 +204,7 @@ const SECURITY_PATTERNS = [
     title: 'Database query with template interpolation',
     description: 'Template literal interpolation in database queries can lead to injection attacks.',
     recommendation: 'Use parameterized queries: query("SELECT * FROM users WHERE id = $1", [userId])',
+    fixType: 'sql-injection-template',
   },
   {
     regex: /execute\s*\(\s*['"`].*\+/i,
@@ -196,6 +213,7 @@ const SECURITY_PATTERNS = [
     title: 'SQL execute with string concatenation',
     description: 'Concatenating strings in SQL execute statements enables injection.',
     recommendation: 'Use parameterized queries instead of string concatenation.',
+    fixType: 'sql-injection-concat',
   },
   {
     regex: /raw\s*\(\s*['"`].*\$\{/i,
@@ -204,6 +222,7 @@ const SECURITY_PATTERNS = [
     title: 'Raw SQL query with interpolation',
     description: 'Raw SQL queries with interpolated values are vulnerable to injection.',
     recommendation: 'Even with raw queries, use parameter binding for user-supplied values.',
+    fixType: 'sql-injection-template',
   },
 ];
 
@@ -247,6 +266,7 @@ export const securityScanner: Scanner = {
                 recommendation: pattern.recommendation,
                 hipaaReference: '§164.312(a)(1), §164.312(d)',
                 context: getContextLines(lines, lineNum, contextSize),
+                fixType: pattern.fixType,
               });
             }
           }

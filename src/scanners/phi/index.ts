@@ -38,6 +38,7 @@ export const phiScanner: Scanner = {
                 recommendation: pattern.recommendation,
                 hipaaReference: '§164.502, §164.514',
                 context: getContextLines(lines, lineNum, contextSize),
+                fixType: pattern.fixType,
               });
             }
           }

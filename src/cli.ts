@@ -5,6 +5,8 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { scan } from './scan.js';
 import { generateReport } from './reporters/index.js';
+import { applyFixes } from './fixer/index.js';
+import { generateFixReport } from './reporters/fix-report.js';
 import type { ComplianceCategory, ReportOptions } from './types.js';
 
 const program = new Command();
@@ -23,6 +25,7 @@ program
   .option('-o, --output <path>', 'Output file path for the report')
   .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
   .option('--config <path>', 'Path to configuration file')
+  .option('--fix', 'Automatically fix detected issues where possible')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
 
@@ -37,6 +40,14 @@ program
       });
 
       spinner.succeed(`Scan complete. Found ${result.findings.length} issues.`);
+
+      // Apply fixes if --fix flag is provided
+      if (options.fix) {
+        const fixSpinner = ora('Applying automatic fixes...').start();
+        const fixReport = await applyFixes(result.findings);
+        fixSpinner.succeed(`Applied ${fixReport.fixedCount} automatic fixes.`);
+        console.log(generateFixReport(fixReport));
+      }
 
       const reportOptions: ReportOptions = {
         format: options.format,
@@ -61,8 +72,8 @@ program
         console.log(chalk.yellow(`  High: ${high}`));
       }
 
-      // Exit with error code if critical issues found
-      if (critical > 0) {
+      // Exit with error code if critical issues found (only if not fixing)
+      if (critical > 0 && !options.fix) {
         process.exit(1);
       }
     } catch (error) {
