@@ -1,211 +1,344 @@
-# Verification Layer
+# vlayer - HIPAA Compliance Scanner
 
-CLI tool for HIPAA compliance scanning and reporting. Scans repositories for healthcare data security issues and generates detailed compliance reports.
+**Automated security scanning for healthcare applications.** Detect PHI exposure, fix vulnerabilities, and generate audit-ready compliance reports.
 
-## Installation
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
+
+---
+
+## What is vlayer?
+
+vlayer is a CLI tool that scans your codebase for HIPAA compliance issues. It's designed for healthcare startups and developers building applications that handle Protected Health Information (PHI).
+
+**Key capabilities:**
+- Scan for 50+ security vulnerabilities and PHI exposure patterns
+- Auto-fix common issues with one command
+- Generate professional audit reports (HTML, PDF, JSON)
+- Detect your tech stack and provide tailored recommendations
+- Create cryptographic audit trails for compliance documentation
+
+---
+
+## Quick Start
 
 ```bash
+# Install
 npm install
 npm run build
-```
 
-## Usage
-
-```bash
-# Scan a repository
-node dist/cli.js scan <path>
+# Scan a project
+node dist/cli.js scan /path/to/your/project
 
 # Generate HTML report
-node dist/cli.js scan <path> -f html -o report.html
+node dist/cli.js scan /path/to/project -f html -o report.html
 
-# Generate Markdown report
-node dist/cli.js scan <path> -f markdown -o report.md
+# Auto-fix issues
+node dist/cli.js scan /path/to/project --fix
 
-# Scan specific categories only
-node dist/cli.js scan <path> -c phi-exposure encryption
-
-# Auto-fix detected issues
-node dist/cli.js scan <path> --fix
+# Generate audit PDF
+node dist/cli.js audit /path/to/project --generate-report
 ```
 
-## Auto-Fix (`--fix`)
+---
 
-Automatically remediate common security issues:
+## Features
 
-| Issue Type | Fix Applied |
-|------------|-------------|
-| SQL injection (template literal) | Convert to parameterized query with `?` placeholders |
-| SQL injection (concatenation) | Convert to parameterized query |
-| Hardcoded password/secret | Replace with `process.env.VAR_NAME` |
-| Hardcoded API key | Replace with `process.env.API_KEY` |
-| HTTP URL | Upgrade to HTTPS |
-| innerHTML assignment | Replace with `textContent` |
-| PHI in console.log | Comment out with `// [VLAYER] PHI logging removed` |
+### 1. Vulnerability Detection
 
-When `--fix` is used, an audit trail is automatically saved to `.vlayer/audit-trail.json`.
+Scans for **50+ security patterns** across 5 HIPAA compliance categories:
 
-## Audit Trail & Compliance Reports
+| Category | What it detects |
+|----------|-----------------|
+| **PHI Exposure** | SSN/MRN in code, PHI in logs, localStorage, URLs |
+| **Encryption** | Weak crypto (MD5, DES), disabled SSL/TLS, HTTP URLs |
+| **Access Control** | SQL injection, XSS, CORS wildcards, hardcoded credentials |
+| **Audit Logging** | Missing logging framework, unlogged PHI operations |
+| **Data Retention** | Bulk deletes without audit, missing retention policies |
 
-Generate professional audit reports for HIPAA compliance documentation:
+<details>
+<summary><strong>View all detection patterns</strong></summary>
+
+**PHI Exposure (18 patterns)**
+- Social Security Numbers (XXX-XX-XXXX)
+- Medical Record Numbers (MRN patterns)
+- Date of Birth handling
+- Diagnosis codes (ICD-10)
+- PHI in console.log statements
+- PHI in localStorage/sessionStorage
+- Patient data in URLs
+- Unencrypted patient contact info
+
+**Security Vulnerabilities (20+ patterns)**
+- Hardcoded passwords and secrets
+- API keys (generic, Stripe, AWS)
+- Database URIs with credentials
+- SQL injection (template literals & concatenation)
+- innerHTML without sanitization
+- eval() and Function constructor
+- dangerouslySetInnerHTML in React
+
+**Infrastructure Issues**
+- HTTP URLs for PHI transmission
+- Disabled SSL/TLS verification
+- CORS wildcard origins
+- Sessions without expiration
+- Missing authentication checks
+
+</details>
+
+---
+
+### 2. Auto-Fix (`--fix`)
+
+Automatically remediate common vulnerabilities:
 
 ```bash
-# View audit trail summary
-node dist/cli.js audit <path> --summary
-
-# Generate PDF audit report
-node dist/cli.js audit <path> --generate-report
-
-# With organization details
-node dist/cli.js audit <path> --generate-report --org "Healthcare Inc" --auditor "John Smith"
-
-# Generate text report instead of PDF
-node dist/cli.js audit <path> --generate-report --text
+node dist/cli.js scan ./my-app --fix
 ```
 
-### Audit Trail Contents
+| Issue | Auto-Fix Applied |
+|-------|------------------|
+| SQL injection | Convert to parameterized query `query('SELECT * FROM users WHERE id = ?', [id])` |
+| Hardcoded password | Replace with `process.env.PASSWORD` |
+| Hardcoded API key | Replace with `process.env.API_KEY` |
+| HTTP URL | Upgrade to HTTPS |
+| innerHTML | Replace with `textContent` |
+| PHI in console.log | Comment out with review marker |
 
-For each **auto-fixed issue**:
-- Code before and after (with context lines)
-- Timestamp of the change
-- SHA256 hash of file before and after
-- Specific HIPAA reference resolved
+**Example output:**
+```
+✔ Scan complete. Found 29 issues.
+✔ Applied 8 automatic fixes.
 
-For each **manual review item**:
-- Status: "Pending human review"
-- Assignable responsible party field
-- Suggested deadline (based on severity)
+Changes by file:
+  src/api/users.ts
+    Line 45: SQL injection → parameterized query
+    Line 89: Hardcoded password → process.env.DB_PASSWORD
+  src/utils/logger.ts
+    Line 12: PHI in console.log → commented out
+```
 
-### PDF Report Includes
+---
 
-1. **Cover Page** - Project info, scan statistics
-2. **Executive Summary** - Remediation rate, risk assessment
-3. **Fix Evidence** - Cryptographic proof of each change
-4. **Manual Reviews** - Pending items with deadlines
-5. **Verification Page** - Report hash, signature fields
+### 3. Stack Detection
 
-The report hash can be used to verify document integrity for auditors.
+vlayer automatically detects your tech stack and provides **personalized code examples**:
 
-## Stack Detection
+```
+Stack detected:
+  Framework: Next.js
+  Database: Supabase
+  Auth: Supabase Auth
+```
 
-vlayer automatically detects your project's technology stack and provides **personalized recommendations** with code examples specific to your setup.
+**Supported technologies:**
 
-### Detected Technologies
+| Type | Detected |
+|------|----------|
+| Frameworks | Next.js, React, Vue, Nuxt, Angular, Express, Fastify, NestJS |
+| Databases | Supabase, Firebase, PostgreSQL, MySQL, MongoDB, Prisma, Drizzle |
+| Auth | NextAuth, Supabase Auth, Firebase Auth, Auth0, Clerk, Passport |
 
-| Type | Technologies |
-|------|--------------|
-| **Frameworks** | Next.js, React, Vue, Nuxt, Angular, Express, Fastify, NestJS, Koa, Hono |
-| **Databases** | Supabase, Firebase, PostgreSQL, MySQL, MongoDB, Prisma, Drizzle |
-| **Auth** | NextAuth, Supabase Auth, Firebase Auth, Auth0, Clerk, Lucia, Passport |
+**Stack-specific recommendations include:**
 
-### Stack-Specific Recommendations
+- **Next.js + Supabase**: Server Components for PHI, Row Level Security (RLS), middleware protection
+- **Express + PostgreSQL**: express-session with Redis, parameterized queries
+- **React + Firebase**: Firestore Security Rules, Admin SDK for PHI
 
-The HTML report includes a "Stack Detected" section with:
+---
 
-- **Detected stack cards** showing framework, database, and auth provider
-- **Tailored recommendations** based on your specific stack
-- **Code examples** customized for your technologies
+### 4. Remediation Guides
 
-#### Example: Next.js + Supabase
+Each finding includes a detailed remediation guide with:
 
-When vlayer detects a Next.js + Supabase project, it provides:
+- **HIPAA Impact**: Why this matters for compliance
+- **Multiple fix options**: Different approaches with trade-offs
+- **Code examples**: Copy-paste ready solutions
+- **Documentation links**: Official resources
 
-**Session Management:**
-- Use Server Components to keep PHI server-side
-- Implement `middleware.ts` for route protection
+The guides are **personalized to your stack** - if you're using Supabase, you'll see Supabase-specific code examples, not generic SQL.
 
-**Database Security:**
-- Enable Row Level Security (RLS) on PHI tables
-- Use Supabase server client for PHI operations
-- Configure database triggers for audit logging
+---
 
-**Authentication:**
-- Configure 15-minute session timeout (HIPAA recommendation)
-- Use Supabase Auth middleware for protected routes
+### 5. Audit Trail & PDF Reports
 
-Each recommendation includes production-ready code examples specific to your stack.
+Generate compliance documentation with cryptographic verification:
 
-## Compliance Categories
+```bash
+# Run scan with fixes (creates audit trail)
+node dist/cli.js scan ./my-app --fix
 
-| Category | Description |
-|----------|-------------|
-| `phi-exposure` | Detects hardcoded PHI (SSN, MRN, DOB), PHI in logs, insecure storage |
-| `encryption` | Identifies weak crypto (MD5, DES, RC4), disabled SSL/TLS, missing encryption |
-| `audit-logging` | Checks for logging framework, unlogged PHI operations |
-| `access-control` | Finds CORS issues, auth bypass, credentials exposure, SQL injection, XSS |
-| `data-retention` | Flags improper deletion, short retention periods, missing backups |
+# Generate PDF report
+node dist/cli.js audit ./my-app --generate-report --org "Healthcare Inc" --auditor "Jane Smith"
+```
 
-## Detection Rules
+**Audit trail includes:**
 
-### PHI Exposure (18 patterns)
+| For Auto-Fixed Issues | For Manual Review Items |
+|-----------------------|-------------------------|
+| Code before & after | Status: "Pending human review" |
+| SHA256 file hashes | Assigned responsible party |
+| Timestamp of change | Suggested deadline by severity |
+| HIPAA reference resolved | Full finding details |
 
-- **Identifiers**: SSN, Medical Record Numbers, Date of Birth, Diagnosis Codes
-- **PHI in URLs**: Patient identifiers exposed in URL patterns
-- **Logging**: PHI in console.log, JSON.stringify of patient objects
-- **Insecure Storage**: PHI in localStorage, sessionStorage, cookies, IndexedDB
-- **Contact Info**: Patient email, phone, address handling without encryption
+**PDF Report sections:**
+1. Cover Page - Project info, scan statistics
+2. Executive Summary - Remediation rate, risk breakdown
+3. Fix Evidence - Cryptographic proof of each change
+4. Manual Reviews - Pending items with deadlines
+5. Verification Page - Report hash, signature fields
 
-### Security Vulnerabilities (20+ patterns)
+---
 
-**Credentials Exposure**
-- Hardcoded passwords and secrets
-- API keys in source code (generic, Stripe, AWS)
-- Bearer tokens and auth tokens
-- Private keys embedded in code
-- Database URIs with credentials (MongoDB, PostgreSQL, MySQL)
+## Report Examples
 
-**Injection Attacks**
-- SQL injection via string concatenation
-- SQL injection via template literals
-- Raw query interpolation
+### HTML Report
 
-**Cross-Site Scripting (XSS)**
-- Unsanitized innerHTML assignment
-- React dangerouslySetInnerHTML usage
-- eval() and Function constructor
-- document.write usage
+The HTML report includes:
+- Summary cards with severity counts
+- Stack detection section with tailored recommendations
+- Each finding with code context and line highlighting
+- Expandable remediation guides with code examples
+- Auto-fixable badge on issues that can be fixed automatically
+
+### JSON Report
+
+Machine-readable format for CI/CD integration:
+
+```json
+{
+  "summary": {
+    "total": 29,
+    "critical": 8,
+    "high": 12,
+    "medium": 6,
+    "low": 3
+  },
+  "stack": {
+    "framework": "nextjs",
+    "database": "supabase",
+    "auth": "supabase-auth"
+  },
+  "findings": [...]
+}
+```
+
+---
 
 ## Configuration
 
-Create a `.vlayerrc.json` in your project root:
+Create `.vlayerrc.json` in your project root:
 
 ```json
 {
   "exclude": ["**/*.test.ts", "**/__mocks__/**"],
   "ignorePaths": ["sample-data", "fixtures"],
-  "safeHttpDomains": ["my-cdn.com"],
-  "contextLines": 2
+  "safeHttpDomains": ["my-internal-cdn.com"],
+  "contextLines": 3,
+  "categories": ["phi-exposure", "encryption", "access-control"]
 }
 ```
 
-| Option | Description |
-|--------|-------------|
-| `exclude` | Glob patterns to exclude from scanning |
-| `ignorePaths` | Path substrings to skip |
-| `safeHttpDomains` | HTTP domains to ignore (CDNs, namespaces) |
-| `contextLines` | Lines of context above/below findings (default: 2) |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `exclude` | Glob patterns to skip | `[]` |
+| `ignorePaths` | Path substrings to ignore | `[]` |
+| `safeHttpDomains` | HTTP domains to allow (CDNs) | Built-in list |
+| `contextLines` | Lines of context in reports | `2` |
+| `categories` | Categories to scan | All |
 
-Built-in safe domains: w3.org, googleapis.com, jsdelivr.net, unpkg.com, cdnjs.cloudflare.com, etc.
+---
 
-## Report Formats
+## CLI Reference
 
-- **JSON** (default): Machine-readable, ideal for CI/CD integration
-- **HTML**: Visual report with color-coded severity and code context
-- **Markdown**: Documentation-friendly format
+```bash
+# Basic scan
+vlayer scan <path>
 
-## Exit Codes
+# Scan options
+vlayer scan <path> -f html -o report.html    # HTML report
+vlayer scan <path> -f markdown -o report.md  # Markdown report
+vlayer scan <path> -c phi-exposure encryption # Specific categories
+vlayer scan <path> --fix                      # Auto-fix issues
 
-- `0`: No critical issues found
-- `1`: Critical issues detected (useful for CI/CD pipelines)
+# Audit commands
+vlayer audit <path> --summary                 # View audit summary
+vlayer audit <path> --generate-report         # Generate PDF
+vlayer audit <path> --generate-report --text  # Generate text instead
+vlayer audit <path> --generate-report --org "Company" --auditor "Name"
+```
+
+**Exit codes:**
+- `0` - No critical issues
+- `1` - Critical issues found (useful for CI/CD)
+
+---
 
 ## HIPAA References
 
-Each finding includes relevant HIPAA regulation references:
-- §164.502, §164.514 - PHI disclosure rules
-- §164.312(a) - Access controls
-- §164.312(b) - Audit controls
-- §164.312(e) - Transmission security
-- §164.530(j) - Retention requirements
+Each finding maps to specific HIPAA regulations:
+
+| Reference | Requirement |
+|-----------|-------------|
+| §164.502, §164.514 | PHI disclosure and de-identification |
+| §164.312(a)(1) | Access control mechanisms |
+| §164.312(a)(2)(iv) | Encryption and decryption |
+| §164.312(b) | Audit controls |
+| §164.312(d) | Person or entity authentication |
+| §164.312(e)(1) | Transmission security |
+| §164.530(j) | Documentation retention (6 years) |
+
+---
+
+## Roadmap
+
+### Coming Soon
+- [ ] GitHub Action for CI/CD integration
+- [ ] VS Code extension with inline warnings
+- [ ] Slack/Teams notifications for new findings
+- [ ] Custom rule definitions (YAML)
+
+### Planned
+- [ ] HITRUST CSF mapping
+- [ ] SOC 2 compliance checks
+- [ ] AWS/GCP/Azure infrastructure scanning
+- [ ] Team dashboard with trend tracking
+- [ ] Jira/Linear integration for issue tracking
+
+### Future
+- [ ] AI-powered fix suggestions
+- [ ] Dependency vulnerability scanning
+- [ ] Runtime PHI detection agent
+- [ ] Compliance certification workflows
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+```bash
+# Development
+npm install
+npm run dev      # Watch mode
+npm run test     # Run tests
+npm run lint     # Lint code
+```
+
+---
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  Built for healthcare developers who take compliance seriously.
+  <br>
+  <a href="https://github.com/Francosimon53/verification-layer/issues">Report Bug</a>
+  ·
+  <a href="https://github.com/Francosimon53/verification-layer/issues">Request Feature</a>
+</p>
