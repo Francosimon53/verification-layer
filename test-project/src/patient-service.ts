@@ -19,7 +19,7 @@ const testPatient = {
 // BAD: PHI in console logs
 export function getPatient(id: string): Patient {
   const patient = fetchFromDb(id);
-  console.log("Fetched patient name:", patient.name);
+  // [VLAYER] PHI logging removed - review needed: console.log("Fetched patient name:", patient.name);
   return patient;
 }
 
@@ -35,7 +35,7 @@ export function encryptData(data: string, key: string): string {
 }
 
 // BAD: HTTP endpoint for PHI
-const API_URL = "http://api.healthcare.com/patients";
+const API_URL = "https://api.healthcare.com/patients";
 
 // BAD: SSL disabled
 const dbConfig = {
