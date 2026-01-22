@@ -180,7 +180,7 @@ const SECURITY_PATTERNS: Array<{
 
   // === SQL Injection Risks ===
   {
-    regex: /['"`]\s*\+\s*[^+]+\s*\+\s*['"`]\s*(FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|SELECT)/i,
+    regex: /\b(SELECT|INSERT|UPDATE|DELETE)\b.*['"`]\s*\+\s*\w+\s*\+?\s*['"`]?/i,
     id: 'sql-string-concat',
     severity: 'critical' as const,
     title: 'SQL query string concatenation',
@@ -189,7 +189,7 @@ const SECURITY_PATTERNS: Array<{
     fixType: 'sql-injection-concat',
   },
   {
-    regex: /\$\{[^}]+\}\s*(FROM|WHERE|AND|OR|INSERT|UPDATE|DELETE|SELECT)/i,
+    regex: /\bSELECT\b.*\$\{[^}]+\}|\bWHERE\b.*\$\{[^}]+\}|\bINSERT\s+INTO\b.*\$\{[^}]+\}|\bUPDATE\b.*\bSET\b.*\$\{[^}]+\}|\bDELETE\s+FROM\b.*\$\{[^}]+\}/i,
     id: 'sql-template-literal',
     severity: 'critical' as const,
     title: 'SQL query with template literal interpolation',
@@ -198,7 +198,7 @@ const SECURITY_PATTERNS: Array<{
     fixType: 'sql-injection-template',
   },
   {
-    regex: /query\s*\(\s*['"`].*\$\{/i,
+    regex: /\.(query|execute|raw|sql)\s*\(\s*`[^`]*\$\{/i,
     id: 'query-template-injection',
     severity: 'critical' as const,
     title: 'Database query with template interpolation',
@@ -207,7 +207,7 @@ const SECURITY_PATTERNS: Array<{
     fixType: 'sql-injection-template',
   },
   {
-    regex: /execute\s*\(\s*['"`].*\+/i,
+    regex: /\.(query|execute|sql)\s*\(\s*['"][^'"]*['"]\s*\+/i,
     id: 'execute-string-concat',
     severity: 'critical' as const,
     title: 'SQL execute with string concatenation',
@@ -216,7 +216,7 @@ const SECURITY_PATTERNS: Array<{
     fixType: 'sql-injection-concat',
   },
   {
-    regex: /raw\s*\(\s*['"`].*\$\{/i,
+    regex: /\$\{[^}]+\}\s*\)\s*$.*\b(SELECT|INSERT|UPDATE|DELETE)\b/i,
     id: 'raw-query-injection',
     severity: 'critical' as const,
     title: 'Raw SQL query with interpolation',
