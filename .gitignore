@@ -3,8 +3,18 @@ dist/
 coverage/
 *.log
 .DS_Store
+.env
+.env.local
+
+# Generated reports
 vlayer-report.*
 *-report.html
 *-report.json
-.env
-.env.local
+*-report.pdf
+vlayer-audit-report.pdf
+
+# Audit trail data
+.vlayer/
+
+# NPM package
+*.tgz
