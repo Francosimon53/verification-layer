@@ -1,11 +1,12 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
 import { auditScanner } from './scanners/audit/index.js';
 import { accessScanner } from './scanners/access/index.js';
 import { retentionScanner } from './scanners/retention/index.js';
+import { securityScanner } from './scanners/security/index.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -15,12 +16,17 @@ const ALL_CATEGORIES: ComplianceCategory[] = [
   'data-retention',
 ];
 
-const scanners = {
+const scanners: Record<ComplianceCategory, Scanner> = {
   'phi-exposure': phiScanner,
   'encryption': encryptionScanner,
   'audit-logging': auditScanner,
   'access-control': accessScanner,
   'data-retention': retentionScanner,
+};
+
+// Additional scanners that run with specific categories
+const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
+  'access-control': [securityScanner], // Security scanner runs with access-control
 };
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
@@ -65,6 +71,15 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     if (scanner) {
       const categoryFindings = await scanner.scan(filteredFiles, optionsWithConfig);
       findings.push(...categoryFindings);
+    }
+
+    // Run additional scanners for this category
+    const additional = additionalScanners[category];
+    if (additional) {
+      for (const extraScanner of additional) {
+        const extraFindings = await extraScanner.scan(filteredFiles, optionsWithConfig);
+        findings.push(...extraFindings);
+      }
     }
   }
 
