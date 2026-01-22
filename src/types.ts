@@ -102,3 +102,68 @@ export interface FixReport {
   skippedCount: number;
   fixes: FixResult[];
 }
+
+// === Audit Trail Types ===
+
+export interface CodeSnapshot {
+  content: string;
+  context: ContextLine[];
+  lineNumber: number;
+}
+
+export interface AuditEvidence {
+  id: string;
+  findingId: string;
+  timestamp: string;
+  filePath: string;
+  before: CodeSnapshot;
+  after: CodeSnapshot;
+  fileHashBefore: string;
+  fileHashAfter: string;
+  hipaaReference: string;
+  fixType: FixType;
+  description: string;
+}
+
+export type ManualReviewStatus =
+  | 'pending_review'
+  | 'assigned'
+  | 'in_progress'
+  | 'resolved'
+  | 'accepted_risk';
+
+export interface ManualReviewItem {
+  id: string;
+  findingId: string;
+  finding: Finding;
+  status: ManualReviewStatus;
+  assignedTo?: string;
+  suggestedDeadline: string;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
+  resolution?: string;
+}
+
+export interface AuditTrail {
+  id: string;
+  createdAt: string;
+  projectPath: string;
+  projectName: string;
+  scanDuration: number;
+  scannedFiles: number;
+  totalFindings: number;
+  autoFixedCount: number;
+  manualReviewCount: number;
+  evidence: AuditEvidence[];
+  manualReviews: ManualReviewItem[];
+  reportHash?: string;
+}
+
+export interface AuditReportOptions {
+  outputPath: string;
+  includeEvidence?: boolean;
+  includeManualReviews?: boolean;
+  organizationName?: string;
+  auditorName?: string;
+}
