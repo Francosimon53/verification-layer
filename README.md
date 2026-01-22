@@ -29,11 +29,41 @@ node dist/cli.js scan <path> -c phi-exposure encryption
 
 | Category | Description |
 |----------|-------------|
-| `phi-exposure` | Detects hardcoded PHI (SSN, MRN, DOB), PHI in logs, PHI in URLs |
+| `phi-exposure` | Detects hardcoded PHI (SSN, MRN, DOB), PHI in logs, insecure storage |
 | `encryption` | Identifies weak crypto (MD5, DES, RC4), disabled SSL/TLS, missing encryption |
 | `audit-logging` | Checks for logging framework, unlogged PHI operations |
-| `access-control` | Finds CORS issues, hardcoded roles, auth bypass, session problems |
+| `access-control` | Finds CORS issues, auth bypass, credentials exposure, SQL injection, XSS |
 | `data-retention` | Flags improper deletion, short retention periods, missing backups |
+
+## Detection Rules
+
+### PHI Exposure (18 patterns)
+
+- **Identifiers**: SSN, Medical Record Numbers, Date of Birth, Diagnosis Codes
+- **PHI in URLs**: Patient identifiers exposed in URL patterns
+- **Logging**: PHI in console.log, JSON.stringify of patient objects
+- **Insecure Storage**: PHI in localStorage, sessionStorage, cookies, IndexedDB
+- **Contact Info**: Patient email, phone, address handling without encryption
+
+### Security Vulnerabilities (20+ patterns)
+
+**Credentials Exposure**
+- Hardcoded passwords and secrets
+- API keys in source code (generic, Stripe, AWS)
+- Bearer tokens and auth tokens
+- Private keys embedded in code
+- Database URIs with credentials (MongoDB, PostgreSQL, MySQL)
+
+**Injection Attacks**
+- SQL injection via string concatenation
+- SQL injection via template literals
+- Raw query interpolation
+
+**Cross-Site Scripting (XSS)**
+- Unsanitized innerHTML assignment
+- React dangerouslySetInnerHTML usage
+- eval() and Function constructor
+- document.write usage
 
 ## Configuration
 
