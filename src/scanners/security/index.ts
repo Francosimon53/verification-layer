@@ -137,7 +137,7 @@ const SECURITY_PATTERNS: Array<{
 
   // === Input Sanitization Issues ===
   {
-    regex: /innerHTML\s*=\s*[^'"`\s;]+/i,
+    regex: /\.innerHTML\s*=\s*[^'"`\s;]+/i,
     id: 'innerhtml-unsanitized',
     severity: 'high' as const,
     title: 'Unsanitized innerHTML assignment',
