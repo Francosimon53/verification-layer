@@ -38,10 +38,21 @@ export interface Finding {
   fixType?: FixType;
 }
 
+export interface StackInfo {
+  framework: string;
+  database: string;
+  auth: string;
+  frameworkDisplay: string;
+  databaseDisplay: string;
+  authDisplay: string;
+  recommendations: string[];
+}
+
 export interface ScanResult {
   findings: Finding[];
   scannedFiles: number;
   scanDuration: number;
+  stack?: StackInfo;
 }
 
 export interface ScanOptions {
@@ -73,6 +84,7 @@ export interface Report {
   findings: Finding[];
   scannedFiles: number;
   scanDuration: number;
+  stack?: StackInfo;
 }
 
 export interface ReportOptions {

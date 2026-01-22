@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -7,6 +7,8 @@ import { auditScanner } from './scanners/audit/index.js';
 import { accessScanner } from './scanners/access/index.js';
 import { retentionScanner } from './scanners/retention/index.js';
 import { securityScanner } from './scanners/security/index.js';
+import { detectStack, getStackDisplayName } from './stack-detector/index.js';
+import { getStackSummary } from './stack-detector/stack-guides.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -87,9 +89,25 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   findings.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
+  // Detect project stack
+  const detectedStack = await detectStack(options.path);
+  const stackDisplayNames = getStackDisplayName(detectedStack);
+  const stackRecommendations = getStackSummary(detectedStack);
+
+  const stack: StackInfo = {
+    framework: detectedStack.framework,
+    database: detectedStack.database,
+    auth: detectedStack.auth,
+    frameworkDisplay: stackDisplayNames.framework,
+    databaseDisplay: stackDisplayNames.database,
+    authDisplay: stackDisplayNames.auth,
+    recommendations: stackRecommendations,
+  };
+
   return {
     findings,
     scannedFiles: filteredFiles.length,
     scanDuration: Date.now() - startTime,
+    stack,
   };
 }

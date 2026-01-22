@@ -1,7 +1,8 @@
 import { writeFile } from 'fs/promises';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
+import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
 function buildReport(result: ScanResult, targetPath: string): Report {
   const summary = {
@@ -20,6 +21,7 @@ function buildReport(result: ScanResult, targetPath: string): Report {
     findings: result.findings,
     scannedFiles: result.scannedFiles,
     scanDuration: result.scanDuration,
+    stack: result.stack,
   };
 }
 
@@ -148,6 +150,90 @@ function renderRemediationGuide(guide: RemediationGuide): string {
   `;
 }
 
+function renderStackGuide(guide: StackGuide): string {
+  return `
+    <div class="stack-guide">
+      <details class="fix-option" open>
+        <summary>${escapeHtml(guide.title)}</summary>
+        <p class="option-desc">${escapeHtml(guide.description)}</p>
+        <pre class="code-block"><code class="language-${guide.language}">${escapeHtml(guide.code)}</code></pre>
+      </details>
+    </div>
+  `;
+}
+
+function renderStackSection(stack: StackInfo): string {
+  // Get stack-specific guides
+  const detectedStack = {
+    framework: stack.framework as any,
+    database: stack.database as any,
+    auth: stack.auth as any,
+    dependencies: [],
+    confidence: { framework: 1, database: 1, auth: 1 },
+    details: {},
+  };
+  const guides = getStackSpecificGuides(detectedStack);
+
+  return `
+    <div class="stack-section">
+      <h2>Stack Detected</h2>
+      <div class="stack-cards">
+        <div class="stack-card">
+          <div class="stack-icon">⚡</div>
+          <div class="stack-label">Framework</div>
+          <div class="stack-value">${escapeHtml(stack.frameworkDisplay)}</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🗄️</div>
+          <div class="stack-label">Database</div>
+          <div class="stack-value">${escapeHtml(stack.databaseDisplay)}</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🔐</div>
+          <div class="stack-label">Authentication</div>
+          <div class="stack-value">${escapeHtml(stack.authDisplay)}</div>
+        </div>
+      </div>
+
+      ${stack.recommendations.length > 0 ? `
+      <div class="stack-recommendations">
+        <h3>Stack-Specific Recommendations</h3>
+        <ul>
+          ${stack.recommendations.map(rec => `<li>${escapeHtml(rec)}</li>`).join('')}
+        </ul>
+      </div>
+      ` : ''}
+
+      ${guides.session.length > 0 || guides.database.length > 0 || guides.auth.length > 0 ? `
+      <div class="stack-guides">
+        <h3>Code Examples for Your Stack</h3>
+
+        ${guides.session.length > 0 ? `
+        <div class="guide-category">
+          <h4>🔒 Session Management (${stack.frameworkDisplay})</h4>
+          ${guides.session.map(g => renderStackGuide(g)).join('')}
+        </div>
+        ` : ''}
+
+        ${guides.database.length > 0 ? `
+        <div class="guide-category">
+          <h4>🗄️ Database Security (${stack.databaseDisplay})</h4>
+          ${guides.database.map(g => renderStackGuide(g)).join('')}
+        </div>
+        ` : ''}
+
+        ${guides.auth.length > 0 ? `
+        <div class="guide-category">
+          <h4>🔐 Authentication (${stack.authDisplay})</h4>
+          ${guides.auth.map(g => renderStackGuide(g)).join('')}
+        </div>
+        ` : ''}
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 function generateHtml(report: Report): string {
   const severityColors = {
     critical: '#dc2626',
@@ -222,9 +308,28 @@ function generateHtml(report: Report): string {
     .code-block .comment { color: #6a9955; }
     .code-block .function { color: #dcdcaa; }
 
+    /* Stack Section Styles */
+    .stack-section { margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 12px; border: 1px solid #e5e7eb; }
+    .stack-section h2 { color: #374151; margin-bottom: 1rem; }
+    .stack-section h3 { color: #4b5563; margin: 1.5rem 0 1rem; font-size: 1.1rem; }
+    .stack-section h4 { color: #6b7280; margin: 1rem 0 0.5rem; font-size: 1rem; }
+    .stack-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stack-card { background: white; padding: 1.25rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e5e7eb; }
+    .stack-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .stack-label { color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stack-value { color: #1f2937; font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem; }
+    .stack-recommendations { background: white; padding: 1rem 1.5rem; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 1.5rem; }
+    .stack-recommendations ul { margin: 0.5rem 0 0 1.5rem; }
+    .stack-recommendations li { margin: 0.5rem 0; color: #374151; }
+    .stack-guides { background: white; padding: 1.5rem; border-radius: 8px; }
+    .guide-category { margin-bottom: 1.5rem; }
+    .guide-category:last-child { margin-bottom: 0; }
+    .stack-guide { margin: 0.75rem 0; }
+
     @media (max-width: 768px) {
       body { padding: 1rem; }
       .summary { grid-template-columns: repeat(2, 1fr); }
+      .stack-cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -257,6 +362,8 @@ function generateHtml(report: Report): string {
       </div>
     </div>
 
+    ${report.stack && report.stack.framework !== 'unknown' ? renderStackSection(report.stack) : ''}
+
     <h2>Findings</h2>
     <div class="findings">
       ${report.findings.map(f => {
@@ -287,7 +394,7 @@ function generateHtml(report: Report): string {
     </div>
 
     <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
-      <p>Generated by <strong>vlayer</strong> v0.1.0 - HIPAA Compliance Scanner for Healthcare Applications</p>
+      <p>Generated by <strong>vlayer</strong> v0.2.0 - HIPAA Compliance Scanner for Healthcare Applications</p>
       <p>Run with <code>--fix</code> flag to automatically fix issues marked as "Auto-fixable"</p>
     </footer>
   </div>
