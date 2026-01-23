@@ -503,4 +503,98 @@ const d = 4;
       expect(sslFinding).toBeDefined();
     });
   });
+
+  describe('Unencrypted Backup Detection', () => {
+    it('should detect backup with encryption disabled', async () => {
+      const file = await createTestFile('backup-config.ts', `
+        const config = { backup: true, encrypt: false };
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('Backup encryption disabled'));
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe('critical');
+    });
+
+    it('should detect unencrypted backup file format', async () => {
+      const file = await createTestFile('backup-sql.ts', `
+        const backupPath = '/data/backup.sql';
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('Unencrypted backup file'));
+      expect(finding).toBeDefined();
+    });
+
+    it('should detect CSV backup without encryption', async () => {
+      const file = await createTestFile('backup-csv.ts', `
+        exportToFile('patient_backup.csv', data);
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('Unencrypted backup'));
+      expect(finding).toBeDefined();
+    });
+
+    it('should detect PHI backup without encryption', async () => {
+      const file = await createTestFile('phi-backup.ts', `
+        fs.writeFile(backupPath, JSON.stringify(patientBackup));
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('PHI backup without encryption'));
+      expect(finding).toBeDefined();
+    });
+
+    it('should detect S3 backup without encryption', async () => {
+      const file = await createTestFile('s3-backup.ts', `
+        s3.upload({ Bucket: bucket, Key: 'backup/data.json' });
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('S3 backup without'));
+      expect(finding).toBeDefined();
+    });
+
+    it('should NOT flag encrypted backup', async () => {
+      const file = await createTestFile('encrypted-backup.ts', `
+        const backupConfig = {
+          backup: true,
+          encrypt: true
+        };
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('Backup encryption disabled'));
+      expect(finding).toBeUndefined();
+    });
+
+    it('should NOT flag backup with GPG encryption', async () => {
+      const file = await createTestFile('gpg-backup.ts', `
+        const backupPath = 'backup.sql.gpg';
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('Unencrypted backup'));
+      expect(finding).toBeUndefined();
+    });
+
+    it('should NOT flag S3 backup with SSE', async () => {
+      const file = await createTestFile('s3-sse.ts', `
+        s3.upload({ Bucket: bucket, Key: 'backup/data.json', ServerSideEncryption: 'AES256' });
+      `);
+
+      const findings = await encryptionScanner.scan([file], defaultOptions);
+
+      const finding = findings.find(f => f.title.includes('S3 backup without'));
+      expect(finding).toBeUndefined();
+    });
+  });
 });

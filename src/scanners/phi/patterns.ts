@@ -150,4 +150,108 @@ export const PHI_PATTERNS: PHIPattern[] = [
     description: 'Code handles patient addresses which are PHI.',
     recommendation: 'Ensure patient addresses are encrypted and access is logged.',
   },
+
+  // === PHI in URL Query Parameters ===
+  {
+    id: 'phi-query-param',
+    regex: /[?&](ssn|social.?security|patient.?id|mrn|dob|birth.?date|diagnosis|medical.?record)=/i,
+    severity: 'critical',
+    title: 'PHI in URL query parameter',
+    description: 'PHI identifiers are being passed as URL query parameters, which may be logged in server logs, browser history, and referrer headers.',
+    recommendation: 'Never pass PHI in URLs. Use POST requests with encrypted body or session-based lookups.',
+  },
+  {
+    id: 'phi-url-interpolation',
+    regex: /\$\{[^}]*(ssn|patientId|mrn|dob|diagnosis)[^}]*\}.*[?&]/i,
+    severity: 'critical',
+    title: 'PHI interpolated into URL',
+    description: 'PHI values are being interpolated into URLs, exposing sensitive data.',
+    recommendation: 'Use opaque tokens or encrypted references instead of PHI in URLs.',
+  },
+  {
+    id: 'phi-fetch-url',
+    regex: /fetch\s*\(\s*`[^`]*[?&](patient|ssn|mrn|dob)/i,
+    severity: 'high',
+    title: 'PHI in fetch URL',
+    description: 'Fetch request URL contains PHI identifiers.',
+    recommendation: 'Pass PHI in request body with proper encryption, not in URLs.',
+  },
+
+  // === PHI in HTTP Headers ===
+  {
+    id: 'phi-header-set',
+    regex: /setHeader\s*\(\s*['"`][^'"`]*(patient|ssn|mrn|dob|diagnosis|medical)/i,
+    severity: 'critical',
+    title: 'PHI in HTTP header',
+    description: 'PHI data is being set in HTTP headers, which may be logged or cached.',
+    recommendation: 'Never transmit PHI in HTTP headers. Use encrypted request/response body.',
+  },
+  {
+    id: 'phi-header-object',
+    regex: /headers\s*[:=]\s*\{[^}]*(patient|ssn|mrn|dob|diagnosis|x-patient|x-medical)/i,
+    severity: 'critical',
+    title: 'PHI in headers object',
+    description: 'Headers object contains PHI-related fields.',
+    recommendation: 'Remove PHI from headers. Transmit sensitive data in encrypted request body only.',
+  },
+  {
+    id: 'phi-authorization-header',
+    regex: /authorization.*patient|patient.*authorization/i,
+    severity: 'high',
+    title: 'Patient data in authorization context',
+    description: 'Patient identifiers may be exposed in authorization headers.',
+    recommendation: 'Use opaque session tokens for authorization, not patient identifiers.',
+  },
+
+  // === PHI in Email ===
+  {
+    id: 'phi-email-body',
+    regex: /(sendMail|sendEmail|send_email|mailer\.send)\s*\([^)]*patient/i,
+    severity: 'high',
+    title: 'PHI in email content',
+    description: 'Patient data may be included in email body, which is typically unencrypted.',
+    recommendation: 'Avoid sending PHI via email. Use secure patient portals with authentication.',
+  },
+  {
+    id: 'phi-email-template',
+    regex: /(email|mail).*template.*patient|patient.*(email|mail).*template/i,
+    severity: 'high',
+    title: 'PHI in email template',
+    description: 'Email templates may contain patient data placeholders.',
+    recommendation: 'Do not include PHI in email templates. Send secure links to authenticated portals instead.',
+  },
+  {
+    id: 'phi-email-subject',
+    regex: /subject\s*[:=].*patient|subject.*diagnosis|subject.*medical/i,
+    severity: 'medium',
+    title: 'Potential PHI in email subject',
+    description: 'Email subject lines may contain patient-related information.',
+    recommendation: 'Keep email subjects generic. Never include patient names, diagnoses, or identifiers.',
+  },
+
+  // === PHI Logging Without Redaction ===
+  {
+    id: 'phi-logger-unredacted',
+    regex: /logger\.(info|debug|warn|error)\s*\([^)]*patient(?!.*redact|.*mask|.*sanitize)/i,
+    severity: 'high',
+    title: 'PHI logged without redaction',
+    description: 'Patient data is being logged without apparent redaction or masking.',
+    recommendation: 'Implement PHI redaction in logging. Use structured logging with automatic PII masking.',
+  },
+  {
+    id: 'phi-log-file',
+    regex: /writeFile.*log.*patient|patient.*writeFile.*log/i,
+    severity: 'high',
+    title: 'PHI written to log file',
+    description: 'Patient data may be written directly to log files.',
+    recommendation: 'Use structured logging with PHI redaction. Never write raw PHI to log files.',
+  },
+  {
+    id: 'phi-debug-output',
+    regex: /debug\s*[:=]\s*true.*patient|patient.*debug\s*[:=]\s*true/i,
+    severity: 'medium',
+    title: 'Debug mode with patient data',
+    description: 'Debug mode enabled in code handling patient data may expose PHI.',
+    recommendation: 'Ensure debug logging excludes PHI or uses proper redaction.',
+  },
 ];
