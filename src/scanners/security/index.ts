@@ -224,6 +224,26 @@ const SECURITY_PATTERNS: Array<{
     recommendation: 'Even with raw queries, use parameter binding for user-supplied values.',
     fixType: 'sql-injection-template',
   },
+
+  // === Cookie Security ===
+  {
+    regex: /res\.cookie\s*\([^)]+\)(?!.*httpOnly)/i,
+    id: 'cookie-no-httponly',
+    severity: 'high' as const,
+    title: 'Cookie without httpOnly flag',
+    description: 'Cookies without httpOnly can be accessed by JavaScript, enabling XSS attacks.',
+    recommendation: 'Add httpOnly: true and secure: true to all cookies, especially session cookies.',
+    fixType: 'cookie-insecure',
+  },
+  {
+    regex: /cookie\s*:\s*\{[^}]*\}(?!.*httpOnly)/i,
+    id: 'cookie-config-insecure',
+    severity: 'high' as const,
+    title: 'Cookie configuration missing security flags',
+    description: 'Cookie configuration is missing httpOnly and/or secure flags.',
+    recommendation: 'Always set httpOnly: true, secure: true for cookies handling sensitive data.',
+    fixType: 'cookie-insecure',
+  },
 ];
 
 export const securityScanner: Scanner = {

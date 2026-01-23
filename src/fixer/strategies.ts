@@ -149,6 +149,96 @@ const fixStrategies: Record<FixType, FixStrategy> = {
     }
     return null;
   },
+
+  'phi-localstorage': (line: string): string | null => {
+    // Pattern: localStorage.setItem("patientData", data)
+    // Convert to: comment with suggestion to use server-side session
+    const match = line.match(/^(\s*)localStorage\.(setItem|getItem)\s*\(/);
+    if (match) {
+      const indent = match[1];
+      return `${indent}// [VLAYER] PHI in localStorage removed - use server-side session storage instead\n${indent}// TODO: Replace with: await sessionApi.store(key, encryptedData)\n${indent}// Original: ${line.trim()}`;
+    }
+    return null;
+  },
+
+  'phi-url-param': (line: string): string | null => {
+    // Pattern: fetch(`/api?patientId=${id}`)
+    // Convert to: suggestion to use POST with body
+    const match = line.match(/^(\s*)(fetch|axios\.get|http\.get)\s*\(\s*[`'"]/);
+    if (match) {
+      const indent = match[1];
+      const method = match[2];
+      return `${indent}// [VLAYER] PHI in URL params - use POST with encrypted body instead\n${indent}// TODO: Replace with: ${method === 'fetch' ? "fetch(url, { method: 'POST', body: JSON.stringify({ patientId }) })" : 'axios.post(url, { patientId })'}\n${indent}// Original: ${line.trim()}`;
+    }
+    return null;
+  },
+
+  'phi-log-unredacted': (line: string): string | null => {
+    // Pattern: logger.info("Patient data", patientData)
+    // Convert to: logger.info("Patient data", redactPHI(patientData))
+    const match = line.match(/(logger\.(log|info|debug|warn|error))\s*\(\s*(['"`][^'"`]*['"`])\s*,\s*(\w+)/);
+    if (match) {
+      const [fullMatch, loggerCall, , message, variable] = match;
+      return line.replace(
+        new RegExp(`(${loggerCall.replace('.', '\\.')}\\s*\\(\\s*${message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,\\s*)${variable}`),
+        `$1redactPHI(${variable})`
+      );
+    }
+    // Simpler pattern: logger.info(patientData)
+    const simpleMatch = line.match(/(logger\.(log|info|debug|warn|error))\s*\(\s*(\w*patient\w*)\s*\)/i);
+    if (simpleMatch) {
+      const [, loggerCall, , variable] = simpleMatch;
+      return line.replace(
+        new RegExp(`(${loggerCall.replace('.', '\\.')}\\s*\\()${variable}(\\s*\\))`),
+        `$1redactPHI(${variable})$2`
+      );
+    }
+    return null;
+  },
+
+  'cookie-insecure': (line: string): string | null => {
+    // Pattern: cookie: { maxAge: 3600 } or res.cookie('session', value)
+    // Add httpOnly: true, secure: true
+
+    // Pattern 1: cookie options object without httpOnly
+    const optionsMatch = line.match(/cookie\s*:\s*\{([^}]*)\}/);
+    if (optionsMatch && !line.includes('httpOnly')) {
+      const options = optionsMatch[1];
+      const newOptions = options.trim() ? `${options.trim()}, httpOnly: true, secure: true` : 'httpOnly: true, secure: true';
+      return line.replace(/cookie\s*:\s*\{[^}]*\}/, `cookie: { ${newOptions} }`);
+    }
+
+    // Pattern 2: res.cookie() without options
+    const resCookieMatch = line.match(/(res\.cookie\s*\(\s*['"`][^'"`]+['"`]\s*,\s*\w+)\s*\)/);
+    if (resCookieMatch && !line.includes('httpOnly')) {
+      return line.replace(
+        /(res\.cookie\s*\(\s*['"`][^'"`]+['"`]\s*,\s*\w+)\s*\)/,
+        '$1, { httpOnly: true, secure: true })'
+      );
+    }
+
+    return null;
+  },
+
+  'backup-unencrypted': (line: string): string | null => {
+    // Pattern: writeFile('backup.sql', data) or backup.sql without encryption
+    // Add encryption suggestion
+    const match = line.match(/^(\s*)(fs\.)?writeFile\s*\(\s*(['"`][^'"`]*backup[^'"`]*['"`])/i);
+    if (match) {
+      const indent = match[1];
+      const filePath = match[3];
+      return `${indent}// [VLAYER] Unencrypted backup - encrypt before writing\n${indent}// TODO: const encrypted = await crypto.encrypt(data, process.env.BACKUP_KEY);\n${indent}// Then write encrypted data to ${filePath}.enc\n${indent}// Original: ${line.trim()}`;
+    }
+
+    // Pattern for backup config
+    const configMatch = line.match(/^(\s*).*backup.*=.*\.(sql|csv|json|txt)/i);
+    if (configMatch && !line.includes('encrypt') && !line.includes('gpg')) {
+      const indent = configMatch[1];
+      return `${indent}// [VLAYER] Use encrypted backup format (.gpg, .enc) or enable encryption\n${indent}${line.trim()}`;
+    }
+
+    return null;
+  },
 };
 
 export function applyFixStrategy(line: string, fixType: FixType): string | null {

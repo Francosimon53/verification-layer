@@ -99,6 +99,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'PHI stored in localStorage',
     description: 'PHI data is being stored in localStorage which is not encrypted and persists indefinitely.',
     recommendation: 'Never store PHI in localStorage. Use encrypted server-side storage with proper access controls.',
+    fixType: 'phi-localstorage',
   },
   {
     id: 'phi-sessionstorage',
@@ -159,6 +160,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'PHI in URL query parameter',
     description: 'PHI identifiers are being passed as URL query parameters, which may be logged in server logs, browser history, and referrer headers.',
     recommendation: 'Never pass PHI in URLs. Use POST requests with encrypted body or session-based lookups.',
+    fixType: 'phi-url-param',
   },
   {
     id: 'phi-url-interpolation',
@@ -237,6 +239,7 @@ export const PHI_PATTERNS: PHIPattern[] = [
     title: 'PHI logged without redaction',
     description: 'Patient data is being logged without apparent redaction or masking.',
     recommendation: 'Implement PHI redaction in logging. Use structured logging with automatic PII masking.',
+    fixType: 'phi-log-unredacted',
   },
   {
     id: 'phi-log-file',

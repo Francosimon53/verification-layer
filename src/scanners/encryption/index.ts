@@ -24,10 +24,10 @@ const MISSING_ENCRYPTION_PATTERNS: Array<{
   { regex: /verify\s*[:=]\s*false.*ssl/i, issue: 'SSL verification disabled', severity: 'critical' as const },
   { regex: /rejectUnauthorized\s*:\s*false/i, issue: 'TLS certificate validation disabled', severity: 'critical' as const },
   // Unencrypted backup patterns
-  { regex: /backup.*encrypt\s*[:=]\s*false|encrypt\s*[:=]\s*false.*backup/i, issue: 'Backup encryption disabled', severity: 'critical' as const },
+  { regex: /backup.*encrypt\s*[:=]\s*false|encrypt\s*[:=]\s*false.*backup/i, issue: 'Backup encryption disabled', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
   { regex: /mysqldump(?!.*--ssl).*password|pg_dump(?!.*--ssl)/i, issue: 'Database backup without SSL', severity: 'high' as const },
-  { regex: /backup.*(\.sql|\.csv|\.json|\.txt)\b(?!.*encrypt|.*gpg|.*aes)/i, issue: 'Unencrypted backup file format', severity: 'high' as const },
-  { regex: /writeFile.*backup.*patient|patient.*backup.*writeFile/i, issue: 'PHI backup without encryption', severity: 'critical' as const },
+  { regex: /backup.*(\.sql|\.csv|\.json|\.txt)\b(?!.*encrypt|.*gpg|.*aes)/i, issue: 'Unencrypted backup file format', severity: 'high' as const, fixType: 'backup-unencrypted' as FixType },
+  { regex: /writeFile.*backup.*patient|patient.*backup.*writeFile/i, issue: 'PHI backup without encryption', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
   { regex: /s3.*upload.*backup(?!.*encrypt|.*sse|.*kms)/i, issue: 'S3 backup without server-side encryption', severity: 'high' as const },
   { regex: /backup.*storage(?!.*encrypt)|storage.*backup(?!.*encrypt)/i, issue: 'Backup storage without encryption specified', severity: 'medium' as const },
 ];

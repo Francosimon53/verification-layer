@@ -21,7 +21,12 @@ export type FixType =
   | 'api-key-exposed'
   | 'phi-console-log'
   | 'http-url'
-  | 'innerhtml-unsanitized';
+  | 'innerhtml-unsanitized'
+  | 'phi-localstorage'
+  | 'phi-url-param'
+  | 'phi-log-unredacted'
+  | 'cookie-insecure'
+  | 'backup-unencrypted';
 
 export interface Finding {
   id: string;
