@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/Francosimon53/verification-layer/compare/v0.6.1...v0.7.0) (2026-01-26)
+
+
+### Features
+
+* **vscode-vlayer:** add Slack/Teams notifications for HIPAA findings ([182ec62](https://github.com/Francosimon53/verification-layer/commit/182ec6223b4dbc7b917e729e0f63c8e72a3d502f))
+
 ## [0.6.1](https://github.com/Francosimon53/verification-layer/compare/v0.6.0...v0.6.1) (2026-01-26)
 
 
