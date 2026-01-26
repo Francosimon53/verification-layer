@@ -8,5 +8,6 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-node_modules/**
-!node_modules/verification-layer/**
+**/node_modules/**
+../**
+package-lock.json
