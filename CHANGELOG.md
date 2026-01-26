@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/Francosimon53/verification-layer/compare/v0.5.2...v0.6.0) (2026-01-26)
+
+
+### Features
+
+* add VS Code extension for HIPAA compliance scanning ([852ca1b](https://github.com/Francosimon53/verification-layer/commit/852ca1b126f867ea45cb01aee3b738a3360eea82))
+
 ## [0.5.2](https://github.com/Francosimon53/verification-layer/compare/v0.5.1...v0.5.2) (2026-01-26)
 
 
