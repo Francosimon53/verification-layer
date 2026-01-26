@@ -297,6 +297,7 @@ Each finding maps to specific HIPAA regulations:
 
 ### Coming Soon
 - [x] GitHub Action for CI/CD integration
+- [x] Automated npm releases with semantic-release
 - [ ] VS Code extension with inline warnings
 - [ ] Slack/Teams notifications for new findings
 - [ ] Custom rule definitions (YAML)
