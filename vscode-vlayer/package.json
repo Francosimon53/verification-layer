@@ -1,0 +1,100 @@
+{
+  "name": "vlayer",
+  "displayName": "HIPAA Compliance Scanner",
+  "description": "Inline HIPAA compliance warnings using verification-layer",
+  "version": "0.1.0",
+  "publisher": "vlayer",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vlayer.scan",
+        "title": "Scan Workspace for HIPAA Issues",
+        "category": "vlayer"
+      },
+      {
+        "command": "vlayer.scanFile",
+        "title": "Scan Current File for HIPAA Issues",
+        "category": "vlayer"
+      }
+    ],
+    "configuration": {
+      "title": "HIPAA Compliance Scanner",
+      "properties": {
+        "vlayer.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable HIPAA compliance scanning"
+        },
+        "vlayer.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scan files when saved"
+        },
+        "vlayer.categories": {
+          "type": "array",
+          "default": [
+            "phi-exposure",
+            "encryption",
+            "audit-logging",
+            "access-control",
+            "data-retention"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "phi-exposure",
+              "encryption",
+              "audit-logging",
+              "access-control",
+              "data-retention"
+            ]
+          },
+          "description": "Categories to scan for"
+        },
+        "vlayer.exclude": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/.git/**"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns to exclude from scanning"
+        },
+        "vlayer.debounceDelay": {
+          "type": "number",
+          "default": 1000,
+          "description": "Delay in ms before rescanning after file changes"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "npm run compile -- --watch",
+    "lint": "eslint src --ext ts",
+    "pretest": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.19.8",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "verification-layer": "file:../node_modules/verification-layer"
+  }
+}
