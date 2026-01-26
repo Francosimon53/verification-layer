@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'fs/promises';
-import type { Finding, FixResult, FixReport, FixType, AuditEvidence, AuditTrail } from '../types.js';
+import type { Finding, FixResult, FixReport, AuditTrail } from '../types.js';
 import { applyFixStrategy } from './strategies.js';
-import { createEvidence, hashContent } from '../audit/evidence.js';
+import { createEvidence } from '../audit/evidence.js';
 import {
   createAuditTrail,
   addEvidence,

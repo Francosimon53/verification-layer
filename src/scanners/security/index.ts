@@ -51,7 +51,7 @@ const SECURITY_PATTERNS: Array<{
 
   // === API Keys Exposure ===
   {
-    regex: /api[_-]?key\s*[:=]\s*['"`][A-Za-z0-9_\-]{20,}['"`]/i,
+    regex: /api[_-]?key\s*[:=]\s*['"`][A-Za-z0-9_-]{20,}['"`]/i,
     id: 'api-key-exposed',
     severity: 'critical' as const,
     title: 'API key exposed in source',
@@ -60,7 +60,7 @@ const SECURITY_PATTERNS: Array<{
     fixType: 'api-key-exposed',
   },
   {
-    regex: /apikey\s*[:=]\s*['"`][A-Za-z0-9_\-]{20,}['"`]/i,
+    regex: /apikey\s*[:=]\s*['"`][A-Za-z0-9_-]{20,}['"`]/i,
     id: 'apikey-exposed',
     severity: 'critical' as const,
     title: 'API key (apikey) exposed in source',
@@ -85,7 +85,7 @@ const SECURITY_PATTERNS: Array<{
     recommendation: 'Rotate this key immediately. Use IAM roles or environment variables instead.',
   },
   {
-    regex: /bearer\s+[A-Za-z0-9_\-\.]{20,}/i,
+    regex: /bearer\s+[A-Za-z0-9_.-]{20,}/i,
     id: 'bearer-token-exposed',
     severity: 'high' as const,
     title: 'Bearer token in source',
@@ -93,7 +93,7 @@ const SECURITY_PATTERNS: Array<{
     recommendation: 'Tokens should be fetched at runtime, not hardcoded.',
   },
   {
-    regex: /auth[_-]?token\s*[:=]\s*['"`][A-Za-z0-9_\-\.]{20,}['"`]/i,
+    regex: /auth[_-]?token\s*[:=]\s*['"`][A-Za-z0-9_.-]{20,}['"`]/i,
     id: 'auth-token-exposed',
     severity: 'critical' as const,
     title: 'Auth token exposed in source',

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname, basename, join } from 'path';
+import { basename, join } from 'path';
 import type {
   AuditTrail,
   AuditEvidence,

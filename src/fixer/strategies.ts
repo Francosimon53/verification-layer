@@ -178,7 +178,7 @@ const fixStrategies: Record<FixType, FixStrategy> = {
     // Convert to: logger.info("Patient data", redactPHI(patientData))
     const match = line.match(/(logger\.(log|info|debug|warn|error))\s*\(\s*(['"`][^'"`]*['"`])\s*,\s*(\w+)/);
     if (match) {
-      const [fullMatch, loggerCall, , message, variable] = match;
+      const [, loggerCall, , message, variable] = match;
       return line.replace(
         new RegExp(`(${loggerCall.replace('.', '\\.')}\\s*\\(\\s*${message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,\\s*)${variable}`),
         `$1redactPHI(${variable})`
