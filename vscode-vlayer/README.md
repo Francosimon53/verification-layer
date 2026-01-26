@@ -8,6 +8,7 @@ A VS Code extension that scans your codebase for HIPAA compliance issues and dis
 - **Automatic Scanning**: Scans your workspace on startup and when files are saved
 - **Quick Fixes**: Apply automatic fixes for common issues
 - **Status Bar**: Shows the count of compliance issues at a glance
+- **Slack/Teams Notifications**: Get notified of new findings via webhooks
 - **Configurable**: Enable/disable categories, exclude patterns, and more
 
 ## Compliance Categories
@@ -34,6 +35,24 @@ The extension scans for issues in these HIPAA compliance categories:
 | `vlayer.categories` | All | Categories to scan for |
 | `vlayer.exclude` | `node_modules`, `dist`, `.git` | Glob patterns to exclude |
 | `vlayer.debounceDelay` | `1000` | Delay in ms before rescanning |
+| `vlayer.notifications.enable` | `false` | Enable Slack/Teams notifications |
+| `vlayer.notifications.slackWebhook` | `""` | Slack incoming webhook URL |
+| `vlayer.notifications.teamsWebhook` | `""` | Microsoft Teams webhook URL |
+| `vlayer.notifications.minSeverity` | `high` | Minimum severity to notify |
+
+## Notifications Setup
+
+### Slack
+1. Create an [Incoming Webhook](https://api.slack.com/messaging/webhooks) in your Slack workspace
+2. Copy the webhook URL
+3. Add to VS Code settings: `"vlayer.notifications.slackWebhook": "https://hooks.slack.com/..."`
+4. Enable notifications: `"vlayer.notifications.enable": true`
+
+### Microsoft Teams
+1. Add an [Incoming Webhook](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) to your Teams channel
+2. Copy the webhook URL
+3. Add to VS Code settings: `"vlayer.notifications.teamsWebhook": "https://outlook.office.com/webhook/..."`
+4. Enable notifications: `"vlayer.notifications.enable": true`
 
 ## Severity Levels
 

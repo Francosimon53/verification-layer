@@ -2,7 +2,7 @@
   "name": "vlayer",
   "displayName": "HIPAA Compliance Scanner",
   "description": "Inline HIPAA compliance warnings using verification-layer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "vlayer",
   "engines": {
     "vscode": "^1.85.0"
@@ -77,6 +77,27 @@
           "type": "number",
           "default": 1000,
           "description": "Delay in ms before rescanning after file changes"
+        },
+        "vlayer.notifications.enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Slack/Teams notifications for new findings"
+        },
+        "vlayer.notifications.slackWebhook": {
+          "type": "string",
+          "default": "",
+          "description": "Slack incoming webhook URL for notifications"
+        },
+        "vlayer.notifications.teamsWebhook": {
+          "type": "string",
+          "default": "",
+          "description": "Microsoft Teams incoming webhook URL for notifications"
+        },
+        "vlayer.notifications.minSeverity": {
+          "type": "string",
+          "default": "high",
+          "enum": ["info", "low", "medium", "high", "critical"],
+          "description": "Minimum severity level to trigger notifications"
         }
       }
     }

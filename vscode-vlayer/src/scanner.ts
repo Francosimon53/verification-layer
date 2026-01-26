@@ -53,7 +53,7 @@ export async function scanFile(filePath: string, workspacePath: string): Promise
 
 export function scanWithDebounce(
   workspacePath: string,
-  callback: (result: ScanResult) => void,
+  callback: (result: ScanResult) => void | Promise<void>,
   delay?: number
 ): void {
   const config = vscode.workspace.getConfiguration('vlayer');

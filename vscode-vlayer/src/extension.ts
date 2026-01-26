@@ -11,6 +11,7 @@ import {
   invalidateCacheForFile,
 } from './scanner';
 import { registerCodeActionsProvider } from './codeActions';
+import { notifyNewFindings, resetNotificationState } from './notifications';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 let statusBarItem: vscode.StatusBarItem;
@@ -77,6 +78,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   clearCache();
+  resetNotificationState();
 }
 
 async function runFullScan(): Promise<void> {
@@ -105,6 +107,10 @@ async function runFullScan(): Promise<void> {
         const result = await scanWorkspace(workspacePath);
         updateDiagnostics(diagnosticCollection, result, workspacePath);
         updateStatusBar(result.findings.length);
+
+        // Send notifications for new findings
+        const workspaceName = workspaceFolders[0].name;
+        await notifyNewFindings(result, workspaceName);
 
         if (result.findings.length > 0) {
           const critical = result.findings.filter(
@@ -175,9 +181,11 @@ function onFileSaved(document: vscode.TextDocument): void {
   invalidateCacheForFile(document.uri.fsPath);
 
   // Debounced scan
-  scanWithDebounce(workspacePath, (result) => {
+  const workspaceName = workspaceFolders[0].name;
+  scanWithDebounce(workspacePath, async (result) => {
     updateDiagnostics(diagnosticCollection, result, workspacePath);
     updateStatusBar(result.findings.length);
+    await notifyNewFindings(result, workspaceName);
   });
 }
 
