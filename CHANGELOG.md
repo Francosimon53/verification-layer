@@ -1,3 +1,10 @@
+## [0.5.2](https://github.com/Francosimon53/verification-layer/compare/v0.5.1...v0.5.2) (2026-01-26)
+
+
+### Bug Fixes
+
+* test bypass 2fa token ([e897fbd](https://github.com/Francosimon53/verification-layer/commit/e897fbda2fcd23fbc278c8529f53129cc6300c39))
+
 ## [0.5.1](https://github.com/Francosimon53/verification-layer/compare/v0.5.0...v0.5.1) (2026-01-26)
 
 
