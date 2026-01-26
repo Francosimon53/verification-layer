@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/Francosimon53/verification-layer/compare/v0.5.0...v0.5.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* test granular token release ([ea6138b](https://github.com/Francosimon53/verification-layer/commit/ea6138b4a06a146883217c97e508ba6b02825dcd))
+
 # [0.5.0](https://github.com/Francosimon53/verification-layer/compare/v0.4.0...v0.5.0) (2026-01-26)
 
 
