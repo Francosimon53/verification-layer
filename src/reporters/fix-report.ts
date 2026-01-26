@@ -10,6 +10,11 @@ const FIX_TYPE_DESCRIPTIONS: Record<FixType, string> = {
   'phi-console-log': 'PHI in console.log -> commented out',
   'http-url': 'HTTP URL -> HTTPS',
   'innerhtml-unsanitized': 'innerHTML -> textContent',
+  'phi-localstorage': 'PHI in localStorage -> encrypted storage',
+  'phi-url-param': 'PHI in URL -> removed from URL',
+  'phi-log-unredacted': 'Unredacted PHI in log -> redactPHI()',
+  'cookie-insecure': 'Insecure cookie -> secure cookie options',
+  'backup-unencrypted': 'Unencrypted backup -> encrypted backup',
 };
 
 interface FileFixGroup {
