@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/Francosimon53/verification-layer/compare/v0.6.0...v0.6.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* **vscode-vlayer:** fix packaging for vsix distribution ([f502c5a](https://github.com/Francosimon53/verification-layer/commit/f502c5ae340db521112d1bbd07561ce8b1ee77c5))
+
 # [0.6.0](https://github.com/Francosimon53/verification-layer/compare/v0.5.2...v0.6.0) (2026-01-26)
 
 
