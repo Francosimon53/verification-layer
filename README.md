@@ -295,7 +295,7 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Coming Soon
-- [ ] GitHub Action for CI/CD integration
+- [x] GitHub Action for CI/CD integration
 - [ ] VS Code extension with inline warnings
 - [ ] Slack/Teams notifications for new findings
 - [ ] Custom rule definitions (YAML)
