@@ -2,9 +2,10 @@
 
 **Automated security scanning for healthcare applications.** Detect PHI exposure, fix vulnerabilities, and generate audit-ready compliance reports.
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
+[![CI](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/verification-layer)](https://www.npmjs.com/package/verification-layer)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](package.json)
 
 ---
 
