@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+
+TMPFILE="/tmp/vlayer-precommit.json"
+
+# Run vlayer scan and output JSON
+npx vlayer scan . -f json -o "$TMPFILE" 2>/dev/null
+
+if [ ! -f "$TMPFILE" ]; then
+  echo "⚠ vlayer scan did not produce output — skipping check"
+  exit 0
+fi
+
+# Parse results and check for critical/high findings
+node -e "
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('$TMPFILE', 'utf8'));
+const summary = data.summary || {};
+const critical = summary.critical || 0;
+const high = summary.high || 0;
+
+if (critical > 0) {
+  console.error('');
+  console.error('❌ COMMIT BLOCKED: ' + critical + ' critical HIPAA finding(s) detected');
+  console.error('');
+  const findings = (data.findings || []).filter(f => f.severity === 'critical');
+  findings.forEach(f => {
+    console.error('  • [CRITICAL] ' + f.message + ' (' + (f.file || 'unknown') + ':' + (f.line || '?') + ')');
+  });
+  console.error('');
+  console.error('Fix critical issues before committing.');
+  process.exit(1);
+}
+
+if (high > 0) {
+  console.warn('');
+  console.warn('⚠ WARNING: ' + high + ' high-severity HIPAA finding(s) detected');
+  const findings = (data.findings || []).filter(f => f.severity === 'high');
+  findings.forEach(f => {
+    console.warn('  • [HIGH] ' + f.message + ' (' + (f.file || 'unknown') + ':' + (f.line || '?') + ')');
+  });
+  console.warn('');
+}
+"
+
+EXIT_CODE=$?
+
+rm -f "$TMPFILE"
+
+exit $EXIT_CODE
