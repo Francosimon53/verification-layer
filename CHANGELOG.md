@@ -1,3 +1,10 @@
+# [0.9.0](https://github.com/Francosimon53/verification-layer/compare/v0.8.0...v0.9.0) (2026-01-27)
+
+
+### Features
+
+* add GitHub Actions workflow for HIPAA PR checks ([777bff5](https://github.com/Francosimon53/verification-layer/commit/777bff5479d11c9c3d084e08ea67cb8a8a2fe7e4))
+
 # [0.8.0](https://github.com/Francosimon53/verification-layer/compare/v0.7.0...v0.8.0) (2026-01-27)
 
 
