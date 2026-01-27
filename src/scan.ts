@@ -9,6 +9,7 @@ import { retentionScanner } from './scanners/retention/index.js';
 import { securityScanner } from './scanners/security/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
+import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -83,6 +84,27 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
         findings.push(...extraFindings);
       }
     }
+  }
+
+  // Load and apply custom rules
+  const { rules: customRules, errors: ruleErrors } = await loadCustomRules(
+    options.path,
+    config.customRulesPath
+  );
+
+  if (ruleErrors.length > 0) {
+    // Log errors but continue scanning
+    for (const error of ruleErrors) {
+      console.warn(`[vlayer] Warning: ${error.error} (${error.file})`);
+      if (error.details) {
+        console.warn(`         ${error.details}`);
+      }
+    }
+  }
+
+  if (customRules.length > 0) {
+    const customFindings = await scanWithCustomRules(filteredFiles, optionsWithConfig, customRules);
+    findings.push(...customFindings);
   }
 
   // Sort findings by severity

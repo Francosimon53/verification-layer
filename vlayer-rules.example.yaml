@@ -1,0 +1,132 @@
+# vlayer-rules.yaml
+# Custom compliance rules for vlayer scanner
+#
+# Place this file in your project root as vlayer-rules.yaml
+# Or create multiple files in .vlayer/rules/*.yaml
+#
+# Documentation: https://github.com/Francosimon53/verification-layer
+
+version: "1.0"
+
+rules:
+  # Example: Detect potential credit card numbers
+  - id: custom-pci-card-number
+    name: Credit Card Number Detected
+    description: Detects potential credit card numbers in source code
+    category: phi-exposure  # phi-exposure | encryption | audit-logging | access-control | data-retention
+    severity: critical      # critical | high | medium | low | info
+
+    # Regex pattern to match (JavaScript regex syntax)
+    pattern: '\b(?:\d{4}[-\s]?){3}\d{4}\b'
+    flags: gi  # regex flags (optional, default: gi)
+
+    # File filtering (optional)
+    include:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.tsx"
+      - "**/*.jsx"
+    exclude:
+      - "**/*.test.ts"
+      - "**/*.spec.ts"
+      - "**/mocks/**"
+      - "**/__tests__/**"
+
+    # Recommendation shown to developers
+    recommendation: "Never hardcode credit card numbers. Use tokenization or secure vaults like Stripe Vault."
+
+    # Optional HIPAA/compliance reference
+    hipaaReference: "PCI-DSS 3.4"
+
+    # Optional auto-fix (experimental)
+    # fix:
+    #   type: replace
+    #   replacement: "process.env.CARD_TOKEN"
+
+  # Example: Internal API using HTTP instead of HTTPS
+  - id: custom-internal-api-http
+    name: Internal API using HTTP
+    description: Internal APIs should use HTTPS for secure communication
+    category: encryption
+    severity: high
+    pattern: 'http://api\.internal\.'
+    recommendation: "Use HTTPS for all internal API calls. Update to https://api.internal."
+
+  # Example: Debug logging that shouldn't reach production
+  - id: custom-debug-logging
+    name: Debug Logging in Production
+    description: Debug and trace statements should not reach production code
+    category: audit-logging
+    severity: medium
+    pattern: 'console\.(debug|trace)\('
+    include:
+      - "**/*.ts"
+      - "**/*.js"
+    exclude:
+      - "**/*.test.ts"
+      - "**/*.spec.ts"
+    recommendation: "Remove debug logging or use a proper logging framework with configurable log levels"
+
+  # Example: Rule with negative lookahead (must NOT match)
+  # This finds database connections that are missing SSL configuration
+  - id: custom-require-db-ssl
+    name: Database Connection Without SSL
+    description: Database connections must use SSL/TLS encryption
+    category: encryption
+    severity: critical
+    # Match any createConnection call
+    pattern: 'createConnection\(\{'
+    # But only flag it if ssl: true is NOT present
+    mustNotContain: 'ssl:\s*true'
+    include:
+      - "**/*.ts"
+      - "**/*.js"
+    recommendation: "Add ssl: true to database connection options for encrypted connections"
+    hipaaReference: "§164.312(e)(1)"
+
+  # Example: Hardcoded API endpoints
+  - id: custom-hardcoded-api-url
+    name: Hardcoded API URL
+    description: API URLs should be configurable via environment variables
+    category: access-control
+    severity: medium
+    pattern: '(fetch|axios|http\.get)\s*\(\s*[''"]https?://'
+    exclude:
+      - "**/*.test.ts"
+      - "**/*.spec.ts"
+      - "**/mocks/**"
+    recommendation: "Use environment variables for API URLs (e.g., process.env.API_URL)"
+
+  # Example: Detect potential PII in variable names
+  - id: custom-pii-variable-name
+    name: Potential PII in Variable Name
+    description: Variable names suggest they may contain personally identifiable information
+    category: phi-exposure
+    severity: low
+    pattern: '\b(ssn|socialSecurity|dateOfBirth|dob|passport|driversLicense)\s*[=:]'
+    flags: i
+    recommendation: "Ensure PII is properly encrypted and access-controlled. Consider using generic names."
+    hipaaReference: "§164.502, §164.514"
+
+  # Example: Weak password requirements
+  - id: custom-weak-password-regex
+    name: Weak Password Validation
+    description: Password validation appears to allow weak passwords
+    category: access-control
+    severity: high
+    pattern: 'password.*\.length\s*[<>=]+\s*[0-6]'
+    recommendation: "Require passwords of at least 8 characters with complexity requirements"
+    hipaaReference: "§164.312(d)"
+
+  # Example: Missing rate limiting hint
+  - id: custom-api-no-rate-limit
+    name: API Endpoint Without Rate Limiting
+    description: API endpoints should implement rate limiting
+    category: access-control
+    severity: medium
+    pattern: '@(Get|Post|Put|Delete|Patch)\([''"]/'
+    mustNotContain: '@(RateLimit|Throttle)'
+    include:
+      - "**/*.controller.ts"
+      - "**/*.controller.js"
+    recommendation: "Add rate limiting decorator to prevent abuse (@RateLimit or @Throttle)"

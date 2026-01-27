@@ -10,6 +10,7 @@ import { applyFixes } from './fixer/index.js';
 import { generateFixReport } from './reporters/fix-report.js';
 import { loadAuditTrail, getAuditSummary } from './audit/index.js';
 import { generateAuditReport, generateTextAuditReport } from './reporters/audit-report.js';
+import { loadCustomRules, validateRulesFile } from './rules/index.js';
 import type { ComplianceCategory, ReportOptions, AuditReportOptions } from './types.js';
 
 const program = new Command();
@@ -28,6 +29,7 @@ program
   .option('-o, --output <path>', 'Output file path for the report')
   .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
   .option('--config <path>', 'Path to configuration file')
+  .option('--rules <path>', 'Path to custom rules YAML file')
   .option('--fix', 'Automatically fix detected issues where possible')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
@@ -229,6 +231,100 @@ program
   .description('Initialize a vlayer configuration file')
   .action(() => {
     console.log(chalk.yellow('Configuration initialization not yet implemented'));
+  });
+
+// Rules subcommands
+const rulesCommand = program
+  .command('rules')
+  .description('Manage custom compliance rules');
+
+rulesCommand
+  .command('list')
+  .description('List all loaded custom rules')
+  .argument('[path]', 'Path to the project', '.')
+  .option('--rules <path>', 'Path to custom rules YAML file')
+  .action(async (path: string, options) => {
+    const absolutePath = resolve(path);
+
+    try {
+      const { rules, errors } = await loadCustomRules(absolutePath, options.rules);
+
+      if (errors.length > 0) {
+        console.log(chalk.yellow('\nWarnings:'));
+        for (const error of errors) {
+          console.log(chalk.yellow(`  - ${error.error}`));
+          if (error.details) {
+            console.log(chalk.gray(`    ${error.details}`));
+          }
+        }
+      }
+
+      if (rules.length === 0) {
+        console.log(chalk.yellow('\nNo custom rules found.'));
+        console.log(chalk.gray('Create a vlayer-rules.yaml file or add rules to .vlayer/rules/'));
+        return;
+      }
+
+      console.log(chalk.bold(`\nLoaded ${rules.length} custom rule(s):\n`));
+
+      const severityColors: Record<string, typeof chalk.red> = {
+        critical: chalk.red,
+        high: chalk.yellow,
+        medium: chalk.hex('#ca8a04'),
+        low: chalk.green,
+        info: chalk.blue,
+      };
+
+      for (const rule of rules) {
+        const color = severityColors[rule.severity] || chalk.white;
+        console.log(`  ${chalk.cyan(rule.id)}`);
+        console.log(`    Name: ${rule.name}`);
+        console.log(`    Category: ${rule.category}`);
+        console.log(`    Severity: ${color(rule.severity)}`);
+        console.log(`    Pattern: ${chalk.gray(rule.pattern)}`);
+        if (rule.include) {
+          console.log(`    Include: ${chalk.gray(rule.include.join(', '))}`);
+        }
+        if (rule.exclude) {
+          console.log(`    Exclude: ${chalk.gray(rule.exclude.join(', '))}`);
+        }
+        console.log('');
+      }
+    } catch (error) {
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+rulesCommand
+  .command('validate')
+  .description('Validate a custom rules YAML file')
+  .argument('<file>', 'Path to the rules YAML file')
+  .action(async (file: string) => {
+    const absolutePath = resolve(file);
+    const spinner = ora('Validating rules file...').start();
+
+    try {
+      const result = await validateRulesFile(absolutePath);
+
+      if (result.valid) {
+        spinner.succeed(`Valid! Found ${result.rules} rule(s).`);
+      } else {
+        spinner.fail('Validation failed');
+        console.log(chalk.red('\nErrors:'));
+        for (const error of result.errors) {
+          console.log(chalk.red(`  - ${error.error}`));
+          if (error.details) {
+            console.log(chalk.gray(`    ${error.details}`));
+          }
+        }
+        process.exit(1);
+      }
+    } catch (error) {
+      spinner.fail('Validation failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
   });
 
 program.parse();

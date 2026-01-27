@@ -20,5 +20,7 @@
     "audit-logging",
     "access-control",
     "data-retention"
-  ]
+  ],
+  "customRulesPath": "./vlayer-rules.yaml",
+  "disableBuiltinRules": []
 }

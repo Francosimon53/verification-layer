@@ -103,6 +103,8 @@ export interface VlayerConfig {
   safeHttpDomains?: string[];
   contextLines?: number;
   categories?: ComplianceCategory[];
+  customRulesPath?: string;
+  disableBuiltinRules?: string[];
 }
 
 export interface FixResult {
@@ -183,4 +185,33 @@ export interface AuditReportOptions {
   includeManualReviews?: boolean;
   organizationName?: string;
   auditorName?: string;
+}
+
+// === Custom Rules Types ===
+
+export interface CustomRuleFix {
+  type: 'replace' | 'remove' | 'wrap';
+  replacement?: string;
+  wrapper?: {
+    before: string;
+    after: string;
+  };
+}
+
+export interface CompiledCustomRule {
+  id: string;
+  name: string;
+  description: string;
+  category: ComplianceCategory;
+  severity: Severity;
+  pattern: string;
+  flags?: string;
+  include?: string[];
+  exclude?: string[];
+  recommendation: string;
+  hipaaReference?: string;
+  mustNotContain?: string;
+  fix?: CustomRuleFix;
+  compiledPattern: RegExp;
+  compiledMustNotContain?: RegExp;
 }
