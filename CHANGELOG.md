@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/Francosimon53/verification-layer/compare/v0.7.0...v0.8.0) (2026-01-27)
+
+
+### Features
+
+* add custom YAML rule definitions support ([327e18f](https://github.com/Francosimon53/verification-layer/commit/327e18fbd2d1c48d1e84722604bf7bb5450342f3))
+
 # [0.7.0](https://github.com/Francosimon53/verification-layer/compare/v0.6.1...v0.7.0) (2026-01-26)
 
 
