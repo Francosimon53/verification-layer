@@ -307,6 +307,53 @@ const result = await scan('./src', {
 console.log(`Found ${result.findings.length} issues`);
 ```
 
+## Detection Categories
+
+| Category | Patterns | Severity Range | Examples |
+|----------|----------|----------------|----------|
+| **PHI Exposure** | 18 | Critical–Medium | SSN hardcoding, PHI in localStorage, patient data in URLs, PHI in logs |
+| **Encryption** | 20+ | Critical–Low | MD5/SHA1/DES/RC4, HTTP URLs, disabled SSL/TLS, unencrypted backups |
+| **Access Control** | 10+ | Critical–Medium | SQL injection, XSS, CORS wildcards, hardcoded credentials |
+| **Audit Logging** | 5+ | High–Medium | Missing logging framework, unlogged PHI operations |
+| **Data Retention** | 5+ | High–Medium | Bulk deletes without audit, missing retention policies |
+| **Security** | 10+ | Critical–Low | eval(), hardcoded API keys, insecure cookies, missing auth |
+
+### Auto-Fix Strategies (13)
+
+| Strategy | Detection | Fix Applied |
+|----------|-----------|-------------|
+| `sql-injection-template` | `` `SELECT ${var}` `` | `query('SELECT ?', [var])` |
+| `sql-injection-concat` | `"SELECT " + var` | `query('SELECT ?', [var])` |
+| `hardcoded-password` | `password = "secret"` | `password = process.env.PASSWORD` |
+| `hardcoded-secret` | `secret = "xyz"` | `secret = process.env.SECRET` |
+| `api-key-exposed` | `apiKey = "key123"` | `apiKey = process.env.API_KEY` |
+| `phi-console-log` | `console.log(patient)` | `// [VLAYER] PHI removed` |
+| `http-url` | `http://example.com` | `https://example.com` |
+| `innerhtml-unsanitized` | `.innerHTML = text` | `.textContent = text` |
+| `phi-localstorage` | `localStorage.setItem(...)` | `// [VLAYER] Use server-side session` |
+| `phi-url-param` | `` fetch(`/api?id=${id}`) `` | `// [VLAYER] Use POST with body` |
+| `phi-log-unredacted` | `logger.info(..., patient)` | `logger.info(..., redactPHI(patient))` |
+| `cookie-insecure` | `cookie: {}` | `cookie: { httpOnly: true, secure: true }` |
+| `backup-unencrypted` | `writeFile('backup.sql', ...)` | `// [VLAYER] Encrypt before writing` |
+
+## Notifications
+
+```
+┌───────────────────────────────────────────────────┐
+│              NOTIFICATION FLOW                     │
+│                                                    │
+│  Scan Result ──► New findings? ──► Filter by       │
+│                  (diff check)      minSeverity     │
+│                                        │           │
+│                        ┌───────────────┼────────┐  │
+│                        ▼               ▼        │  │
+│                  ┌──────────┐   ┌───────────┐   │  │
+│                  │  Slack   │   │  Teams    │   │  │
+│                  │ Webhook  │   │ Webhook   │   │  │
+│                  └──────────┘   └───────────┘   │  │
+└───────────────────────────────────────────────────┘
+```
+
 ## Current Metrics
 
 | Metric          | Value |
@@ -319,3 +366,37 @@ console.log(`Found ${result.findings.length} issues`);
 | Databases detected  | 8  |
 | Auth providers detected | 7 |
 | Report formats  | 4 (JSON, HTML, Markdown, PDF) |
+
+## Roadmap
+
+### Done
+- [x] Core scan engine with 6 category scanners
+- [x] 88 detection patterns across HIPAA categories
+- [x] 13 auto-fix strategies with bottom-to-top processing
+- [x] JSON, HTML, Markdown, PDF report generation
+- [x] Tech stack detection (10 frameworks, 8 databases, 7 auth)
+- [x] Custom rules engine (YAML with Zod validation)
+- [x] Cryptographic audit trail with SHA256 evidence
+- [x] GitHub Actions PR compliance gate
+- [x] CI/CD with semantic-release
+- [x] Dependabot for dependency updates
+- [x] Pre-commit hook (husky) for local scanning
+- [x] 253 test cases with Vitest
+
+### In Progress
+- [ ] VS Code extension — inline diagnostics + code actions
+- [ ] Slack/Teams webhook notifications
+- [ ] npm publish to registry
+
+### Planned
+- [ ] HITRUST CSF mapping
+- [ ] SOC 2 compliance checks
+- [ ] AWS/GCP/Azure infrastructure scanning
+- [ ] Team dashboard with trend tracking
+- [ ] Jira/Linear integration for issue tracking
+
+### Future
+- [ ] AI-powered fix suggestions
+- [ ] Dependency vulnerability scanning
+- [ ] Runtime PHI detection agent
+- [ ] Compliance certification workflows
