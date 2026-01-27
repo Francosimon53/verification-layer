@@ -1,0 +1,125 @@
+name: HIPAA Compliance Check
+
+on:
+  pull_request:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  hipaa-scan:
+    name: HIPAA Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install vlayer
+        run: npm install -g verification-layer
+
+      - name: Run HIPAA scan
+        id: scan
+        continue-on-error: true
+        run: npx vlayer scan . -f json -o hipaa-results.json
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync('hipaa-results.json', 'utf8'));
+            } catch (e) {
+              core.setFailed('Failed to read scan results: ' + e.message);
+              return;
+            }
+
+            const { summary, findings, scannedFiles, scanDuration } = report;
+
+            const severityIcon = {
+              critical: '\u{1F534}',
+              high: '\u{1F7E0}',
+              medium: '\u{1F7E1}',
+              low: '\u{1F535}',
+              info: '\u26AA'
+            };
+
+            const severityOrder = ['critical', 'high', 'medium', 'low', 'info'];
+
+            // Summary table
+            const summaryRows = severityOrder.map(s => {
+              const icon = severityIcon[s];
+              const label = s.charAt(0).toUpperCase() + s.slice(1);
+              return `| ${icon} ${label} | ${summary[s]} |`;
+            }).join('\n');
+
+            let body = `<!-- vlayer-hipaa-check -->\n## \u{1F3E5} HIPAA Compliance Report\n\n`;
+
+            if (summary.total === 0) {
+              body += `\u2705 **No findings detected.**\n`;
+            } else {
+              body += `| Severity | Count |\n|----------|-------|\n${summaryRows}\n\n`;
+
+              // Group findings by severity
+              for (const sev of severityOrder) {
+                const group = findings.filter(f => f.severity === sev);
+                if (group.length === 0) continue;
+
+                const icon = severityIcon[sev];
+                const label = sev.charAt(0).toUpperCase() + sev.slice(1);
+                body += `### ${icon} ${label} (${group.length})\n\n`;
+                body += `| Finding | File | Line | HIPAA Ref |\n|---------|------|------|-----------|\n`;
+
+                for (const f of group) {
+                  const file = f.file ? `\`${f.file}\`` : '-';
+                  const line = f.line ?? '-';
+                  const ref = f.hipaaReference ?? '-';
+                  body += `| ${f.title} | ${file} | ${line} | ${ref} |\n`;
+                }
+
+                // Show first recommendation in the group
+                const rec = group.find(f => f.recommendation);
+                if (rec) {
+                  body += `\n> **Recommendation:** ${rec.recommendation}\n\n`;
+                }
+              }
+            }
+
+            const duration = (scanDuration / 1000).toFixed(1);
+            body += `\n---\n\u{1F4CA} Scanned ${scannedFiles} files in ${duration}s | Powered by [vlayer](https://vlayer.dev)\n`;
+
+            // Find existing comment
+            const marker = '<!-- vlayer-hipaa-check -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            // Fail if critical or high findings
+            if (summary.critical > 0 || summary.high > 0) {
+              core.setFailed(`Found ${summary.critical} critical and ${summary.high} high severity findings`);
+            }
