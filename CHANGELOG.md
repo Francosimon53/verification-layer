@@ -1,3 +1,10 @@
+# [0.10.0](https://github.com/Francosimon53/verification-layer/compare/v0.9.0...v0.10.0) (2026-01-27)
+
+
+### Features
+
+* add pre-commit hook to block commits with critical HIPAA findings ([c0a9e5a](https://github.com/Francosimon53/verification-layer/commit/c0a9e5a1f2bae9faee0daf9d4a5762912d793792)), closes [hi#severity](https://github.com/hi/issues/severity)
+
 # [0.9.0](https://github.com/Francosimon53/verification-layer/compare/v0.8.0...v0.9.0) (2026-01-27)
 
 
