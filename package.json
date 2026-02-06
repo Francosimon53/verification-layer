@@ -40,7 +40,15 @@
     "phi",
     "audit",
     "encryption",
-    "medical"
+    "medical",
+    "protected-health-information",
+    "vulnerability-scanner",
+    "static-analysis",
+    "security-scanner",
+    "hipaa-compliance",
+    "baseline",
+    "suppression",
+    "github-action"
   ],
   "author": "Simon Franco",
   "license": "MIT",
