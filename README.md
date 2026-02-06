@@ -19,6 +19,9 @@ vlayer is a CLI tool that scans your codebase for HIPAA compliance issues. It's 
 - Generate professional audit reports (HTML, PDF, JSON)
 - Detect your tech stack and provide tailored recommendations
 - Create cryptographic audit trails for compliance documentation
+- **Professional suppression system** with inline comments and justifications
+- **Baseline support** to focus on new findings while tracking existing issues
+- **Confidence levels** for progressive strictness adoption
 
 ---
 
@@ -40,6 +43,40 @@ node dist/cli.js scan /path/to/project --fix
 
 # Generate audit PDF
 node dist/cli.js audit /path/to/project --generate-report
+```
+
+---
+
+## Suppression & Baseline
+
+### Inline Suppressions
+
+Suppress specific findings with inline comments (justification required):
+
+```typescript
+// vlayer-ignore phi-ssn-hardcoded -- Test data for unit tests
+const testSSN = "123-45-6789";
+```
+
+### Baseline for Existing Codebases
+
+Generate a baseline to track existing findings without blocking progress:
+
+```bash
+# Generate baseline from current state
+node dist/cli.js baseline . -o .vlayer-baseline.json
+
+# Scan with baseline (only NEW findings cause failures)
+node dist/cli.js scan . --baseline .vlayer-baseline.json
+```
+
+### Confidence Levels
+
+Filter findings by confidence level for progressive adoption:
+
+```bash
+# Only fail on high-confidence findings
+node dist/cli.js scan . --min-confidence high
 ```
 
 ---
