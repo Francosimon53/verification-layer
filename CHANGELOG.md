@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/Francosimon53/verification-layer/compare/v0.14.0...v0.15.0) (2026-02-06)
+
+
+### Features
+
+* implement Phase 4A - Next.js Web Dashboard ([8e183e3](https://github.com/Francosimon53/verification-layer/commit/8e183e35c42a88f7446e93829c85e0dfd16ba473))
+
 # [0.14.0](https://github.com/Francosimon53/verification-layer/compare/v0.13.0...v0.14.0) (2026-02-06)
 
 
