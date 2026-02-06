@@ -7,10 +7,10 @@ export function Sidebar() {
   const pathname = usePathname();
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
-    { name: 'Projects', href: '/dashboard/projects', icon: ProjectsIcon },
-    { name: 'Reports', href: '/dashboard/reports', icon: ReportsIcon },
-    { name: 'Settings', href: '/dashboard/settings', icon: SettingsIcon },
+    { name: 'Dashboard', href: '/', icon: DashboardIcon },
+    { name: 'Projects', href: '/projects', icon: ProjectsIcon },
+    { name: 'Reports', href: '/reports', icon: ReportsIcon },
+    { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
   return (

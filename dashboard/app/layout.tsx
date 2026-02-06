@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Sidebar } from "@/components/Sidebar";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VLayer - HIPAA Compliance Scanner",
-  description: "HIPAA compliance scanner for healthcare developers. Detect, fix, and monitor violations in your code.",
+  title: "VLayer - HIPAA Compliance Dashboard",
+  description: "HIPAA compliance monitoring platform for healthcare developers. Track violations, compliance scores, and audit reports.",
 };
 
 export default function RootLayout({
@@ -20,7 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased bg-[#0F172A]`}>
-        {children}
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <main className="flex-1 ml-64">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );
