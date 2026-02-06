@@ -11,6 +11,8 @@ import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
 import { applyAcknowledgments } from './acknowledgments.js';
+import { applyInlineSuppressions } from './suppression.js';
+import { loadBaseline, applyBaseline } from './baseline.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -128,10 +130,35 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   };
 
   // Apply acknowledgments from configuration
-  const acknowledgedFindings = applyAcknowledgments(findings, config);
+  let processedFindings = applyAcknowledgments(findings, config);
+
+  // Apply inline suppressions
+  processedFindings = await applyInlineSuppressions(processedFindings);
+
+  // Apply baseline if provided
+  if (options.baselineFile) {
+    const baseline = await loadBaseline(options.baselineFile);
+    if (baseline) {
+      processedFindings = applyBaseline(processedFindings, baseline);
+    }
+  }
+
+  // Filter by minimum confidence if specified
+  if (options.minConfidence) {
+    const confidenceOrder = { high: 3, medium: 2, low: 1 };
+    const minLevel = confidenceOrder[options.minConfidence];
+    processedFindings = processedFindings.map(f => {
+      const fLevel = confidenceOrder[f.confidence || 'high'];
+      // If finding doesn't meet min confidence, mark it as baseline (don't fail on it)
+      if (fLevel < minLevel) {
+        return { ...f, isBaseline: true };
+      }
+      return f;
+    });
+  }
 
   return {
-    findings: acknowledgedFindings,
+    findings: processedFindings,
     scannedFiles: filteredFiles.length,
     scanDuration: Date.now() - startTime,
     stack,

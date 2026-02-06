@@ -27,7 +27,7 @@ jobs:
       - name: Run HIPAA scan
         id: scan
         continue-on-error: true
-        run: node dist/cli.js scan . -f json -o hipaa-results.json
+        run: node dist/cli.js scan . --baseline .vlayer-baseline.json --min-confidence high -f json -o hipaa-results.json
 
       - name: Post PR comment
         uses: actions/github-script@v7
@@ -64,13 +64,25 @@ jobs:
 
             let body = `<!-- vlayer-hipaa-check -->\n## \u{1F3E5} HIPAA Compliance Report\n\n`;
 
-            const unacknowledgedFindings = findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
+            const newFindings = findings.filter(f => !f.acknowledged && !f.suppressed && !f.isBaseline);
             const acknowledgedFindings = findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
+            const suppressedFindings = findings.filter(f => f.suppressed);
+            const baselineFindings = findings.filter(f => f.isBaseline);
 
             if (summary.total === 0) {
               body += `\u2705 **No findings detected.**\n`;
             } else if (summary.unacknowledged === 0) {
-              body += `\u2705 **No unacknowledged findings.** All ${summary.acknowledged} findings have been reviewed and acknowledged.\n\n`;
+              body += `\u2705 **No new findings.** All findings are acknowledged, suppressed, or in baseline.\n\n`;
+              if (summary.acknowledged > 0) {
+                body += `\u{1F4CB} ${summary.acknowledged} acknowledged | `;
+              }
+              if (summary.suppressed > 0) {
+                body += `\u{1F6AB} ${summary.suppressed} suppressed | `;
+              }
+              if (summary.baseline > 0) {
+                body += `\u{1F4C8} ${summary.baseline} baseline`;
+              }
+              body += '\n\n';
               body += `<details>\n<summary>\u{1F4CB} View ${summary.acknowledged} acknowledged findings</summary>\n\n`;
 
               for (const sev of severityOrder) {
@@ -93,15 +105,19 @@ jobs:
 
               body += `</details>\n`;
             } else {
-              body += `\u26A0\uFE0F **${summary.unacknowledged} unacknowledged findings require attention.**\n`;
-              if (summary.acknowledged > 0) {
-                body += `\u{1F4CB} ${summary.acknowledged} additional findings have been acknowledged.\n`;
+              body += `\u26A0\uFE0F **${summary.unacknowledged} new findings require attention.**\n\n`;
+              const statusParts = [];
+              if (summary.acknowledged > 0) statusParts.push(`\u{1F4CB} ${summary.acknowledged} acknowledged`);
+              if (summary.suppressed > 0) statusParts.push(`\u{1F6AB} ${summary.suppressed} suppressed`);
+              if (summary.baseline > 0) statusParts.push(`\u{1F4C8} ${summary.baseline} baseline`);
+              if (statusParts.length > 0) {
+                body += statusParts.join(' | ') + '\n';
               }
               body += `\n| Severity | Count |\n|----------|-------|\n${summaryRows}\n\n`;
 
-              // Group unacknowledged findings by severity
+              // Group new findings by severity
               for (const sev of severityOrder) {
-                const group = unacknowledgedFindings.filter(f => f.severity === sev);
+                const group = newFindings.filter(f => f.severity === sev);
                 if (group.length === 0) continue;
 
                 const icon = severityIcon[sev];

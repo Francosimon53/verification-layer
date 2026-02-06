@@ -1,0 +1,807 @@
+{
+  "version": "1.0",
+  "createdAt": "2026-02-06T16:54:32.027Z",
+  "findings": [
+    {
+      "hash": "7a4db3e330d72d98",
+      "id": "phi-phi-localstorage-153",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 154,
+      "title": "PHI stored in localStorage",
+      "severity": "critical",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "dea3b83d4009d7fe",
+      "id": "phi-phi-query-param-164",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 165,
+      "title": "PHI in URL query parameter",
+      "severity": "critical",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "5a73d99bdadad2b6",
+      "id": "phi-ssn-hardcoded-137",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 138,
+      "title": "Potential SSN detected",
+      "severity": "critical",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "c6559b6ea00a0092",
+      "id": "enc-weak-4560",
+      "file": "/Users/simonfranco/Projects/verification-layer/package-lock.json",
+      "line": 4561,
+      "title": "Weak cryptography: DES encryption",
+      "severity": "critical",
+      "category": "encryption"
+    },
+    {
+      "hash": "8f3eac62d7359e82",
+      "id": "enc-weak-8",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/encryption/index.ts",
+      "line": 9,
+      "title": "Weak cryptography: DES encryption",
+      "severity": "critical",
+      "category": "encryption"
+    },
+    {
+      "hash": "9c386d1f3613d4b1",
+      "id": "enc-weak-9",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/encryption/index.ts",
+      "line": 10,
+      "title": "Weak cryptography: RC4 encryption",
+      "severity": "critical",
+      "category": "encryption"
+    },
+    {
+      "hash": "759bf13a191b0fa4",
+      "id": "enc-missing-29",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/encryption/index.ts",
+      "line": 30,
+      "title": "Encryption issue: PHI backup without encryption",
+      "severity": "critical",
+      "category": "encryption"
+    },
+    {
+      "hash": "a3fc9166c0825047",
+      "id": "access-auth-bypass-466",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 467,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "9cd6c3637ecffa54",
+      "id": "access-auth-bypass-23",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 24,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "d5e42b25dde233ab",
+      "id": "access-auth-bypass-24",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 25,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "659005e41a734b46",
+      "id": "access-auth-bypass-26",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 27,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "652129d479a52aa6",
+      "id": "access-auth-bypass-27",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 28,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "49eeacc554c572b9",
+      "id": "access-auth-bypass-28",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 29,
+      "title": "Potential authentication bypass",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "b608f462c8ca7d85",
+      "id": "access-public-password-39",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 40,
+      "title": "Password field with public visibility",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "eea08fec489187c2",
+      "id": "access-public-password-42",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 43,
+      "title": "Password field with public visibility",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "c6a9776408541a1d",
+      "id": "access-public-password-43",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 44,
+      "title": "Password field with public visibility",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "cb251e07b501f24b",
+      "id": "security-sql-template-literal-22",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 23,
+      "title": "SQL query with template literal interpolation",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "3f7e85bd7eebbc49",
+      "id": "security-sql-string-concat-54",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 55,
+      "title": "SQL query string concatenation",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "46e0b49afbf88517",
+      "id": "security-hardcoded-password-78",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 79,
+      "title": "Hardcoded password detected",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "8425060605f1a198",
+      "id": "security-sql-string-concat-474",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 475,
+      "title": "SQL query string concatenation",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "25f13e68a468bcd3",
+      "id": "security-eval-usage-159",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/security/index.ts",
+      "line": 160,
+      "title": "eval() usage detected",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "76ef2c6667e7d3bf",
+      "id": "security-eval-usage-160",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/security/index.ts",
+      "line": 161,
+      "title": "eval() usage detected",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "c4d76d4cd4234dfb",
+      "id": "security-eval-usage-161",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/security/index.ts",
+      "line": 162,
+      "title": "eval() usage detected",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "06c47f4c986b87ee",
+      "id": "security-eval-usage-168",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/security/index.ts",
+      "line": 169,
+      "title": "eval() usage detected",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
+      "hash": "295202cf2c8ab64e",
+      "id": "phi-phi-fetch-url-164",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 165,
+      "title": "PHI in fetch URL",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "05113e7aba271aa2",
+      "id": "phi-phi-logger-unredacted-176",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 177,
+      "title": "PHI logged without redaction",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "dbf6b6dc997cfdb5",
+      "id": "phi-phi-logger-unredacted-177",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 178,
+      "title": "PHI logged without redaction",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "fbe05f7834472a8f",
+      "id": "phi-phi-logger-unredacted-186",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 187,
+      "title": "PHI logged without redaction",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "b52a709d03adae70",
+      "id": "phi-phi-logger-unredacted-137",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 138,
+      "title": "PHI logged without redaction",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "41f9190085240eef",
+      "id": "phi-phi-indexeddb-120",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 121,
+      "title": "PHI potentially stored in IndexedDB",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "010cc4ff498e61d4",
+      "id": "phi-phi-indexeddb-121",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 122,
+      "title": "PHI potentially stored in IndexedDB",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "00c829b8c66e7b42",
+      "id": "phi-phi-indexeddb-123",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 124,
+      "title": "PHI potentially stored in IndexedDB",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "793ce37e57839f0f",
+      "id": "phi-phi-indexeddb-124",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 125,
+      "title": "PHI potentially stored in IndexedDB",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "236eb40e0bfb3540",
+      "id": "phi-phi-indexeddb-125",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 126,
+      "title": "PHI potentially stored in IndexedDB",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "d9df5ac813c6546d",
+      "id": "phi-phi-authorization-header-200",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 201,
+      "title": "Patient data in authorization context",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "6954c48b48e9e1d6",
+      "id": "phi-phi-authorization-header-202",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 203,
+      "title": "Patient data in authorization context",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "120ddfaefbbf9ed9",
+      "id": "phi-phi-authorization-header-203",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 204,
+      "title": "Patient data in authorization context",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "8136cae7663ced28",
+      "id": "phi-phi-authorization-header-204",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 205,
+      "title": "Patient data in authorization context",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "d50dac6a01522507",
+      "id": "phi-phi-email-template-218",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 219,
+      "title": "PHI in email template",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "be3504a02117c0bd",
+      "id": "phi-phi-email-template-221",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 222,
+      "title": "PHI in email template",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "1054d4a0fac40071",
+      "id": "phi-phi-log-file-245",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 246,
+      "title": "PHI written to log file",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "6d186368a7d25e43",
+      "id": "enc-missing-51",
+      "file": "/Users/simonfranco/Projects/verification-layer/vlayer-rules.example.yaml",
+      "line": 52,
+      "title": "Encryption issue: Unencrypted HTTP URL",
+      "severity": "high",
+      "category": "encryption"
+    },
+    {
+      "hash": "24f6187667789bf8",
+      "id": "enc-missing-570",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 571,
+      "title": "Encryption issue: Unencrypted HTTP URL",
+      "severity": "high",
+      "category": "encryption"
+    },
+    {
+      "hash": "d868738cfdc6050b",
+      "id": "enc-missing-573",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 574,
+      "title": "Encryption issue: Unencrypted HTTP URL",
+      "severity": "high",
+      "category": "encryption"
+    },
+    {
+      "hash": "41cbed91469b8750",
+      "id": "enc-weak-11",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/encryption/index.ts",
+      "line": 12,
+      "title": "Weak cryptography: ECB mode encryption",
+      "severity": "high",
+      "category": "encryption"
+    },
+    {
+      "hash": "4961f8ba386e5f1f",
+      "id": "access-hardcoded-admin-157",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/stack-detector/stack-guides.ts",
+      "line": 158,
+      "title": "Hardcoded admin role",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "bde5e621e2b15d8e",
+      "id": "access-cors-wildcard-47",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/access/index.ts",
+      "line": 48,
+      "title": "CORS wildcard origin",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "f644e5749533744f",
+      "id": "security-innerhtml-unsanitized-143",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 144,
+      "title": "Unsanitized innerHTML assignment",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "089d29eb8922b9bf",
+      "id": "security-cookie-no-httponly-199",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 200,
+      "title": "Cookie without httpOnly flag",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "8c08f5b20dc6e711",
+      "id": "security-cookie-config-insecure-199",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 200,
+      "title": "Cookie configuration missing security flags",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "bebffc6c91abfbec",
+      "id": "security-cookie-config-insecure-207",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 208,
+      "title": "Cookie configuration missing security flags",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "8f918c031f3e96c4",
+      "id": "security-innerhtml-unsanitized-526",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 527,
+      "title": "Unsanitized innerHTML assignment",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "6dee8d91b1070752",
+      "id": "security-innerhtml-unsanitized-548",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 549,
+      "title": "Unsanitized innerHTML assignment",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "c6d1cee34d3b617c",
+      "id": "security-dangerous-innerhtml-react-553",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 554,
+      "title": "dangerouslySetInnerHTML usage",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "80b2afb974301aaa",
+      "id": "retention-backup-disabled-39",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 40,
+      "title": "Backup may be disabled",
+      "severity": "high",
+      "category": "data-retention"
+    },
+    {
+      "hash": "770707046e6f8da3",
+      "id": "retention-backup-disabled-40",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 41,
+      "title": "Backup may be disabled",
+      "severity": "high",
+      "category": "data-retention"
+    },
+    {
+      "hash": "5d6e7b045587201a",
+      "id": "retention-backup-disabled-42",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 43,
+      "title": "Backup may be disabled",
+      "severity": "high",
+      "category": "data-retention"
+    },
+    {
+      "hash": "a73c2abd37d83b76",
+      "id": "retention-backup-disabled-43",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 44,
+      "title": "Backup may be disabled",
+      "severity": "high",
+      "category": "data-retention"
+    },
+    {
+      "hash": "849bae324543ccd1",
+      "id": "retention-backup-disabled-26",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/encryption/index.ts",
+      "line": 27,
+      "title": "Backup may be disabled",
+      "severity": "high",
+      "category": "data-retention"
+    },
+    {
+      "hash": "096e52931ab0a9f9",
+      "id": "phi-email-phi-context-131",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 132,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "935eb85823cb03c0",
+      "id": "phi-email-phi-context-133",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 134,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "2aaebf75ca08c57a",
+      "id": "phi-email-phi-context-134",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 135,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "7b8beba4926888b6",
+      "id": "phi-address-phi-context-134",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 135,
+      "title": "Patient address handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "2052b7663a0706e0",
+      "id": "phi-email-phi-context-135",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 136,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "a87fa1ae5c8d19fe",
+      "id": "phi-phone-phi-context-139",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 140,
+      "title": "Patient phone handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "46f34611601fbee8",
+      "id": "phi-phone-phi-context-141",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 142,
+      "title": "Patient phone handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "fe8bdb7d8fbcba2f",
+      "id": "phi-phone-phi-context-142",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 143,
+      "title": "Patient phone handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "3b0434bd74515c80",
+      "id": "phi-address-phi-context-147",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 148,
+      "title": "Patient address handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "93532ede0d884fed",
+      "id": "phi-address-phi-context-149",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 150,
+      "title": "Patient address handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "a8ff32f48fac25df",
+      "id": "phi-address-phi-context-150",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 151,
+      "title": "Patient address handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "b9ebc3d800133c6b",
+      "id": "phi-address-phi-context-151",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 152,
+      "title": "Patient address handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "a3787aaa18bb1e90",
+      "id": "phi-email-phi-context-210",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 211,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "fa303078992b2f5b",
+      "id": "phi-email-phi-context-213",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 214,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "65d805bf70bd3ef3",
+      "id": "phi-email-phi-context-214",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 215,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "be28f0c386f5d7d8",
+      "id": "phi-email-phi-context-218",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 219,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "e2b3247c3b4104f8",
+      "id": "phi-email-phi-context-221",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 222,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "e5f5a4c5b6b0ede8",
+      "id": "phi-phi-email-subject-226",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 227,
+      "title": "Potential PHI in email subject",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "5bff9d3a4a61d7a0",
+      "id": "phi-email-phi-context-229",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 230,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "9180752021da525d",
+      "id": "phi-email-phi-context-230",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/phi/patterns.ts",
+      "line": 231,
+      "title": "Patient email handling detected",
+      "severity": "medium",
+      "category": "phi-exposure"
+    },
+    {
+      "hash": "663bc2dc49557943",
+      "id": "access-select-star-22",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 23,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "475d4bfff4e19c2c",
+      "id": "access-select-star-23",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 24,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "a04a6dde0e818b8f",
+      "id": "access-select-star-54",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 55,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "4da7268b1a49093d",
+      "id": "access-select-star-55",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
+      "line": 56,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "2b6959b10ab5f618",
+      "id": "access-select-star-474",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 475,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "38fc2fd3ec44f8d3",
+      "id": "access-select-star-479",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 480,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "f64277ffa2f21e77",
+      "id": "access-select-star-485",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 486,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "1d0728cd3db32efa",
+      "id": "access-select-star-205",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/security/index.ts",
+      "line": 206,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "39a01fba3d657487",
+      "id": "retention-phi-cache-47",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 48,
+      "title": "PHI caching detected",
+      "severity": "medium",
+      "category": "data-retention"
+    },
+    {
+      "hash": "2a60b07eadcbf56c",
+      "id": "retention-phi-cache-51",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/scanners/retention/index.ts",
+      "line": 52,
+      "title": "PHI caching detected",
+      "severity": "medium",
+      "category": "data-retention"
+    }
+  ]
+}

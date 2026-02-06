@@ -30,6 +30,8 @@ program
   .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
   .option('--config <path>', 'Path to configuration file')
   .option('--rules <path>', 'Path to custom rules YAML file')
+  .option('--baseline <path>', 'Path to baseline file for comparison')
+  .option('--min-confidence <level>', 'Minimum confidence level (high, medium, low)', 'low')
   .option('--fix', 'Automatically fix detected issues where possible')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
@@ -67,6 +69,8 @@ program
         categories,
         exclude: excludePatterns,
         configFile: options.config,
+        baselineFile: options.baseline,
+        minConfidence: options.minConfidence as 'high' | 'medium' | 'low' | undefined,
       });
 
       spinner.succeed(`Scan complete. Found ${result.findings.length} issues.`);
@@ -102,9 +106,13 @@ program
 
       // Print summary
       const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired).length;
-      const unacknowledged = result.findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
-      const critical = unacknowledged.filter(f => f.severity === 'critical').length;
-      const high = unacknowledged.filter(f => f.severity === 'high').length;
+      const suppressed = result.findings.filter(f => f.suppressed).length;
+      const baseline = result.findings.filter(f => f.isBaseline).length;
+      const newFindings = result.findings.filter(f =>
+        !f.acknowledged && !f.suppressed && !f.isBaseline
+      );
+      const critical = newFindings.filter(f => f.severity === 'critical').length;
+      const high = newFindings.filter(f => f.severity === 'high').length;
 
       console.log('\n' + chalk.bold('Summary:'));
       console.log(`  Files scanned: ${result.scannedFiles}`);
@@ -114,23 +122,85 @@ program
       if (acknowledged > 0) {
         console.log(chalk.blue(`  Acknowledged: ${acknowledged}`));
       }
-      if (unacknowledged.length > 0) {
-        console.log(chalk.yellow(`  Requiring action: ${unacknowledged.length}`));
+      if (suppressed > 0) {
+        console.log(chalk.cyan(`  Suppressed: ${suppressed}`));
+      }
+      if (baseline > 0) {
+        console.log(chalk.gray(`  Baseline: ${baseline}`));
+      }
+      if (newFindings.length > 0) {
+        console.log(chalk.yellow(`  New/Requiring action: ${newFindings.length}`));
       }
 
       if (critical > 0) {
-        console.log(chalk.red(`  Critical: ${critical}`));
+        console.log(chalk.red(`  Critical (new): ${critical}`));
       }
       if (high > 0) {
-        console.log(chalk.yellow(`  High: ${high}`));
+        console.log(chalk.yellow(`  High (new): ${high}`));
       }
 
-      // Exit with error code if unacknowledged critical issues found (only if not fixing)
+      // Exit with error code if new critical issues found (only if not fixing)
       if (critical > 0 && !options.fix) {
         process.exit(1);
       }
     } catch (error) {
       spinner.fail('Scan failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('baseline')
+  .description('Generate a baseline file from current scan results')
+  .argument('[path]', 'Path to the repository to scan', '.')
+  .option('-o, --output <path>', 'Output path for baseline file', '.vlayer-baseline.json')
+  .option('-c, --categories <categories...>', 'Compliance categories to check')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude')
+  .option('--config <path>', 'Path to configuration file')
+  .action(async (path: string, options) => {
+    const spinner = ora('Generating baseline...').start();
+    const absolutePath = resolve(path);
+
+    try {
+      const categories = options.categories as ComplianceCategory[] | undefined;
+
+      // Parse exclude patterns
+      let excludePatterns: string[] | undefined;
+      if (options.exclude) {
+        let patterns: string[];
+        if (typeof options.exclude === 'string') {
+          patterns = options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0);
+        } else if (Array.isArray(options.exclude)) {
+          patterns = options.exclude;
+        } else {
+          patterns = [];
+        }
+
+        excludePatterns = patterns.map((p: string) => {
+          if (p.includes('*') || p.includes('**')) {
+            return p.startsWith('**/') ? p : `**/${p}`;
+          }
+          return `**/${p}/**`;
+        });
+      }
+
+      const result = await scan({
+        path,
+        categories,
+        exclude: excludePatterns,
+        configFile: options.config,
+      });
+
+      const { saveBaseline } = await import('./baseline.js');
+      const outputPath = resolve(options.output);
+      await saveBaseline(outputPath, result.findings);
+
+      spinner.succeed(`Baseline generated with ${result.findings.length} findings`);
+      console.log(chalk.green(`\nBaseline saved to: ${outputPath}`));
+      console.log(chalk.gray('Use --baseline flag with scan command to compare against this baseline.'));
+    } catch (error) {
+      spinner.fail('Baseline generation failed');
       console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
       process.exit(1);
     }

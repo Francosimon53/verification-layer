@@ -6,17 +6,25 @@ import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack
 
 function buildReport(result: ScanResult, targetPath: string): Report {
   const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
-  const unacknowledged = result.findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
+  const suppressed = result.findings.filter(f => f.suppressed);
+  const baseline = result.findings.filter(f => f.isBaseline);
+
+  // New findings are those that are NOT acknowledged, suppressed, or baseline
+  const newFindings = result.findings.filter(f =>
+    !f.acknowledged && !f.suppressed && !f.isBaseline
+  );
 
   const summary = {
     total: result.findings.length,
     acknowledged: acknowledged.length,
-    unacknowledged: unacknowledged.length,
-    critical: unacknowledged.filter(f => f.severity === 'critical').length,
-    high: unacknowledged.filter(f => f.severity === 'high').length,
-    medium: unacknowledged.filter(f => f.severity === 'medium').length,
-    low: unacknowledged.filter(f => f.severity === 'low').length,
-    info: unacknowledged.filter(f => f.severity === 'info').length,
+    suppressed: suppressed.length,
+    baseline: baseline.length,
+    unacknowledged: newFindings.length,
+    critical: newFindings.filter(f => f.severity === 'critical').length,
+    high: newFindings.filter(f => f.severity === 'high').length,
+    medium: newFindings.filter(f => f.severity === 'medium').length,
+    low: newFindings.filter(f => f.severity === 'low').length,
+    info: newFindings.filter(f => f.severity === 'info').length,
   };
 
   return {

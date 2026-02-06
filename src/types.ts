@@ -28,6 +28,8 @@ export type FixType =
   | 'cookie-insecure'
   | 'backup-unencrypted';
 
+export type Confidence = 'high' | 'medium' | 'low';
+
 export interface Finding {
   id: string;
   category: ComplianceCategory;
@@ -41,6 +43,7 @@ export interface Finding {
   hipaaReference?: string;
   context?: ContextLine[];
   fixType?: FixType;
+  confidence?: Confidence;
   acknowledged?: boolean;
   acknowledgment?: {
     reason: string;
@@ -49,6 +52,12 @@ export interface Finding {
     ticketUrl?: string;
     expired?: boolean;
   };
+  suppressed?: boolean;
+  suppression?: {
+    reason: string;
+    comment: string;
+  };
+  isBaseline?: boolean;
 }
 
 export interface StackInfo {
@@ -75,6 +84,8 @@ export interface ScanOptions {
   configFile?: string;
   config?: VlayerConfig;
   fix?: boolean;
+  baselineFile?: string;
+  minConfidence?: Confidence;
 }
 
 export interface Scanner {
@@ -89,6 +100,8 @@ export interface Report {
   summary: {
     total: number;
     acknowledged: number;
+    suppressed: number;
+    baseline: number;
     unacknowledged: number;
     critical: number;
     high: number;
