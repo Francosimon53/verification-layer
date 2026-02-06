@@ -1,0 +1,53 @@
+{
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test-project/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "ignorePaths": [
+    "sample-data",
+    "demo-data",
+    "__mocks__"
+  ],
+  "safeHttpDomains": [
+    "example.com",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "contextLines": 2,
+  "categories": [
+    "phi-exposure",
+    "encryption",
+    "audit-logging",
+    "access-control",
+    "data-retention"
+  ],
+  "acknowledgedFindings": [
+    {
+      "pattern": "**/src/scanners/**/*.ts",
+      "reason": "Scanner source code contains intentional example patterns for detecting PHI exposure, weak encryption, and security vulnerabilities. These are demonstration patterns used for detection logic, not actual production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/fixer/**/*.ts",
+      "reason": "Fixer code intentionally contains before/after examples of vulnerable code patterns for transformation strategies. These are fix templates used to demonstrate remediation, not production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/reporters/**/*.ts",
+      "reason": "Reporter code handles and displays finding data which may contain PHI-like strings in examples and remediation guides. This is necessary for report generation and documentation, not actual PHI or production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/tests/**/*.test.ts",
+      "reason": "Test files contain intentional vulnerable code examples to verify scanner detection capabilities and ensure comprehensive coverage of security patterns.",
+      "acknowledgedBy": "Development Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    }
+  ]
+}

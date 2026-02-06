@@ -10,6 +10,7 @@ import { securityScanner } from './scanners/security/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
+import { applyAcknowledgments } from './acknowledgments.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -126,8 +127,11 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     recommendations: stackRecommendations,
   };
 
+  // Apply acknowledgments from configuration
+  const acknowledgedFindings = applyAcknowledgments(findings, config);
+
   return {
-    findings,
+    findings: acknowledgedFindings,
     scannedFiles: filteredFiles.length,
     scanDuration: Date.now() - startTime,
     stack,

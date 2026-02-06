@@ -5,13 +5,18 @@ import { getRemediationGuide, type RemediationGuide } from './remediation-guides
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
 function buildReport(result: ScanResult, targetPath: string): Report {
+  const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
+  const unacknowledged = result.findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
+
   const summary = {
     total: result.findings.length,
-    critical: result.findings.filter(f => f.severity === 'critical').length,
-    high: result.findings.filter(f => f.severity === 'high').length,
-    medium: result.findings.filter(f => f.severity === 'medium').length,
-    low: result.findings.filter(f => f.severity === 'low').length,
-    info: result.findings.filter(f => f.severity === 'info').length,
+    acknowledged: acknowledged.length,
+    unacknowledged: unacknowledged.length,
+    critical: unacknowledged.filter(f => f.severity === 'critical').length,
+    high: unacknowledged.filter(f => f.severity === 'high').length,
+    medium: unacknowledged.filter(f => f.severity === 'medium').length,
+    low: unacknowledged.filter(f => f.severity === 'low').length,
+    info: unacknowledged.filter(f => f.severity === 'info').length,
   };
 
   return {

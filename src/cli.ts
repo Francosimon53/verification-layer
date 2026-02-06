@@ -101,13 +101,22 @@ program
       await generateReport(result, path, reportOptions);
 
       // Print summary
-      const critical = result.findings.filter(f => f.severity === 'critical').length;
-      const high = result.findings.filter(f => f.severity === 'high').length;
+      const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired).length;
+      const unacknowledged = result.findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
+      const critical = unacknowledged.filter(f => f.severity === 'critical').length;
+      const high = unacknowledged.filter(f => f.severity === 'high').length;
 
       console.log('\n' + chalk.bold('Summary:'));
       console.log(`  Files scanned: ${result.scannedFiles}`);
       console.log(`  Duration: ${result.scanDuration}ms`);
       console.log(`  Total findings: ${result.findings.length}`);
+
+      if (acknowledged > 0) {
+        console.log(chalk.blue(`  Acknowledged: ${acknowledged}`));
+      }
+      if (unacknowledged.length > 0) {
+        console.log(chalk.yellow(`  Requiring action: ${unacknowledged.length}`));
+      }
 
       if (critical > 0) {
         console.log(chalk.red(`  Critical: ${critical}`));
@@ -116,7 +125,7 @@ program
         console.log(chalk.yellow(`  High: ${high}`));
       }
 
-      // Exit with error code if critical issues found (only if not fixing)
+      // Exit with error code if unacknowledged critical issues found (only if not fixing)
       if (critical > 0 && !options.fix) {
         process.exit(1);
       }

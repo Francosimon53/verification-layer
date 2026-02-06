@@ -41,6 +41,14 @@ export interface Finding {
   hipaaReference?: string;
   context?: ContextLine[];
   fixType?: FixType;
+  acknowledged?: boolean;
+  acknowledgment?: {
+    reason: string;
+    acknowledgedBy: string;
+    acknowledgedAt: string;
+    ticketUrl?: string;
+    expired?: boolean;
+  };
 }
 
 export interface StackInfo {
@@ -80,6 +88,8 @@ export interface Report {
   targetPath: string;
   summary: {
     total: number;
+    acknowledged: number;
+    unacknowledged: number;
     critical: number;
     high: number;
     medium: number;
@@ -97,6 +107,18 @@ export interface ReportOptions {
   outputPath?: string;
 }
 
+export interface AcknowledgedFinding {
+  pattern: string;
+  id?: string;
+  category?: ComplianceCategory;
+  severity?: Severity;
+  reason: string;
+  acknowledgedBy: string;
+  acknowledgedAt: string;
+  expiresAt?: string;
+  ticketUrl?: string;
+}
+
 export interface VlayerConfig {
   exclude?: string[];
   ignorePaths?: string[];
@@ -105,6 +127,7 @@ export interface VlayerConfig {
   categories?: ComplianceCategory[];
   customRulesPath?: string;
   disableBuiltinRules?: string[];
+  acknowledgedFindings?: AcknowledgedFinding[];
 }
 
 export interface FixResult {

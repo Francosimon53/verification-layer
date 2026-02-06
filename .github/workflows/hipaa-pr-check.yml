@@ -27,7 +27,7 @@ jobs:
       - name: Run HIPAA scan
         id: scan
         continue-on-error: true
-        run: node dist/cli.js scan . -f json -o hipaa-results.json --exclude "tests,test,__tests__,*.test.*,*.spec.*,examples,fixtures,sample,test-project,src/scanners,src/fixer,src/reporters,src/remediation,node_modules,dist,package-lock.json"
+        run: node dist/cli.js scan . -f json -o hipaa-results.json
 
       - name: Post PR comment
         uses: actions/github-script@v7
@@ -64,14 +64,44 @@ jobs:
 
             let body = `<!-- vlayer-hipaa-check -->\n## \u{1F3E5} HIPAA Compliance Report\n\n`;
 
+            const unacknowledgedFindings = findings.filter(f => !f.acknowledged || f.acknowledgment?.expired);
+            const acknowledgedFindings = findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
+
             if (summary.total === 0) {
               body += `\u2705 **No findings detected.**\n`;
-            } else {
-              body += `| Severity | Count |\n|----------|-------|\n${summaryRows}\n\n`;
+            } else if (summary.unacknowledged === 0) {
+              body += `\u2705 **No unacknowledged findings.** All ${summary.acknowledged} findings have been reviewed and acknowledged.\n\n`;
+              body += `<details>\n<summary>\u{1F4CB} View ${summary.acknowledged} acknowledged findings</summary>\n\n`;
 
-              // Group findings by severity
               for (const sev of severityOrder) {
-                const group = findings.filter(f => f.severity === sev);
+                const group = acknowledgedFindings.filter(f => f.severity === sev);
+                if (group.length === 0) continue;
+
+                const icon = severityIcon[sev];
+                const label = sev.charAt(0).toUpperCase() + sev.slice(1);
+                body += `#### ${icon} ${label} (${group.length})\n\n`;
+
+                for (const f of group) {
+                  const file = f.file ? `\`${f.file.split('/').pop()}\`` : '-';
+                  body += `- ${f.title} in ${file}\n`;
+                  if (f.acknowledgment) {
+                    body += `  > \u{1F4DD} ${f.acknowledgment.reason}\n`;
+                  }
+                }
+                body += '\n';
+              }
+
+              body += `</details>\n`;
+            } else {
+              body += `\u26A0\uFE0F **${summary.unacknowledged} unacknowledged findings require attention.**\n`;
+              if (summary.acknowledged > 0) {
+                body += `\u{1F4CB} ${summary.acknowledged} additional findings have been acknowledged.\n`;
+              }
+              body += `\n| Severity | Count |\n|----------|-------|\n${summaryRows}\n\n`;
+
+              // Group unacknowledged findings by severity
+              for (const sev of severityOrder) {
+                const group = unacknowledgedFindings.filter(f => f.severity === sev);
                 if (group.length === 0) continue;
 
                 const icon = severityIcon[sev];
@@ -91,6 +121,31 @@ jobs:
                 if (rec) {
                   body += `\n> **Recommendation:** ${rec.recommendation}\n\n`;
                 }
+              }
+
+              // Show acknowledged findings in collapsed section
+              if (acknowledgedFindings.length > 0) {
+                body += `\n<details>\n<summary>\u{1F4CB} View ${acknowledgedFindings.length} acknowledged findings</summary>\n\n`;
+
+                for (const sev of severityOrder) {
+                  const group = acknowledgedFindings.filter(f => f.severity === sev);
+                  if (group.length === 0) continue;
+
+                  const icon = severityIcon[sev];
+                  const label = sev.charAt(0).toUpperCase() + sev.slice(1);
+                  body += `#### ${icon} ${label} (${group.length})\n\n`;
+
+                  for (const f of group) {
+                    const file = f.file ? `\`${f.file.split('/').pop()}\`` : '-';
+                    body += `- ${f.title} in ${file}\n`;
+                    if (f.acknowledgment) {
+                      body += `  > \u{1F4DD} ${f.acknowledgment.reason}\n`;
+                    }
+                  }
+                  body += '\n';
+                }
+
+                body += `</details>\n`;
               }
             }
 
@@ -122,7 +177,7 @@ jobs:
               });
             }
 
-            // Fail if critical or high findings
+            // Fail only if unacknowledged critical or high findings
             if (summary.critical > 0 || summary.high > 0) {
-              core.setFailed(`Found ${summary.critical} critical and ${summary.high} high severity findings`);
+              core.setFailed(`Found ${summary.critical} unacknowledged critical and ${summary.high} unacknowledged high severity findings`);
             }
