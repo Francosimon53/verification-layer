@@ -13,6 +13,7 @@ import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
 import { applyAcknowledgments } from './acknowledgments.js';
 import { applyInlineSuppressions } from './suppression.js';
 import { loadBaseline, applyBaseline } from './baseline.js';
+import { batchAnalyzeSemanticContext } from './semantic-analysis.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -134,6 +135,23 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   // Apply inline suppressions
   processedFindings = await applyInlineSuppressions(processedFindings);
+
+  // Apply semantic analysis to determine confidence levels
+  const semanticContexts = await batchAnalyzeSemanticContext(
+    processedFindings.map(f => ({ file: f.file, line: f.line, pattern: f.id }))
+  );
+
+  processedFindings = processedFindings.map((finding, index) => {
+    const context = semanticContexts[index];
+    // Only set confidence if not already set
+    if (!finding.confidence) {
+      return {
+        ...finding,
+        confidence: context.confidence,
+      };
+    }
+    return finding;
+  });
 
   // Apply baseline if provided
   if (options.baselineFile) {
