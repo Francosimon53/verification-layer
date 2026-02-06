@@ -50,6 +50,33 @@ node dist/cli.js report /path/to/project -o audit-report.html
 
 ---
 
+## 🌐 Web Dashboard
+
+**Live Dashboard**: [https://dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
+
+Monitor HIPAA compliance across all your projects with our web dashboard:
+
+**Features:**
+- 📊 **Visual Compliance Scores** - Animated gauges showing 0-100 scores
+- 📈 **Historical Tracking** - View compliance trends over time
+- 🗂️ **Multi-Project Management** - Monitor multiple codebases from one place
+- 🔍 **Detailed Findings** - Filter by severity and view recommendations
+- 📋 **Executive Reports** - Share compliance status with stakeholders
+
+**Quick Start:**
+1. Visit the dashboard and create a project
+2. Run a scan: `node dist/cli.js scan ./src --format json --output scan.json`
+3. Upload results via API:
+   ```bash
+   curl -X POST https://dashboard-silk-zeta-55.vercel.app/api/projects/{projectId}/scans \
+     -H "Content-Type: application/json" \
+     -d @scan.json
+   ```
+
+See [dashboard/README.md](dashboard/README.md) for API documentation and deployment instructions.
+
+---
+
 ## 🆕 Compliance Score & Dashboard
 
 ### HIPAA Compliance Score (0-100)
@@ -469,6 +496,13 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Recently Completed ✅
+- [x] **Phase 4A: Web Dashboard**
+  - [x] Next.js dashboard deployed to Vercel
+  - [x] Multi-project management with REST API
+  - [x] Visual compliance score gauges and charts
+  - [x] Historical score tracking and trends
+  - [x] Detailed findings viewer with filtering
+  - [x] Live at: https://dashboard-silk-zeta-55.vercel.app
 - [x] **Phase 3B: Dashboard & Compliance Score**
   - [x] HIPAA Compliance Score (0-100) with severity weighting
   - [x] Enhanced HTML reports with visual gauge
@@ -495,8 +529,8 @@ Each finding maps to specific HIPAA regulations:
 
 ### Coming Soon
 - [ ] Slack/Teams notifications for new findings
-- [ ] Web dashboard with trend tracking
-- [ ] API for programmatic access
+- [ ] CLI integration with dashboard auto-upload
+- [ ] Database backend for dashboard (currently file-based)
 
 ### Planned
 - [ ] HITRUST CSF mapping
