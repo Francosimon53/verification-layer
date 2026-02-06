@@ -52,7 +52,7 @@ node dist/cli.js report /path/to/project -o audit-report.html
 
 ## 🌐 Web Dashboard
 
-**Live Dashboard**: [https://dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
+**Live Dashboard**: [https://app.vlayer.app](https://app.vlayer.app)
 
 Enterprise-grade HIPAA compliance monitoring platform for tracking violations, compliance scores, and generating audit reports.
 
@@ -80,7 +80,7 @@ Enterprise-grade HIPAA compliance monitoring platform for tracking violations, c
 
 ### Quick Start
 
-1. **Visit Dashboard**: Navigate to [dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
+1. **Visit Dashboard**: Navigate to [app.vlayer.app](https://app.vlayer.app)
 2. **Create Project**: Click "+ New Project" and enter your project details
 3. **Run Scan**: Execute a compliance scan on your codebase
    ```bash
@@ -88,7 +88,7 @@ Enterprise-grade HIPAA compliance monitoring platform for tracking violations, c
    ```
 4. **Upload Results**: Send scan data to your project via API
    ```bash
-   curl -X POST https://dashboard-silk-zeta-55.vercel.app/api/projects/{projectId}/scans \
+   curl -X POST https://app.vlayer.app/api/projects/{projectId}/scans \
      -H "Content-Type: application/json" \
      -d @scan.json
    ```
@@ -526,6 +526,12 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Recently Completed ✅
+- [x] **Phase 4D: Custom Domain Configuration**
+  - [x] Configured custom domain app.vlayer.app
+  - [x] Automatic DNS configuration via Vercel
+  - [x] SSL/TLS certificates provisioned
+  - [x] Production deployment on custom domain
+  - [x] Live at: https://app.vlayer.app
 - [x] **Phase 4C: Dashboard Consolidation**
   - [x] Moved landing page to separate repo ([vlayer-website](https://github.com/Francosimon53/vlayer-website))
   - [x] Dashboard now at root route (/) instead of /dashboard
@@ -543,7 +549,6 @@ Each finding maps to specific HIPAA regulations:
   - [x] Demo data with 4 realistic projects
   - [x] Glassmorphism effects and professional shadows
   - [x] Responsive design optimized for all devices
-  - [x] Live at: https://dashboard-silk-zeta-55.vercel.app
 - [x] **Phase 3B: Dashboard & Compliance Score**
   - [x] HIPAA Compliance Score (0-100) with severity weighting
   - [x] Enhanced HTML reports with visual gauge
