@@ -50,13 +50,14 @@ node dist/cli.js report /path/to/project -o audit-report.html
 
 ---
 
-## 🌐 Web Dashboard
+## 🌐 VLayer Ecosystem
 
-**Live Dashboard**: [https://app.vlayer.app](https://app.vlayer.app)
+**Dashboard**: [https://app.vlayer.app](https://app.vlayer.app) - Compliance monitoring platform
+**Playground**: [https://play.vlayer.app](https://play.vlayer.app) - Try vlayer in your browser
+**Documentation**: [https://docs.vlayer.app](https://docs.vlayer.app) - Complete guides and API reference
+**Landing Page**: [https://vlayer.app](https://vlayer.app) - Marketing site
 
 Enterprise-grade HIPAA compliance monitoring platform for tracking violations, compliance scores, and generating audit reports.
-
-> **Note**: The marketing landing page is available separately at [vlayer.app](https://vlayer.app) ([vlayer-website](https://github.com/Francosimon53/vlayer-website) repo).
 
 ### Design
 
@@ -527,11 +528,14 @@ Each finding maps to specific HIPAA regulations:
 
 ### Recently Completed ✅
 - [x] **Phase 4D: Custom Domain Configuration**
-  - [x] Configured custom domain app.vlayer.app
+  - [x] Configured custom domains on vlayer.app
+  - [x] Dashboard: app.vlayer.app
+  - [x] Playground: play.vlayer.app
+  - [x] Documentation: docs.vlayer.app
+  - [x] Landing page: vlayer.app
   - [x] Automatic DNS configuration via Vercel
-  - [x] SSL/TLS certificates provisioned
-  - [x] Production deployment on custom domain
-  - [x] Live at: https://app.vlayer.app
+  - [x] SSL/TLS certificates provisioned for all domains
+  - [x] Updated all cross-project links
 - [x] **Phase 4C: Dashboard Consolidation**
   - [x] Moved landing page to separate repo ([vlayer-website](https://github.com/Francosimon53/vlayer-website))
   - [x] Dashboard now at root route (/) instead of /dashboard
