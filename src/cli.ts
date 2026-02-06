@@ -160,7 +160,6 @@ program
   .option('--config <path>', 'Path to configuration file')
   .action(async (path: string, options) => {
     const spinner = ora('Generating baseline...').start();
-    const absolutePath = resolve(path);
 
     try {
       const categories = options.categories as ComplianceCategory[] | undefined;

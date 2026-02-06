@@ -80,7 +80,7 @@ export async function analyzeSemanticContext(
         errorOnUnknownASTType: false,
         jsx: filePath.endsWith('x'),
       });
-    } catch (parseError) {
+    } catch {
       // If parsing fails, fall back to regex analysis
       return analyzeWithoutAST(targetLine, inTestFile);
     }
@@ -113,7 +113,7 @@ export async function analyzeSemanticContext(
       inTestFile,
     };
 
-  } catch (error) {
+  } catch {
     // If any error occurs, fall back to simple analysis
     return {
       confidence: 'medium',

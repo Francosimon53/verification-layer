@@ -51,7 +51,7 @@ export async function loadBaseline(path: string): Promise<Baseline | null> {
     const content = await readFile(path, 'utf-8');
     const baseline = JSON.parse(content) as Baseline;
     return baseline;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

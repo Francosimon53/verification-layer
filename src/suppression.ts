@@ -107,7 +107,7 @@ export async function checkInlineSuppression(
     }
 
     return { suppressed: false };
-  } catch (error) {
+  } catch {
     // If we can't read the file, don't suppress
     return { suppressed: false };
   }

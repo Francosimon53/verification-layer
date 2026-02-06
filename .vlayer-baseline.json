@@ -1,7 +1,16 @@
 {
   "version": "1.0",
-  "createdAt": "2026-02-06T16:54:32.027Z",
+  "createdAt": "2026-02-06T18:13:49.927Z",
   "findings": [
+    {
+      "hash": "5a73d99bdadad2b6",
+      "id": "phi-ssn-hardcoded-137",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 138,
+      "title": "Potential SSN detected",
+      "severity": "critical",
+      "category": "phi-exposure"
+    },
     {
       "hash": "7a4db3e330d72d98",
       "id": "phi-phi-localstorage-153",
@@ -21,19 +30,10 @@
       "category": "phi-exposure"
     },
     {
-      "hash": "5a73d99bdadad2b6",
-      "id": "phi-ssn-hardcoded-137",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 138,
-      "title": "Potential SSN detected",
-      "severity": "critical",
-      "category": "phi-exposure"
-    },
-    {
-      "hash": "c6559b6ea00a0092",
-      "id": "enc-weak-4560",
+      "hash": "4b865726180531f2",
+      "id": "enc-weak-4551",
       "file": "/Users/simonfranco/Projects/verification-layer/package-lock.json",
-      "line": 4561,
+      "line": 4552,
       "title": "Weak cryptography: DES encryption",
       "severity": "critical",
       "category": "encryption"
@@ -147,6 +147,15 @@
       "category": "access-control"
     },
     {
+      "hash": "8425060605f1a198",
+      "id": "security-sql-string-concat-474",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 475,
+      "title": "SQL query string concatenation",
+      "severity": "critical",
+      "category": "access-control"
+    },
+    {
       "hash": "cb251e07b501f24b",
       "id": "security-sql-template-literal-22",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
@@ -170,15 +179,6 @@
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
       "line": 79,
       "title": "Hardcoded password detected",
-      "severity": "critical",
-      "category": "access-control"
-    },
-    {
-      "hash": "8425060605f1a198",
-      "id": "security-sql-string-concat-474",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 475,
-      "title": "SQL query string concatenation",
       "severity": "critical",
       "category": "access-control"
     },
@@ -219,6 +219,15 @@
       "category": "access-control"
     },
     {
+      "hash": "b52a709d03adae70",
+      "id": "phi-phi-logger-unredacted-137",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 138,
+      "title": "PHI logged without redaction",
+      "severity": "high",
+      "category": "phi-exposure"
+    },
+    {
       "hash": "295202cf2c8ab64e",
       "id": "phi-phi-fetch-url-164",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
@@ -250,15 +259,6 @@
       "id": "phi-phi-logger-unredacted-186",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
       "line": 187,
-      "title": "PHI logged without redaction",
-      "severity": "high",
-      "category": "phi-exposure"
-    },
-    {
-      "hash": "b52a709d03adae70",
-      "id": "phi-phi-logger-unredacted-137",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 138,
       "title": "PHI logged without redaction",
       "severity": "high",
       "category": "phi-exposure"
@@ -426,6 +426,33 @@
       "category": "access-control"
     },
     {
+      "hash": "8f918c031f3e96c4",
+      "id": "security-innerhtml-unsanitized-526",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 527,
+      "title": "Unsanitized innerHTML assignment",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "6dee8d91b1070752",
+      "id": "security-innerhtml-unsanitized-548",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 549,
+      "title": "Unsanitized innerHTML assignment",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
+      "hash": "c6d1cee34d3b617c",
+      "id": "security-dangerous-innerhtml-react-553",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 554,
+      "title": "dangerouslySetInnerHTML usage",
+      "severity": "high",
+      "category": "access-control"
+    },
+    {
       "hash": "f644e5749533744f",
       "id": "security-innerhtml-unsanitized-143",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
@@ -458,33 +485,6 @@
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
       "line": 208,
       "title": "Cookie configuration missing security flags",
-      "severity": "high",
-      "category": "access-control"
-    },
-    {
-      "hash": "8f918c031f3e96c4",
-      "id": "security-innerhtml-unsanitized-526",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 527,
-      "title": "Unsanitized innerHTML assignment",
-      "severity": "high",
-      "category": "access-control"
-    },
-    {
-      "hash": "6dee8d91b1070752",
-      "id": "security-innerhtml-unsanitized-548",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 549,
-      "title": "Unsanitized innerHTML assignment",
-      "severity": "high",
-      "category": "access-control"
-    },
-    {
-      "hash": "c6d1cee34d3b617c",
-      "id": "security-dangerous-innerhtml-react-553",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 554,
-      "title": "dangerouslySetInnerHTML usage",
       "severity": "high",
       "category": "access-control"
     },
@@ -714,6 +714,33 @@
       "category": "phi-exposure"
     },
     {
+      "hash": "2b6959b10ab5f618",
+      "id": "access-select-star-474",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 475,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "38fc2fd3ec44f8d3",
+      "id": "access-select-star-479",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 480,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
+      "hash": "f64277ffa2f21e77",
+      "id": "access-select-star-485",
+      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
+      "line": 486,
+      "title": "SELECT * on sensitive table",
+      "severity": "medium",
+      "category": "access-control"
+    },
+    {
       "hash": "663bc2dc49557943",
       "id": "access-select-star-22",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
@@ -745,33 +772,6 @@
       "id": "access-select-star-55",
       "file": "/Users/simonfranco/Projects/verification-layer/src/fixer/strategies.ts",
       "line": 56,
-      "title": "SELECT * on sensitive table",
-      "severity": "medium",
-      "category": "access-control"
-    },
-    {
-      "hash": "2b6959b10ab5f618",
-      "id": "access-select-star-474",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 475,
-      "title": "SELECT * on sensitive table",
-      "severity": "medium",
-      "category": "access-control"
-    },
-    {
-      "hash": "38fc2fd3ec44f8d3",
-      "id": "access-select-star-479",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 480,
-      "title": "SELECT * on sensitive table",
-      "severity": "medium",
-      "category": "access-control"
-    },
-    {
-      "hash": "f64277ffa2f21e77",
-      "id": "access-select-star-485",
-      "file": "/Users/simonfranco/Projects/verification-layer/src/reporters/remediation-guides.ts",
-      "line": 486,
       "title": "SELECT * on sensitive table",
       "severity": "medium",
       "category": "access-control"

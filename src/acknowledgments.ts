@@ -1,5 +1,5 @@
 import { minimatch } from 'minimatch';
-import type { Finding, VlayerConfig, AcknowledgedFinding } from './types.js';
+import type { Finding, VlayerConfig } from './types.js';
 
 export interface AcknowledgmentMatch {
   acknowledged: boolean;
