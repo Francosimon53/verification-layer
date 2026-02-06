@@ -1,3 +1,10 @@
+## [0.18.1](https://github.com/Francosimon53/verification-layer/compare/v0.18.0...v0.18.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* remove sidebar from login/signup pages ([800fb3f](https://github.com/Francosimon53/verification-layer/commit/800fb3f960b41607454e2ab0f65a4ab24db8b879))
+
 # [0.18.0](https://github.com/Francosimon53/verification-layer/compare/v0.17.0...v0.18.0) (2026-02-06)
 
 
