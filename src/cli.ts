@@ -206,6 +206,182 @@ program
   });
 
 program
+  .command('watch')
+  .description('Watch for file changes and scan automatically')
+  .argument('<path>', 'Path to watch')
+  .option('-c, --categories <categories...>', 'Compliance categories to check')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated)')
+  .option('--config <path>', 'Path to configuration file')
+  .option('--min-confidence <level>', 'Minimum confidence level (low, medium, high)', 'low')
+  .action(async (path: string, options) => {
+    const { watch: watchScan } = await import('chokidar');
+    const absolutePath = resolve(path);
+
+    console.log(chalk.bold.cyan('\n🔍 VLayer Watch Mode\n'));
+    console.log(chalk.gray(`Watching: ${absolutePath}`));
+    console.log(chalk.gray('Press Ctrl+C to stop\n'));
+
+    let isScanning = false;
+    let previousFindings = new Map<string, number>();
+    let scanCount = 0;
+
+    async function performScan(changedFile?: string) {
+      if (isScanning) return;
+      isScanning = true;
+      scanCount++;
+
+      const scanId = scanCount;
+      const timestamp = new Date().toLocaleTimeString();
+
+      try {
+        if (changedFile) {
+          console.log(chalk.dim(`[${timestamp}] File changed: ${changedFile}`));
+        }
+
+        const categories = options.categories as ComplianceCategory[] | undefined;
+        let excludePatterns: string[] | undefined;
+
+        if (options.exclude) {
+          const patterns = typeof options.exclude === 'string'
+            ? options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
+            : options.exclude;
+
+          excludePatterns = patterns.map((p: string) => {
+            if (p.includes('*') || p.includes('**')) {
+              return p.startsWith('**/') ? p : `**/${p}`;
+            }
+            return `**/${p}/**`;
+          });
+        }
+
+        const result = await scan({
+          path: absolutePath,
+          categories,
+          exclude: excludePatterns,
+          configFile: options.config,
+          minConfidence: options.minConfidence as any,
+        });
+
+        // Filter active findings (not baseline, not suppressed, not acknowledged)
+        const activeFindings = result.findings.filter(
+          f => !f.isBaseline && !f.suppressed && !f.acknowledged
+        );
+
+        // Group by severity
+        const bySeverity = {
+          critical: activeFindings.filter(f => f.severity === 'critical').length,
+          high: activeFindings.filter(f => f.severity === 'high').length,
+          medium: activeFindings.filter(f => f.severity === 'medium').length,
+          low: activeFindings.filter(f => f.severity === 'low').length,
+        };
+
+        // Check for new critical/high findings
+        const currentFindings = new Map<string, number>();
+        for (const finding of activeFindings) {
+          const key = `${finding.file}:${finding.line}:${finding.id}`;
+          currentFindings.set(key, finding.severity === 'critical' ? 2 : finding.severity === 'high' ? 1 : 0);
+        }
+
+        const newCriticalOrHigh: string[] = [];
+        for (const [key, severity] of currentFindings.entries()) {
+          if (severity >= 1 && !previousFindings.has(key)) {
+            newCriticalOrHigh.push(key);
+          }
+        }
+
+        previousFindings = currentFindings;
+
+        // Display results
+        console.log(chalk.dim(`\n[${timestamp}] Scan #${scanId} complete`));
+
+        if (activeFindings.length === 0) {
+          console.log(chalk.green.bold('✓ No compliance issues found!'));
+        } else {
+          console.log(chalk.yellow(`Found ${activeFindings.length} issue(s):`));
+
+          if (bySeverity.critical > 0) {
+            console.log(chalk.red.bold(`  ● ${bySeverity.critical} Critical`));
+          }
+          if (bySeverity.high > 0) {
+            console.log(chalk.red(`  ● ${bySeverity.high} High`));
+          }
+          if (bySeverity.medium > 0) {
+            console.log(chalk.yellow(`  ● ${bySeverity.medium} Medium`));
+          }
+          if (bySeverity.low > 0) {
+            console.log(chalk.blue(`  ● ${bySeverity.low} Low`));
+          }
+
+          // Show new critical/high findings
+          if (newCriticalOrHigh.length > 0) {
+            console.log(chalk.red.bold(`\n⚠️  ${newCriticalOrHigh.length} new critical/high finding(s) detected!`));
+
+            for (const key of newCriticalOrHigh.slice(0, 3)) {
+              const [file, line] = key.split(':');
+              const finding = activeFindings.find(f =>
+                f.file === file && f.line === parseInt(line)
+              );
+
+              if (finding) {
+                console.log(chalk.red(`   ${finding.title}`));
+                console.log(chalk.gray(`   ${file}:${line}`));
+              }
+            }
+
+            if (newCriticalOrHigh.length > 3) {
+              console.log(chalk.gray(`   ... and ${newCriticalOrHigh.length - 3} more`));
+            }
+          }
+        }
+
+        console.log(chalk.dim('\nWatching for changes...\n'));
+
+      } catch (error) {
+        console.error(chalk.red(`[${timestamp}] Scan failed:`), error instanceof Error ? error.message : error);
+      } finally {
+        isScanning = false;
+      }
+    }
+
+    // Initial scan
+    await performScan();
+
+    // Watch for changes
+    const defaultExclude = [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.git/**',
+      '**/coverage/**',
+    ];
+
+    const excludePatterns = options.exclude
+      ? [...defaultExclude, ...(typeof options.exclude === 'string' ? options.exclude.split(',') : options.exclude)]
+      : defaultExclude;
+
+    const watcher = watchScan(absolutePath, {
+      ignored: excludePatterns,
+      persistent: true,
+      ignoreInitial: true,
+    });
+
+    watcher.on('change', (filePath) => {
+      performScan(filePath);
+    });
+
+    watcher.on('add', (filePath) => {
+      performScan(filePath);
+    });
+
+    // Handle exit
+    process.on('SIGINT', () => {
+      console.log(chalk.yellow('\n\nStopping watch mode...'));
+      watcher.close();
+      process.exit(0);
+    });
+  });
+
+program
   .command('audit')
   .description('Manage audit trail and generate compliance reports')
   .argument('<path>', 'Path to the project with audit trail')

@@ -1,0 +1,100 @@
+{
+  "name": "vlayer-hipaa",
+  "displayName": "VLayer - HIPAA Compliance Scanner",
+  "description": "Real-time HIPAA compliance scanning for healthcare applications",
+  "version": "2.0.0",
+  "publisher": "vlayer",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Testing"
+  ],
+  "keywords": [
+    "hipaa",
+    "compliance",
+    "security",
+    "healthcare",
+    "phi",
+    "linter"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vlayer.scanCurrentFile",
+        "title": "VLayer: Scan Current File"
+      },
+      {
+        "command": "vlayer.scanWorkspace",
+        "title": "VLayer: Scan Workspace"
+      },
+      {
+        "command": "vlayer.clearDiagnostics",
+        "title": "VLayer: Clear Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "VLayer HIPAA",
+      "properties": {
+        "vlayer.enableAutoScan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic scanning on file save"
+        },
+        "vlayer.minConfidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "low",
+          "description": "Minimum confidence level to show diagnostics"
+        },
+        "vlayer.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show compliance score in status bar"
+        },
+        "vlayer.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to vlayer config file (optional)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "verification-layer": "file:.."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Francosimon53/verification-layer"
+  },
+  "bugs": {
+    "url": "https://github.com/Francosimon53/verification-layer/issues"
+  },
+  "homepage": "https://github.com/Francosimon53/verification-layer#readme",
+  "license": "MIT"
+}

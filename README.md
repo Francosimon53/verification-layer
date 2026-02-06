@@ -47,6 +47,61 @@ node dist/cli.js audit /path/to/project --generate-report
 
 ---
 
+## 🆕 IDE & Developer Experience
+
+### VS Code Extension
+
+Get real-time HIPAA compliance feedback directly in your editor:
+
+```bash
+# Install from the vscode-extension directory
+cd vscode-extension
+npm install
+npm run compile
+```
+
+**Features:**
+- ✅ Real-time scanning on file save
+- ✅ Inline diagnostics with severity markers
+- ✅ Hover tooltips with HIPAA references and recommendations
+- ✅ Quick-fix actions for auto-remediation
+- ✅ Status bar compliance score
+- ✅ Commands: "VLayer: Scan Current File", "VLayer: Scan Workspace"
+
+**Configuration:**
+```json
+{
+  "vlayer.enableAutoScan": true,
+  "vlayer.minConfidence": "low",
+  "vlayer.showStatusBar": true,
+  "vlayer.configPath": ".vlayerrc.json"
+}
+```
+
+### Watch Mode
+
+Continuous monitoring with real-time feedback:
+
+```bash
+# Watch a directory for changes
+node dist/cli.js watch ./src
+
+# Watch with specific categories
+node dist/cli.js watch ./src --categories phi-exposure encryption
+
+# Watch with custom config
+node dist/cli.js watch ./src --config .vlayerrc.json
+```
+
+**Features:**
+- 🔍 Automatic scan on file save/create
+- 🎨 Colored terminal output by severity
+- 📊 Diff tracking (new findings vs. previous scan)
+- 🚨 Alerts for new critical/high severity findings
+- ⚡ Smart file filtering (excludes node_modules, dist, etc.)
+
+---
+
 ## Suppression & Baseline
 
 ### Inline Suppressions
@@ -301,11 +356,22 @@ vlayer scan <path> -f markdown -o report.md  # Markdown report
 vlayer scan <path> -c phi-exposure encryption # Specific categories
 vlayer scan <path> --fix                      # Auto-fix issues
 
+# Watch mode
+vlayer watch <path>                           # Watch for changes
+vlayer watch <path> -c phi-exposure          # Watch specific categories
+vlayer watch <path> --config .vlayerrc.json  # Watch with custom config
+vlayer watch <path> --min-confidence high    # Watch with confidence filter
+
 # Audit commands
 vlayer audit <path> --summary                 # View audit summary
 vlayer audit <path> --generate-report         # Generate PDF
 vlayer audit <path> --generate-report --text  # Generate text instead
 vlayer audit <path> --generate-report --org "Company" --auditor "Name"
+
+# Baseline commands
+vlayer baseline <path>                        # Generate baseline
+vlayer baseline <path> -o custom.json         # Custom output path
+vlayer scan <path> --baseline .vlayer-baseline.json  # Scan with baseline
 ```
 
 **Exit codes:**
@@ -332,13 +398,29 @@ Each finding maps to specific HIPAA regulations:
 
 ## Roadmap
 
+### Recently Completed ✅
+- [x] **Phase 3A: IDE & Developer Experience**
+  - [x] VS Code Extension v2.0 with real-time scanning
+  - [x] Watch mode for continuous monitoring
+  - [x] Inline diagnostics with hover tooltips
+  - [x] Quick-fix actions and status bar integration
+- [x] **Phase 2B: Enhanced Custom Rules**
+  - [x] Semantic awareness for custom rules
+  - [x] Pattern-aware context detection
+  - [x] Confidence level controls
+- [x] **Phase 2A: Semantic Context Analysis**
+  - [x] AST-based semantic analysis
+  - [x] Context-aware confidence levels
+  - [x] Test file detection
+- [x] **Phase 1B: Reusable GitHub Action**
+  - [x] GitHub Action for CI/CD integration
+  - [x] Enhanced npm package
+  - [x] Baseline and suppression systems
+
 ### Coming Soon
-- [x] GitHub Action for CI/CD integration
-- [x] Automated npm releases with semantic-release
-- [x] Dependabot for dependency updates
-- [ ] VS Code extension with inline warnings
 - [ ] Slack/Teams notifications for new findings
-- [ ] Custom rule definitions (YAML)
+- [ ] Web dashboard with trend tracking
+- [ ] API for programmatic access
 
 ### Planned
 - [ ] HITRUST CSF mapping
