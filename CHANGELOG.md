@@ -1,3 +1,10 @@
+# [0.18.0](https://github.com/Francosimon53/verification-layer/compare/v0.17.0...v0.18.0) (2026-02-06)
+
+
+### Features
+
+* add Supabase authentication to dashboard ([18266af](https://github.com/Francosimon53/verification-layer/commit/18266af17e5d02634717e7cd2b3532c09a47742f))
+
 # [0.17.0](https://github.com/Francosimon53/verification-layer/compare/v0.16.0...v0.17.0) (2026-02-06)
 
 
