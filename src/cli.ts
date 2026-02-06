@@ -11,6 +11,9 @@ import { generateFixReport } from './reporters/fix-report.js';
 import { loadAuditTrail, getAuditSummary } from './audit/index.js';
 import { generateAuditReport, generateTextAuditReport } from './reporters/audit-report.js';
 import { loadCustomRules, validateRulesFile } from './rules/index.js';
+import { getScoreSummary, formatScore, getScoreColor } from './compliance-score.js';
+import { generateAuditorReport } from './reporters/auditor-report.js';
+import { writeFile } from 'fs/promises';
 import type { ComplianceCategory, ReportOptions, AuditReportOptions } from './types.js';
 
 const program = new Command();
@@ -379,6 +382,181 @@ program
       watcher.close();
       process.exit(0);
     });
+  });
+
+program
+  .command('score')
+  .description('Calculate HIPAA compliance score for a repository')
+  .argument('<path>', 'Path to the repository')
+  .option('-c, --categories <categories...>', 'Compliance categories to check')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated)')
+  .option('--config <path>', 'Path to configuration file')
+  .option('--baseline <path>', 'Path to baseline file')
+  .option('-f, --format <format>', 'Output format: text, json', 'text')
+  .action(async (path: string, options) => {
+    const spinner = ora('Calculating compliance score...').start();
+
+    try {
+      const categories = options.categories as ComplianceCategory[] | undefined;
+      let excludePatterns: string[] | undefined;
+
+      if (options.exclude) {
+        const patterns = typeof options.exclude === 'string'
+          ? options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
+          : options.exclude;
+
+        excludePatterns = patterns.map((p: string) => {
+          if (p.includes('*') || p.includes('**')) {
+            return p.startsWith('**/') ? p : `**/${p}`;
+          }
+          return `**/${p}/**`;
+        });
+      }
+
+      const result = await scan({
+        path,
+        categories,
+        exclude: excludePatterns,
+        configFile: options.config,
+        baselineFile: options.baseline,
+      });
+
+      spinner.stop();
+
+      if (!result.complianceScore) {
+        console.error(chalk.red('Failed to calculate compliance score'));
+        process.exit(1);
+      }
+
+      const score = result.complianceScore;
+
+      if (options.format === 'json') {
+        console.log(JSON.stringify(score, null, 2));
+      } else {
+        // Text format (default)
+        const scoreColor = getScoreColor(score.score);
+        const colorFn = scoreColor === 'green' ? chalk.green : scoreColor === 'yellow' ? chalk.yellow : chalk.red;
+
+        console.log(chalk.bold('\n📊 HIPAA Compliance Score\n'));
+        console.log(colorFn.bold(`Score: ${score.score}/100 (Grade ${score.grade})`));
+        console.log(colorFn(`Status: ${score.status.toUpperCase()}\n`));
+
+        console.log(chalk.bold('Findings Breakdown:'));
+        console.log(`  ${chalk.red('Critical:')} ${score.breakdown.critical}`);
+        console.log(`  ${chalk.red('High:')} ${score.breakdown.high}`);
+        console.log(`  ${chalk.yellow('Medium:')} ${score.breakdown.medium}`);
+        console.log(`  ${chalk.blue('Low:')} ${score.breakdown.low}`);
+        console.log(`  ${chalk.white('Total Active:')} ${score.breakdown.total}`);
+
+        if (score.breakdown.acknowledged > 0) {
+          console.log(`  ${chalk.gray('Acknowledged:')} ${score.breakdown.acknowledged}`);
+        }
+
+        console.log(chalk.bold('\nPenalty Points:'));
+        console.log(`  Critical: ${chalk.red(`-${score.penalties.critical}`)}`);
+        console.log(`  High: ${chalk.red(`-${score.penalties.high}`)}`);
+        console.log(`  Medium: ${chalk.yellow(`-${score.penalties.medium}`)}`);
+        console.log(`  Low: ${chalk.blue(`-${score.penalties.low}`)}`);
+        console.log(`  ${chalk.bold('Total:')} ${chalk.red(`-${score.penalties.total}`)}`);
+
+        if (score.recommendations.length > 0) {
+          console.log(chalk.bold('\n💡 Recommendations:'));
+          for (const rec of score.recommendations) {
+            console.log(`  • ${rec}`);
+          }
+        }
+
+        console.log('');
+      }
+
+      // Exit with error code if score is below 60
+      if (score.score < 60) {
+        process.exit(1);
+      }
+    } catch (error) {
+      spinner.fail('Score calculation failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('report')
+  .description('Generate auditor-ready compliance report with SHA256 hash')
+  .argument('<path>', 'Path to the repository')
+  .option('-o, --output <path>', 'Output file path for the report', 'vlayer-audit-report.html')
+  .option('--org <name>', 'Organization name for the report')
+  .option('--period <period>', 'Report period (e.g., "January 2024")')
+  .option('--auditor <name>', 'Auditor name')
+  .option('-c, --categories <categories...>', 'Compliance categories to check')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated)')
+  .option('--config <path>', 'Path to configuration file')
+  .option('--baseline <path>', 'Path to baseline file')
+  .option('--include-baseline', 'Include baseline comparison in report')
+  .action(async (path: string, options) => {
+    const spinner = ora('Generating auditor report...').start();
+
+    try {
+      const categories = options.categories as ComplianceCategory[] | undefined;
+      let excludePatterns: string[] | undefined;
+
+      if (options.exclude) {
+        const patterns = typeof options.exclude === 'string'
+          ? options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
+          : options.exclude;
+
+        excludePatterns = patterns.map((p: string) => {
+          if (p.includes('*') || p.includes('**')) {
+            return p.startsWith('**/') ? p : `**/${p}`;
+          }
+          return `**/${p}/**`;
+        });
+      }
+
+      const result = await scan({
+        path,
+        categories,
+        exclude: excludePatterns,
+        configFile: options.config,
+        baselineFile: options.baseline,
+      });
+
+      if (!result.complianceScore) {
+        spinner.fail('Failed to calculate compliance score');
+        process.exit(1);
+      }
+
+      const { html, hash } = generateAuditorReport(result, path, {
+        organizationName: options.org,
+        reportPeriod: options.period,
+        auditorName: options.auditor,
+        includeBaseline: options.includeBaseline,
+      });
+
+      await writeFile(options.output, html, 'utf-8');
+
+      spinner.succeed(`Auditor report generated: ${options.output}`);
+
+      console.log(chalk.bold('\n📄 Report Details:\n'));
+      console.log(`${chalk.cyan('Location:')} ${options.output}`);
+      console.log(`${chalk.cyan('SHA256 Hash:')} ${chalk.gray(hash)}`);
+      console.log(`${chalk.cyan('Compliance Score:')} ${formatScore(result.complianceScore)}`);
+      console.log(`${chalk.cyan('Total Findings:')} ${result.complianceScore.breakdown.total}`);
+      console.log(`${chalk.cyan('Files Scanned:')} ${result.scannedFiles}`);
+
+      console.log(chalk.gray('\n💡 This report is ready for audit review and includes:'));
+      console.log(chalk.gray('   • Compliance score with visual gauge'));
+      console.log(chalk.gray('   • Executive summary with key metrics'));
+      console.log(chalk.gray('   • Detailed findings with HIPAA references'));
+      console.log(chalk.gray('   • Suppression and acknowledgment audit trails'));
+      console.log(chalk.gray('   • SHA256 hash for document integrity verification'));
+      console.log(chalk.gray('   • Print-friendly CSS for PDF export\n'));
+
+    } catch (error) {
+      spinner.fail('Report generation failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
   });
 
 program

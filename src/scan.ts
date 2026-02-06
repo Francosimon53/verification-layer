@@ -14,6 +14,7 @@ import { applyAcknowledgments } from './acknowledgments.js';
 import { applyInlineSuppressions } from './suppression.js';
 import { loadBaseline, applyBaseline } from './baseline.js';
 import { batchAnalyzeSemanticContext } from './semantic-analysis.js';
+import { calculateComplianceScore } from './compliance-score.js';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -179,10 +180,18 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     });
   }
 
-  return {
+  // Calculate compliance score
+  const result = {
     findings: processedFindings,
     scannedFiles: filteredFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
+  };
+
+  const complianceScore = calculateComplianceScore(result);
+
+  return {
+    ...result,
+    complianceScore,
   };
 }

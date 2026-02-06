@@ -71,11 +71,34 @@ export interface StackInfo {
   recommendations: string[];
 }
 
+export interface ComplianceScore {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  status: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  breakdown: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    acknowledged: number;
+  };
+  penalties: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  };
+  recommendations: string[];
+}
+
 export interface ScanResult {
   findings: Finding[];
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;
+  complianceScore?: ComplianceScore;
 }
 
 export interface ScanOptions {

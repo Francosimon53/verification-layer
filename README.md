@@ -41,9 +41,68 @@ node dist/cli.js scan /path/to/project -f html -o report.html
 # Auto-fix issues
 node dist/cli.js scan /path/to/project --fix
 
-# Generate audit PDF
-node dist/cli.js audit /path/to/project --generate-report
+# Check compliance score
+node dist/cli.js score /path/to/project
+
+# Generate auditor-ready report
+node dist/cli.js report /path/to/project -o audit-report.html
 ```
+
+---
+
+## 🆕 Compliance Score & Dashboard
+
+### HIPAA Compliance Score (0-100)
+
+VLayer calculates a compliance score based on findings weighted by severity and confidence:
+
+```bash
+# Calculate compliance score
+node dist/cli.js score ./src
+
+# Output as JSON
+node dist/cli.js score ./src -f json
+```
+
+**Scoring System:**
+- 🔴 Critical: -10 points each
+- 🟠 High: -5 points each
+- 🟡 Medium: -2 points each
+- 🔵 Low: -1 point each
+- ✅ Acknowledged findings: 25% penalty reduction
+
+**Grading:**
+- A (90-100): Excellent compliance posture
+- B (80-89): Good compliance
+- C (70-79): Fair compliance
+- D (60-69): Poor compliance
+- F (<60): Critical - requires immediate attention
+
+### Auditor-Ready Reports
+
+Generate professional compliance reports with SHA256 hash verification:
+
+```bash
+# Basic auditor report
+node dist/cli.js report ./src
+
+# Full-featured report
+node dist/cli.js report ./src \
+  -o compliance-report.html \
+  --org "HealthTech Inc" \
+  --period "Q1 2024" \
+  --auditor "John Doe" \
+  --include-baseline
+```
+
+**Report Features:**
+- 📊 Compliance score with visual gauge (green/yellow/red)
+- 📈 Executive summary with key metrics
+- 📋 Findings table with filtering by severity
+- 🔒 Suppression and acknowledgment audit trails
+- 📄 Baseline comparison (if enabled)
+- 🔐 SHA256 hash for document integrity
+- 🖨️ Print-friendly CSS for PDF export
 
 ---
 
@@ -372,6 +431,17 @@ vlayer audit <path> --generate-report --org "Company" --auditor "Name"
 vlayer baseline <path>                        # Generate baseline
 vlayer baseline <path> -o custom.json         # Custom output path
 vlayer scan <path> --baseline .vlayer-baseline.json  # Scan with baseline
+
+# Compliance score
+vlayer score <path>                           # Calculate compliance score
+vlayer score <path> -f json                   # JSON output
+vlayer score <path> --baseline baseline.json  # Score with baseline
+
+# Auditor reports
+vlayer report <path>                          # Generate auditor report
+vlayer report <path> -o report.html           # Custom output path
+vlayer report <path> --org "Company Name"     # Set organization
+vlayer report <path> --include-baseline       # Include baseline comparison
 ```
 
 **Exit codes:**
@@ -399,6 +469,12 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Recently Completed ✅
+- [x] **Phase 3B: Dashboard & Compliance Score**
+  - [x] HIPAA Compliance Score (0-100) with severity weighting
+  - [x] Enhanced HTML reports with visual gauge
+  - [x] Auditor-ready reports with SHA256 hash
+  - [x] Executive summary and filterable findings table
+  - [x] Print-friendly CSS for PDF export
 - [x] **Phase 3A: IDE & Developer Experience**
   - [x] VS Code Extension v2.0 with real-time scanning
   - [x] Watch mode for continuous monitoring

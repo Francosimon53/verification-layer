@@ -4,6 +4,7 @@ export { loadCustomRules, validateRulesFile, scanWithCustomRules } from './rules
 export { loadBaseline, saveBaseline, applyBaseline, generateFindingHash } from './baseline.js';
 export { checkInlineSuppression, applyInlineSuppressions } from './suppression.js';
 export { checkAcknowledgment, applyAcknowledgments } from './acknowledgments.js';
+export { calculateComplianceScore, formatScore, getScoreColor, getScoreSummary } from './compliance-score.js';
 export type {
   Finding,
   ScanResult,
@@ -19,6 +20,7 @@ export type {
   ContextLine,
   CompiledCustomRule,
   CustomRuleFix,
+  ComplianceScore,
 } from './types.js';
 export type { LoadRulesResult, RuleLoadError, CustomRuleDefinition, RulesFile } from './rules/index.js';
 export type { Baseline, BaselineEntry } from './baseline.js';
