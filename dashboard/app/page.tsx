@@ -1,10 +1,17 @@
 import Link from 'next/link';
 import { getProjects } from '@/lib/storage';
+import { getDemoProjects } from '@/lib/demo-data';
+import { CircularProgress } from '@/components/CircularProgress';
+import { StatusBadge } from '@/components/StatusBadge';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const projects = await getProjects();
+  const realProjects = await getProjects();
+  const demoProjects = getDemoProjects();
+
+  // Combine real and demo projects
+  const projects = [...realProjects, ...demoProjects];
 
   // Calculate summary stats
   const totalScans = projects.reduce((sum, p) => sum + p.scans.length, 0);
@@ -17,19 +24,27 @@ export default async function HomePage() {
         )
       : 0;
 
+  // Get status distribution
+  const compliantCount = projectsWithScans.filter(p => (p.scans[0]?.complianceScore.score || 0) >= 80).length;
+  const atRiskCount = projectsWithScans.filter(p => {
+    const score = p.scans[0]?.complianceScore.score || 0;
+    return score >= 60 && score < 80;
+  }).length;
+  const criticalCount = projectsWithScans.filter(p => (p.scans[0]?.complianceScore.score || 0) < 60).length;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-[#0F172A]">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <header className="bg-[#1E293B] border-b border-slate-800">
+        <div className="px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">VLayer Dashboard</h1>
-              <p className="text-gray-600 mt-1">HIPAA Compliance Monitoring</p>
+              <h1 className="text-2xl font-bold text-white">Compliance Overview</h1>
+              <p className="text-slate-400 mt-1">Monitor HIPAA compliance across all projects</p>
             </div>
             <Link
               href="/projects/new"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-emerald-500/20"
             >
               + New Project
             </Link>
@@ -37,128 +52,206 @@ export default async function HomePage() {
         </div>
       </header>
 
-      {/* Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">📁</div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{projects.length}</div>
-                <div className="text-sm text-gray-600">Total Projects</div>
+      <div className="px-8 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Average Score Card */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-slate-400 text-sm font-medium">Average Score</div>
+              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white">{avgScore}</span>
+              <span className="text-slate-400">/100</span>
+            </div>
+            <div className="mt-2">
+              <StatusBadge
+                status={avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'at-risk' : 'critical'}
+                size="sm"
+              />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🔍</div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{totalScans}</div>
-                <div className="text-sm text-gray-600">Total Scans</div>
+          {/* Total Projects */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-slate-400 text-sm font-medium">Total Projects</div>
+              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
               </div>
             </div>
+            <div className="text-4xl font-bold text-white">{projects.length}</div>
+            <div className="mt-2 text-sm text-slate-400">{projectsWithScans.length} with scans</div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🎯</div>
-              <div>
-                <div
-                  className={`text-2xl font-bold ${
-                    avgScore >= 80 ? 'text-green-600' : avgScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                  }`}
-                >
-                  {avgScore}/100
-                </div>
-                <div className="text-sm text-gray-600">Average Score</div>
+          {/* Total Scans */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-slate-400 text-sm font-medium">Total Scans</div>
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-4xl font-bold text-white">{totalScans}</div>
+            <div className="mt-2 text-sm text-slate-400">Last 30 days</div>
+          </div>
+
+          {/* Status Distribution */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-slate-400 text-sm font-medium">Status</div>
+              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-emerald-400">Compliant</span>
+                <span className="font-semibold text-white">{compliantCount}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-amber-400">At Risk</span>
+                <span className="font-semibold text-white">{atRiskCount}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-red-400">Critical</span>
+                <span className="font-semibold text-white">{criticalCount}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Projects List */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
+        {/* Projects Table */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-700">
+            <h2 className="text-lg font-semibold text-white">Projects</h2>
+            <p className="text-sm text-slate-400 mt-1">Monitor compliance status across all projects</p>
           </div>
 
           {projects.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <div className="text-6xl mb-4">📂</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first project.</p>
+            <div className="px-6 py-16 text-center">
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
+              <p className="text-slate-400 mb-6">Get started by creating your first project.</p>
               <Link
                 href="/projects/new"
-                className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-emerald-500/20"
               >
                 Create Project
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {projects.map((project) => {
-                const lastScan = project.scans[0];
-                return (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="block px-6 py-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-                        {project.description && (
-                          <p className="text-sm text-gray-600 mt-1">{project.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                          <span>📂 {project.path}</span>
-                          <span>• {project.scans.length} scans</span>
-                          {project.lastScanAt && (
-                            <span>
-                              • Last scan: {new Date(project.lastScanAt).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-800/50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Project</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Score</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Findings</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Last Scan</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {projects.map((project) => {
+                    const lastScan = project.scans[0];
+                    const score = lastScan?.complianceScore.score || 0;
+                    const status = score >= 80 ? 'compliant' : score >= 60 ? 'at-risk' : 'critical';
 
-                      {lastScan && (
-                        <div className="ml-6 flex items-center gap-4">
-                          <div className="text-right">
-                            <div
-                              className={`text-2xl font-bold ${
-                                lastScan.complianceScore.score >= 80
-                                  ? 'text-green-600'
-                                  : lastScan.complianceScore.score >= 60
-                                    ? 'text-yellow-600'
-                                    : 'text-red-600'
-                              }`}
-                            >
-                              {lastScan.complianceScore.score}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Grade {lastScan.complianceScore.grade}
-                            </div>
+                    return (
+                      <tr key={project.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <Link href={`/projects/${project.id}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
+                              {project.name}
+                            </Link>
+                            {project.description && (
+                              <div className="text-sm text-slate-400 mt-1">{project.description}</div>
+                            )}
                           </div>
-                          <svg
-                            className="w-5 h-5 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                        </td>
+                        <td className="px-6 py-4">
+                          {lastScan ? (
+                            <StatusBadge status={status} />
+                          ) : (
+                            <span className="text-sm text-slate-500">No scans</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {lastScan ? (
+                            <div className="flex items-center gap-3">
+                              <CircularProgress score={score} size={50} strokeWidth={6} showLabel={false} />
+                              <div>
+                                <div className="text-lg font-bold text-white">{score}</div>
+                                <div className="text-xs text-slate-400">Grade {lastScan.complianceScore.grade}</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {lastScan ? (
+                            <div className="flex items-center gap-3">
+                              {lastScan.summary.critical > 0 && (
+                                <span className="px-2 py-1 bg-red-500/10 text-red-400 text-xs font-semibold rounded border border-red-500/20">
+                                  {lastScan.summary.critical} Critical
+                                </span>
+                              )}
+                              {lastScan.summary.high > 0 && (
+                                <span className="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs font-semibold rounded border border-orange-500/20">
+                                  {lastScan.summary.high} High
+                                </span>
+                              )}
+                              {lastScan.summary.critical === 0 && lastScan.summary.high === 0 && (
+                                <span className="text-sm text-emerald-400">✓ No critical issues</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {project.lastScanAt ? (
+                            <div className="text-sm text-slate-300">
+                              {new Date(project.lastScanAt).toLocaleDateString()}
+                              <div className="text-xs text-slate-500">
+                                {new Date(project.lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">Never</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link
+                            href={`/projects/${project.id}`}
+                            className="text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
+                            View Details →
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
