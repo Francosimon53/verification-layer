@@ -1,3 +1,19 @@
+# [0.12.0](https://github.com/Francosimon53/verification-layer/compare/v0.11.0...v0.12.0) (2026-02-06)
+
+
+### Bug Fixes
+
+* resolve linting errors and update baseline ([ae209a5](https://github.com/Francosimon53/verification-layer/commit/ae209a55dc6e38be9e2551817974d712b9f6ae21))
+
+
+### Features
+
+* add reusable GitHub Action and improve npm package configuration ([da7af1f](https://github.com/Francosimon53/verification-layer/commit/da7af1fb1bfc5c42d7975338feb4b2f594ee9ce9)), closes [hi#findings](https://github.com/hi/issues/findings)
+* add semantic awareness to custom rules (Phase 2B) ([c4ec9b9](https://github.com/Francosimon53/verification-layer/commit/c4ec9b98103005bce6833133f205b4177ab80eec))
+* implement acknowledged findings system for professional compliance scanning ([f4c0b9a](https://github.com/Francosimon53/verification-layer/commit/f4c0b9aa8b52105b5c7fa3ae13bf1ea4b7805775))
+* implement professional suppression and baseline system ([5264204](https://github.com/Francosimon53/verification-layer/commit/52642049b0ef23d26adbf269987b577ed7111a38)), closes [hi#confidence](https://github.com/hi/issues/confidence)
+* implement semantic context analysis with AST parsing (Phase 2A) ([f7fdc1f](https://github.com/Francosimon53/verification-layer/commit/f7fdc1f69d92739bddebd6953bae291cbc511fac))
+
 # [0.11.0](https://github.com/Francosimon53/verification-layer/compare/v0.10.0...v0.11.0) (2026-02-06)
 
 
