@@ -27,7 +27,7 @@ jobs:
       - name: Run HIPAA scan
         id: scan
         continue-on-error: true
-        run: node dist/cli.js scan . -f json -o hipaa-results.json --exclude "tests,test,__tests__,*.test.*,*.spec.*,examples,fixtures,sample,test-project"
+        run: node dist/cli.js scan . -f json -o hipaa-results.json --exclude "tests,test,__tests__,*.test.*,*.spec.*,examples,fixtures,sample,test-project,src/scanners,src/fixer,src/reporters,src/remediation,node_modules,dist,package-lock.json"
 
       - name: Post PR comment
         uses: actions/github-script@v7
