@@ -48,6 +48,24 @@
       "reason": "Test files contain intentional vulnerable code examples to verify scanner detection capabilities and ensure comprehensive coverage of security patterns.",
       "acknowledgedBy": "Development Team",
       "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/package-lock.json",
+      "reason": "Package lock file may contain references to cryptographic algorithms in dependency names or metadata. These are dependency references, not actual usage in production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/vlayer-rules.example.yaml",
+      "reason": "Example configuration file contains sample patterns including HTTP URLs for demonstration purposes. This is documentation, not production configuration.",
+      "acknowledgedBy": "Documentation Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/stack-detector/**/*.ts",
+      "reason": "Stack detection guides contain example code snippets and configuration patterns for various frameworks. These examples may include security anti-patterns for educational purposes.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z"
     }
   ]
 }
