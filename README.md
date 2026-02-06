@@ -52,11 +52,35 @@ node dist/cli.js report /path/to/project -o audit-report.html
 
 ## 🌐 Web Dashboard
 
-**Live Dashboard**: [https://dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
+**Live Site**: [https://dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
 
-Enterprise-grade HIPAA compliance monitoring platform with professional dark theme and real-time visualizations.
+Enterprise-grade HIPAA compliance monitoring platform with professional landing page and real-time dashboard.
 
-### Design
+### Landing Page
+
+Professional SaaS marketing site at the root URL with 8 sections designed for $10M+ look:
+
+**Sections:**
+- 🚀 **Hero** - Animated terminal showing live vlayer scan with gradient background and CTAs
+- ✨ **Social Proof** - Trust bar featuring healthcare partners and enterprise logos
+- 🎯 **Features** - 6 feature cards (88+ detection rules, auto-fix engine, CI/CD integration, AI analysis, compliance scoring, auditor reports)
+- 📚 **How It Works** - 3-step process (Install → Scan → Fix) with CLI code examples
+- 💰 **Pricing** - 4 pricing tiers with feature comparison
+  - Free - Up to 5 scans/month
+  - Starter ($19/mo) - Most Popular, all detection rules + auto-fixes
+  - Pro ($49/mo) - Priority support + advanced features
+  - Enterprise ($199/mo) - Custom rules + dedicated support
+- 📊 **Comparison Table** - VLayer vs Snyk/Vanta/Drata competitive analysis
+- ❓ **FAQ** - 8 frequently asked questions with accordion UI
+- 🔗 **Footer** - 4-column footer with navigation, resources, and social links
+
+**Design:**
+- Same dark navy theme (#0A1628, #0F172A, #1E293B) with emerald/teal accents
+- Gradient effects, glassmorphism, and smooth animations
+- Fully responsive and optimized for SEO
+- Professional typography and spacing
+
+### Dashboard Design
 
 **Professional Enterprise UI:**
 - 🎨 **Dark Navy Theme** - Professional color palette (#0A1628, #0F172A) with emerald/teal accents
@@ -78,7 +102,7 @@ Enterprise-grade HIPAA compliance monitoring platform with professional dark the
 
 ### Quick Start
 
-1. **Visit Dashboard**: Navigate to [dashboard-silk-zeta-55.vercel.app](https://dashboard-silk-zeta-55.vercel.app)
+1. **Visit Dashboard**: Navigate to [dashboard-silk-zeta-55.vercel.app/dashboard](https://dashboard-silk-zeta-55.vercel.app/dashboard)
 2. **Create Project**: Click "+ New Project" and enter your project details
 3. **Run Scan**: Execute a compliance scan on your codebase
    ```bash
@@ -524,8 +548,17 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Recently Completed ✅
+- [x] **Phase 4B: Professional Landing Page**
+  - [x] SaaS marketing site at root route (/)
+  - [x] 8 professional sections (Hero, Social Proof, Features, How It Works, Pricing, Comparison, FAQ, Footer)
+  - [x] Animated terminal demo in hero section
+  - [x] 4-tier pricing with feature comparison
+  - [x] Competitive analysis table (VLayer vs Snyk/Vanta/Drata)
+  - [x] Professional $10M+ SaaS design
+  - [x] SEO-optimized and fully responsive
+  - [x] Live at: https://dashboard-silk-zeta-55.vercel.app
 - [x] **Phase 4A: Web Dashboard (Enterprise Redesign)**
-  - [x] Next.js dashboard deployed to Vercel
+  - [x] Next.js dashboard deployed to Vercel at /dashboard
   - [x] Enterprise-grade dark navy theme with emerald accents
   - [x] Fixed sidebar navigation with VLayer branding
   - [x] Circular progress gauges with animations
@@ -535,7 +568,6 @@ Each finding maps to specific HIPAA regulations:
   - [x] Demo data with 4 realistic projects
   - [x] Glassmorphism effects and professional shadows
   - [x] Responsive design optimized for all devices
-  - [x] Live at: https://dashboard-silk-zeta-55.vercel.app
 - [x] **Phase 3B: Dashboard & Compliance Score**
   - [x] HIPAA Compliance Score (0-100) with severity weighting
   - [x] Enhanced HTML reports with visual gauge
