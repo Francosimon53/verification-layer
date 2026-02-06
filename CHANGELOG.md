@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/Francosimon53/verification-layer/compare/v0.16.0...v0.17.0) (2026-02-06)
+
+
+### Features
+
+* add professional SaaS landing page with 8 sections ([1543f21](https://github.com/Francosimon53/verification-layer/commit/1543f21b22d29f50420856e77fa3ea95f754afa9)), closes [#0A1628](https://github.com/Francosimon53/verification-layer/issues/0A1628) [#0F172A](https://github.com/Francosimon53/verification-layer/issues/0F172A) [#1E293B](https://github.com/Francosimon53/verification-layer/issues/1E293B) [#10b981](https://github.com/Francosimon53/verification-layer/issues/10b981) [#14b8a6](https://github.com/Francosimon53/verification-layer/issues/14b8a6)
+
 # [0.16.0](https://github.com/Francosimon53/verification-layer/compare/v0.15.0...v0.16.0) (2026-02-06)
 
 
