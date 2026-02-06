@@ -1,3 +1,15 @@
+# [0.14.0](https://github.com/Francosimon53/verification-layer/compare/v0.13.0...v0.14.0) (2026-02-06)
+
+
+### Bug Fixes
+
+* remove unused imports to resolve linting errors ([5fd275e](https://github.com/Francosimon53/verification-layer/commit/5fd275e092774d152642e0da7377ded601d2e635))
+
+
+### Features
+
+* implement Phase 3B - Dashboard & Compliance Score ([1f25b31](https://github.com/Francosimon53/verification-layer/commit/1f25b31c26f94f4c44ff6bf7281d98b14d8a9db1))
+
 # [0.13.0](https://github.com/Francosimon53/verification-layer/compare/v0.12.0...v0.13.0) (2026-02-06)
 
 
