@@ -36,6 +36,7 @@ program
   .option('--baseline <path>', 'Path to baseline file for comparison')
   .option('--min-confidence <level>', 'Minimum confidence level (high, medium, low)', 'low')
   .option('--fix', 'Automatically fix detected issues where possible')
+  .option('--no-ai', 'Disable AI-powered triage and analysis')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
     const absolutePath = resolve(path);
@@ -148,6 +149,120 @@ program
       }
     } catch (error) {
       spinner.fail('Scan failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('ai-scan')
+  .description('Run AI-powered HIPAA compliance scan (requires API key)')
+  .argument('<path>', 'Path to the repository to scan')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated)')
+  .option('-o, --output <path>', 'Output file path for the report')
+  .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
+  .option('--budget <cents>', 'AI budget in cents (default: 50)', '50')
+  .option('--rules-only', 'Run LLM rules only (skip triage)')
+  .action(async (path: string, options) => {
+    const spinner = ora('Running AI-powered scan...').start();
+    const absolutePath = resolve(path);
+
+    try {
+      const { runAIScan } = await import('./ai/scanner.js');
+      const { isAIAvailable } = await import('./ai/client.js');
+
+      if (!isAIAvailable()) {
+        spinner.fail('AI scanning requires an API key');
+        console.error(chalk.red('\nSet ANTHROPIC_API_KEY or VLAYER_AI_KEY environment variable.'));
+        console.error(chalk.gray('Get your API key at: https://console.anthropic.com/'));
+        process.exit(1);
+      }
+
+      // Get all files to scan
+      let excludePatterns: string[] | undefined;
+      if (options.exclude) {
+        const patterns = typeof options.exclude === 'string'
+          ? options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
+          : options.exclude;
+
+        excludePatterns = patterns.map((p: string) => {
+          if (p.includes('*') || p.includes('**')) {
+            return p.startsWith('**/') ? p : `**/${p}`;
+          }
+          return `**/${p}/**`;
+        });
+      }
+
+      const { glob } = await import('glob');
+      const defaultExclude = [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/build/**',
+        '**/.git/**',
+        '**/coverage/**',
+      ];
+
+      const files = await glob('**/*', {
+        cwd: absolutePath,
+        nodir: true,
+        ignore: [...defaultExclude, ...(excludePatterns || [])],
+        absolute: false,
+      });
+
+      // Filter to source code files only
+      const sourceFiles = files.filter(f =>
+        /\.(js|jsx|ts|tsx|py|java|rb|php|go|rs|cs|swift|kt)$/.test(f)
+      );
+
+      if (sourceFiles.length === 0) {
+        spinner.warn('No source files found to scan');
+        return;
+      }
+
+      const result = await runAIScan(absolutePath, {
+        enableLLMRules: true,
+        enableTriage: !options.rulesOnly,
+        budgetCents: parseInt(options.budget),
+        targetFiles: sourceFiles.slice(0, 20), // Limit to 20 files for cost control
+      });
+
+      spinner.succeed(`AI scan complete: ${result.aiFindings.length} findings, ${result.stats.costCents}¢`);
+
+      // Generate report
+      const { generateReport } = await import('./reporters/index.js');
+      const scanResult = {
+        findings: result.aiFindings,
+        scannedFiles: result.stats.filesScanned,
+        scanDuration: 0,
+      };
+
+      await generateReport(scanResult, path, {
+        format: options.format,
+        outputPath: options.output,
+      });
+
+      // Print summary
+      console.log('\n' + chalk.bold('AI Scan Summary:'));
+      console.log(`  Files scanned: ${result.stats.filesScanned}`);
+      console.log(`  AI findings: ${result.aiFindings.length}`);
+      console.log(`  AI calls made: ${result.stats.aiCallsMade}`);
+      console.log(`  Cost: ${chalk.cyan(result.stats.costCents + '¢')}`);
+
+      const critical = result.aiFindings.filter(f => f.severity === 'critical').length;
+      const high = result.aiFindings.filter(f => f.severity === 'high').length;
+
+      if (critical > 0) {
+        console.log(chalk.red(`  Critical: ${critical}`));
+      }
+      if (high > 0) {
+        console.log(chalk.yellow(`  High: ${high}`));
+      }
+
+      if (critical > 0) {
+        process.exit(1);
+      }
+    } catch (error) {
+      spinner.fail('AI scan failed');
       console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
       process.exit(1);
     }

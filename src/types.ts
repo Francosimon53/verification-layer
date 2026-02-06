@@ -165,6 +165,13 @@ export interface VlayerConfig {
   customRulesPath?: string;
   disableBuiltinRules?: string[];
   acknowledgedFindings?: AcknowledgedFinding[];
+  ai?: {
+    enabled?: boolean;
+    enableTriage?: boolean;
+    enableLLMRules?: boolean;
+    filterFalsePositives?: boolean;
+    budgetCents?: number;
+  };
 }
 
 export interface FixResult {

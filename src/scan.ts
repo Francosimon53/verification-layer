@@ -15,6 +15,9 @@ import { applyInlineSuppressions } from './suppression.js';
 import { loadBaseline, applyBaseline } from './baseline.js';
 import { batchAnalyzeSemanticContext } from './semantic-analysis.js';
 import { calculateComplianceScore } from './compliance-score.js';
+import { triageExistingFindings } from './ai/scanner.js';
+import { isAIAvailable } from './ai/client.js';
+import * as fs from 'fs/promises';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
   'phi-exposure',
@@ -157,6 +160,39 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     }
     return finding;
   });
+
+  // Apply AI triage if enabled and available
+  if (config.ai?.enableTriage !== false && isAIAvailable()) {
+    try {
+      // Load file contents for triage
+      const fileContents = new Map<string, string>();
+      const uniqueFiles = [...new Set(processedFindings.map(f => f.file))];
+
+      for (const file of uniqueFiles) {
+        try {
+          const content = await fs.readFile(file, 'utf-8');
+          fileContents.set(file, content);
+        } catch (error) {
+          // Skip files that can't be read
+        }
+      }
+
+      const triagedFindings = await triageExistingFindings(processedFindings, fileContents);
+
+      // Filter out false positives (optional, based on config)
+      if (config.ai?.filterFalsePositives !== false) {
+        processedFindings = triagedFindings.filter(
+          f => f.aiClassification !== 'false_positive'
+        );
+      } else {
+        // Keep all but add AI metadata
+        processedFindings = triagedFindings;
+      }
+    } catch (error) {
+      // AI triage failed, continue with original findings
+      console.warn('AI triage failed:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
 
   // Apply baseline if provided
   if (options.baselineFile) {

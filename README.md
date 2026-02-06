@@ -15,6 +15,7 @@ vlayer is a CLI tool that scans your codebase for HIPAA compliance issues. It's 
 
 **Key capabilities:**
 - Scan for 50+ security vulnerabilities and PHI exposure patterns
+- **AI-powered analysis** with Claude API for complex violations and false positive reduction
 - Auto-fix common issues with one command
 - Generate professional audit reports (HTML, PDF, JSON)
 - Detect your tech stack and provide tailored recommendations
@@ -402,6 +403,96 @@ node dist/cli.js audit ./my-app --generate-report --org "Healthcare Inc" --audit
 3. Fix Evidence - Cryptographic proof of each change
 4. Manual Reviews - Pending items with deadlines
 5. Verification Page - Report hash, signature fields
+
+---
+
+### 6. AI-Powered Scanning (Beta)
+
+**Reduce false positives and catch complex violations with Claude AI.**
+
+vlayer now includes optional AI-powered analysis using Anthropic's Claude API:
+
+#### Features
+
+- **🤖 LLM-Powered Rules**: 6 specialized AI rules for detecting complex HIPAA violations
+- **🎯 AI Triage**: Automatically classify findings to reduce false positives by 50%+
+- **🔒 PHI Scrubbing**: All code is sanitized before sending to the LLM (HIPAA-safe)
+- **💰 Cost Control**: Budget limits, caching, and rate limiting built-in
+- **📊 Confidence Scores**: AI provides reasoning and confidence for each finding
+
+#### Quick Start
+
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Run AI-powered scan (default: 50¢ budget)
+node dist/cli.js ai-scan ./my-app
+
+# Adjust budget
+node dist/cli.js ai-scan ./my-app --budget 100
+
+# Run LLM rules only (skip triage)
+node dist/cli.js ai-scan ./my-app --rules-only
+
+# Enable AI triage in regular scan
+node dist/cli.js scan ./my-app  # AI triage runs automatically if API key is set
+
+# Disable AI features
+node dist/cli.js scan ./my-app --no-ai
+```
+
+#### AI Rules
+
+The AI scanner includes 6 specialized rules:
+
+| Rule ID | Name | Detects |
+|---------|------|---------|
+| **HIPAA-PHI-003** | Minimum Necessary Access | APIs returning more PHI than needed (SELECT * violations) |
+| **HIPAA-SEC-001** | PHI Encryption | Unencrypted PHI in transit or at rest |
+| **HIPAA-ACCESS-001** | Role-Based Access Control | Missing auth checks, hardcoded roles, IDOR vulnerabilities |
+| **HIPAA-AUDIT-001** | Audit Logging | PHI operations without proper audit trails |
+| **HIPAA-RETENTION-001** | Data Retention | Improper deletion, missing retention policies |
+| **HIPAA-AUTH-001** | Session Management | Weak session configs, missing timeouts |
+
+#### Configuration
+
+Add AI settings to `.vlayerrc.json`:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "enableTriage": true,
+    "enableLLMRules": true,
+    "filterFalsePositives": true,
+    "budgetCents": 50
+  }
+}
+```
+
+#### Cost & Performance
+
+- **Typical scan**: 5-20 API calls, $0.10-$0.50
+- **Caching**: Results cached for 24 hours by file hash
+- **Rate limiting**: Max 20 calls/minute, 50 calls/scan
+- **PHI protection**: All sensitive data scrubbed before API call
+
+**Example output:**
+```
+🤖 Starting AI-powered HIPAA scan...
+🔒 Scrubbed 3 PHI patterns from src/api/patients.ts
+📋 Running 6 LLM-powered rules...
+✅ AI scan complete: 12 findings, 48¢
+
+AI Scan Summary:
+  Files scanned: 8
+  AI findings: 12
+  AI calls made: 18
+  Cost: 48¢
+  Critical: 2
+  High: 5
+```
 
 ---
 
