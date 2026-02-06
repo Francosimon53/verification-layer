@@ -71,6 +71,7 @@ Enterprise-grade HIPAA compliance monitoring platform for tracking violations, c
 
 ### Features
 
+- 🔐 **Supabase Authentication** - Secure email/password authentication with session management
 - 📊 **Visual Compliance Dashboard** - 4-metric overview with real-time scores and status distribution
 - 📈 **Historical Score Tracking** - Interactive charts showing compliance trends over time
 - 🗂️ **Multi-Project Management** - Monitor unlimited projects with inline progress indicators
@@ -78,16 +79,18 @@ Enterprise-grade HIPAA compliance monitoring platform for tracking violations, c
 - 📋 **Executive Summaries** - Professional reports with grade assignments (A-F)
 - 🎨 **Enterprise Tables** - Sortable project lists with circular scores and status badges
 - 📱 **Responsive Design** - Optimized for desktop, tablet, and mobile devices
+- 👤 **User Management** - User profiles with logout functionality in sidebar
 
 ### Quick Start
 
-1. **Visit Dashboard**: Navigate to [app.vlayer.app](https://app.vlayer.app)
-2. **Create Project**: Click "+ New Project" and enter your project details
-3. **Run Scan**: Execute a compliance scan on your codebase
+1. **Create Account**: Sign up at [app.vlayer.app/signup](https://app.vlayer.app/signup) with your email
+2. **Login**: Access the dashboard at [app.vlayer.app](https://app.vlayer.app)
+3. **Create Project**: Click "+ New Project" and enter your project details
+4. **Run Scan**: Execute a compliance scan on your codebase
    ```bash
    node dist/cli.js scan ./src --format json --output scan.json
    ```
-4. **Upload Results**: Send scan data to your project via API
+5. **Upload Results**: Send scan data to your project via API
    ```bash
    curl -X POST https://app.vlayer.app/api/projects/{projectId}/scans \
      -H "Content-Type: application/json" \
@@ -527,6 +530,15 @@ Each finding maps to specific HIPAA regulations:
 ## Roadmap
 
 ### Recently Completed ✅
+- [x] **Phase 4E: Authentication & User Management**
+  - [x] Supabase Auth integration
+  - [x] Email/password authentication flow
+  - [x] Login and signup pages with dark theme
+  - [x] Protected routes via Next.js middleware
+  - [x] User session management
+  - [x] User profile display in sidebar
+  - [x] Logout functionality
+  - [x] Environment variables configured in Vercel
 - [x] **Phase 4D: Custom Domain Configuration**
   - [x] Configured custom domains on vlayer.app
   - [x] Dashboard: app.vlayer.app
