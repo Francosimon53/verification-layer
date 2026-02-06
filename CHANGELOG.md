@@ -1,3 +1,10 @@
+# [0.16.0](https://github.com/Francosimon53/verification-layer/compare/v0.15.0...v0.16.0) (2026-02-06)
+
+
+### Features
+
+* redesign dashboard with enterprise-grade professional look ([825e9e9](https://github.com/Francosimon53/verification-layer/commit/825e9e93607337a7443efa3afdc1ba7611c618aa)), closes [#0A1628](https://github.com/Francosimon53/verification-layer/issues/0A1628) [#0F172A](https://github.com/Francosimon53/verification-layer/issues/0F172A) [#1E293B](https://github.com/Francosimon53/verification-layer/issues/1E293B) [#10b981](https://github.com/Francosimon53/verification-layer/issues/10b981) [#14b8a6](https://github.com/Francosimon53/verification-layer/issues/14b8a6)
+
 # [0.15.0](https://github.com/Francosimon53/verification-layer/compare/v0.14.0...v0.15.0) (2026-02-06)
 
 
