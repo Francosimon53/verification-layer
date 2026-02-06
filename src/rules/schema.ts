@@ -23,6 +23,10 @@ export const CustomRuleSchema = z.object({
   hipaaReference: z.string().optional(),
   mustNotContain: z.string().optional(),
   fix: CustomRuleFixSchema.optional(),
+  // Semantic awareness fields
+  confidence: z.enum(['high', 'medium', 'low']).optional(),
+  contexts: z.array(z.enum(['code', 'string', 'comment', 'template'])).optional(),
+  adjustConfidenceByContext: z.boolean().optional().default(true),
 });
 
 export const RulesFileSchema = z.object({

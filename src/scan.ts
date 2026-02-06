@@ -143,8 +143,12 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   processedFindings = processedFindings.map((finding, index) => {
     const context = semanticContexts[index];
-    // Only set confidence if not already set
-    if (!finding.confidence) {
+
+    // Check if we should adjust confidence based on context
+    const shouldAdjust = finding.adjustConfidenceByContext !== false; // Default to true
+
+    // Set confidence if not already set, or if adjustConfidenceByContext is true
+    if (!finding.confidence || shouldAdjust) {
       return {
         ...finding,
         confidence: context.confidence,

@@ -44,6 +44,7 @@ export interface Finding {
   context?: ContextLine[];
   fixType?: FixType;
   confidence?: Confidence;
+  adjustConfidenceByContext?: boolean;
   acknowledged?: boolean;
   acknowledgment?: {
     reason: string;
@@ -250,4 +251,8 @@ export interface CompiledCustomRule {
   fix?: CustomRuleFix;
   compiledPattern: RegExp;
   compiledMustNotContain?: RegExp;
+  // Semantic awareness fields
+  confidence?: Confidence;
+  contexts?: Array<'code' | 'string' | 'comment' | 'template'>;
+  adjustConfidenceByContext?: boolean;
 }

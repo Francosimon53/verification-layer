@@ -159,22 +159,51 @@ function findContextAtLine(node: any, lineNumber: number, pattern?: string): Omi
 
     // String literal
     if (node.type === 'Literal' && typeof node.value === 'string') {
-      return { confidence: 'low', context: 'string' };
+      // If no pattern provided, treat any string as low confidence (old behavior)
+      if (!pattern) {
+        return { confidence: 'low', context: 'string' };
+      }
+      // If pattern is provided, only return string context if pattern is in the string
+      if (node.value.includes(pattern)) {
+        return { confidence: 'low', context: 'string' };
+      }
+      // Pattern not in this string, continue searching
     }
 
     // Template literal
     if (node.type === 'TemplateLiteral') {
-      return { confidence: 'medium', context: 'template' };
+      if (!pattern) {
+        return { confidence: 'medium', context: 'template' };
+      }
+      // Check if pattern is in template content
+      if (node.quasis) {
+        for (const quasi of node.quasis) {
+          if (quasi.value && quasi.value.raw && quasi.value.raw.includes(pattern)) {
+            return { confidence: 'medium', context: 'template' };
+          }
+        }
+      }
+      // Pattern not in template, continue searching
     }
 
     // Template element (part of template literal)
     if (node.type === 'TemplateElement') {
-      return { confidence: 'medium', context: 'template' };
+      if (!pattern) {
+        return { confidence: 'medium', context: 'template' };
+      }
+      if (node.value && node.value.raw && node.value.raw.includes(pattern)) {
+        return { confidence: 'medium', context: 'template' };
+      }
     }
 
     // JSX Text
     if (node.type === 'JSXText') {
-      return { confidence: 'low', context: 'string' };
+      if (!pattern) {
+        return { confidence: 'low', context: 'string' };
+      }
+      if (node.value && node.value.includes(pattern)) {
+        return { confidence: 'low', context: 'string' };
+      }
     }
 
     // Check children recursively
