@@ -1,3 +1,10 @@
+# [0.13.0](https://github.com/Francosimon53/verification-layer/compare/v0.12.0...v0.13.0) (2026-02-06)
+
+
+### Features
+
+* implement Phase 3A - IDE & Developer Experience ([152754d](https://github.com/Francosimon53/verification-layer/commit/152754d841cfaf2017c0d4e9dd2ca38221224905))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
