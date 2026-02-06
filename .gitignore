@@ -23,3 +23,4 @@ vlayer-audit-report.pdf
 # Test projects
 test-nextjs-supabase/
 .vlayer-data
+.vercel
