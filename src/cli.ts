@@ -11,7 +11,7 @@ import { generateFixReport } from './reporters/fix-report.js';
 import { loadAuditTrail, getAuditSummary } from './audit/index.js';
 import { generateAuditReport, generateTextAuditReport } from './reporters/audit-report.js';
 import { loadCustomRules, validateRulesFile } from './rules/index.js';
-import { getScoreSummary, formatScore, getScoreColor } from './compliance-score.js';
+import { formatScore, getScoreColor } from './compliance-score.js';
 import { generateAuditorReport } from './reporters/auditor-report.js';
 import { writeFile } from 'fs/promises';
 import type { ComplianceCategory, ReportOptions, AuditReportOptions } from './types.js';

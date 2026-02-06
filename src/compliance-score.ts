@@ -1,4 +1,4 @@
-import type { Finding, ScanResult } from './types.js';
+import type { ScanResult } from './types.js';
 
 export interface ComplianceScore {
   score: number; // 0-100

@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { ScanResult, Finding, ComplianceScore } from '../types.js';
+import type { ScanResult } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
 
 interface AuditorReportOptions {
