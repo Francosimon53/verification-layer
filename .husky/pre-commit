@@ -5,8 +5,13 @@
 
 TMPFILE="/tmp/vlayer-precommit.json"
 
-# Run vlayer scan and output JSON
-npx vlayer scan . -f json -o "$TMPFILE" 2>/dev/null
+# Run vlayer scan and output JSON (excluding test files and examples)
+# Use local build if available, otherwise fallback to npx
+if [ -f "dist/cli.js" ]; then
+  node dist/cli.js scan . -f json -o "$TMPFILE" --exclude "tests,test,__tests__,*.test.*,*.spec.*,examples,fixtures,sample,test-project" 2>/dev/null
+else
+  npx vlayer scan . -f json -o "$TMPFILE" --exclude "tests,test,__tests__,*.test.*,*.spec.*,examples,fixtures,sample,test-project" 2>/dev/null
+fi
 
 if [ ! -f "$TMPFILE" ]; then
   echo "⚠ vlayer scan did not produce output — skipping check"

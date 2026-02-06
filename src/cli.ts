@@ -25,7 +25,7 @@ program
   .description('Scan a repository for HIPAA compliance issues')
   .argument('<path>', 'Path to the repository to scan')
   .option('-c, --categories <categories...>', 'Compliance categories to check')
-  .option('-e, --exclude <patterns...>', 'Glob patterns to exclude')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated or space-separated)')
   .option('-o, --output <path>', 'Output file path for the report')
   .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
   .option('--config <path>', 'Path to configuration file')
@@ -38,10 +38,34 @@ program
     try {
       const categories = options.categories as ComplianceCategory[] | undefined;
 
+      // Parse exclude patterns - support both comma-separated and array format
+      let excludePatterns: string[] | undefined;
+      if (options.exclude) {
+        let patterns: string[];
+        if (typeof options.exclude === 'string') {
+          // Split by comma and trim whitespace
+          patterns = options.exclude.split(',').map((p: string) => p.trim()).filter((p: string) => p.length > 0);
+        } else if (Array.isArray(options.exclude)) {
+          patterns = options.exclude;
+        } else {
+          patterns = [];
+        }
+
+        // Convert simple patterns to glob patterns
+        excludePatterns = patterns.map((p: string) => {
+          // If already a glob pattern (contains * or **), use as-is
+          if (p.includes('*') || p.includes('**')) {
+            return p.startsWith('**/') ? p : `**/${p}`;
+          }
+          // Otherwise, convert simple directory/file names to glob patterns
+          return `**/${p}/**`;
+        });
+      }
+
       const result = await scan({
         path,
         categories,
-        exclude: options.exclude,
+        exclude: excludePatterns,
         configFile: options.config,
       });
 
