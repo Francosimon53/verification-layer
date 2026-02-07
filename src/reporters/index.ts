@@ -1017,6 +1017,57 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; padding: 2rem; }
     .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Executive Summary Styles */
+    .executive-summary-section { margin: 0 0 3rem 0; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); }
+    .exec-header h1 { color: #111827; font-size: 2.5rem; margin: 0 0 0.5rem 0; }
+    .exec-subtitle { color: #6b7280; font-size: 1.1rem; margin: 0 0 1rem 0; }
+    .exec-meta { color: #9ca3af; font-size: 0.9rem; }
+    .exec-meta span { margin: 0 0.5rem; }
+    .exec-meta span:first-child { margin-left: 0; }
+    .exec-status-card { display: flex; align-items: center; gap: 1.5rem; padding: 2rem; margin: 2rem 0; background: #f9fafb; border-radius: 12px; border-left: 6px solid; }
+    .exec-status-icon { font-size: 3rem; line-height: 1; }
+    .exec-status-content h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; }
+    .exec-status-content p { margin: 0; color: #4b5563; font-size: 1rem; }
+    .exec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+    .exec-metric-card { background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    .exec-metric-label { color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem; }
+    .exec-metric-value { color: #111827; font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem; line-height: 1; }
+    .exec-metric-desc { color: #6b7280; font-size: 0.85rem; }
+    .exec-priority-section { margin: 2.5rem 0; padding: 2rem; background: #fef2f2; border-radius: 12px; border-left: 4px solid #dc2626; }
+    .exec-priority-section h3 { color: #111827; margin: 0 0 0.75rem 0; font-size: 1.3rem; }
+    .exec-priority-intro { color: #4b5563; margin: 0 0 1.5rem 0; }
+    .exec-priority-list { display: flex; flex-direction: column; gap: 1rem; }
+    .exec-priority-item { display: flex; gap: 1rem; background: white; padding: 1.5rem; border-radius: 8px; border-left: 4px solid; }
+    .exec-priority-number { width: 32px; height: 32px; background: #111827; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; flex-shrink: 0; }
+    .exec-priority-content { flex: 1; }
+    .exec-priority-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .exec-priority-badge { padding: 0.25rem 0.6rem; border-radius: 4px; color: white; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .exec-priority-title { font-weight: 600; color: #111827; font-size: 1.05rem; }
+    .exec-priority-desc { color: #4b5563; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .exec-priority-action { background: #f0fdf4; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #10b981; margin-bottom: 0.75rem; }
+    .exec-priority-action strong { color: #065f46; }
+    .exec-priority-ref { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .exec-file-ref { font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem; color: #6b7280; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    .exec-hipaa-ref { font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem; color: #3730a3; background: #e0e7ff; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    .exec-categories-section { margin: 2.5rem 0; }
+    .exec-categories-section h3 { color: #111827; margin: 0 0 1.5rem 0; font-size: 1.3rem; }
+    .exec-category-bars { display: flex; flex-direction: column; gap: 1rem; }
+    .exec-category-item { background: white; padding: 1.25rem; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .exec-category-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .exec-category-name { font-weight: 600; color: #111827; }
+    .exec-category-count { color: #6b7280; font-size: 0.9rem; }
+    .exec-category-bar-bg { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .exec-category-bar { height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); border-radius: 4px; transition: width 0.3s ease; }
+    .exec-recommendations { margin: 2.5rem 0; padding: 2rem; background: #eff6ff; border-radius: 12px; border-left: 4px solid #3b82f6; }
+    .exec-recommendations h3 { color: #111827; margin: 0 0 1rem 0; font-size: 1.3rem; }
+    .exec-recommendations-list { margin: 0; padding-left: 1.5rem; }
+    .exec-recommendations-list li { margin: 0.75rem 0; color: #374151; line-height: 1.7; }
+    .exec-recommendations-list li strong { color: #1e40af; }
+    .exec-congrats { display: flex; align-items: center; gap: 1.5rem; padding: 2rem; margin: 2rem 0; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border-left: 4px solid #10b981; }
+    .exec-congrats-icon { font-size: 3rem; line-height: 1; }
+    .exec-congrats-content h3 { color: #065f46; margin: 0 0 0.5rem 0; }
+    .exec-congrats-content p { color: #047857; margin: 0; }
     h1 { color: #111827; margin-bottom: 0.5rem; }
     h2 { color: #374151; margin: 2rem 0 1rem; }
     .meta { color: #6b7280; margin-bottom: 2rem; }
@@ -1223,6 +1274,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
 </head>
 <body>
   <div class="container">
+    ${renderExecutiveSummaryHtml(report)}
+
     <h1>HIPAA Compliance Report</h1>
     <p style="color: #6b7280; margin-bottom: 1rem;">Generated by <strong>vlayer</strong> - HIPAA Compliance Scanner</p>
     <div class="meta">
@@ -1494,6 +1547,222 @@ async function renderAssetInventoryHtml(targetPath: string): Promise<string> {
           URL.revokeObjectURL(url);
         }
       </script>
+    </div>
+  `;
+}
+
+function renderExecutiveSummaryHtml(report: Report): string {
+  const criticalCount = report.summary.critical;
+  const highCount = report.summary.high;
+  const totalFindings = report.summary.total;
+
+  // Determine overall status
+  const overallStatus = criticalCount === 0 && highCount === 0 ? 'compliant' :
+                        criticalCount === 0 && highCount <= 3 ? 'needs-attention' :
+                        'non-compliant';
+
+  const statusConfig = {
+    'compliant': {
+      icon: '✅',
+      label: 'HIPAA Compliant',
+      color: '#10b981',
+      message: 'Your application demonstrates strong HIPAA compliance practices with no critical vulnerabilities detected.',
+    },
+    'needs-attention': {
+      icon: '⚠️',
+      label: 'Requires Attention',
+      color: '#f59e0b',
+      message: 'Your application has areas requiring attention to achieve full HIPAA compliance. Address high-severity findings promptly.',
+    },
+    'non-compliant': {
+      icon: '❌',
+      label: 'Non-Compliant',
+      color: '#dc2626',
+      message: 'Critical HIPAA compliance issues detected. Immediate action required to protect PHI and avoid regulatory penalties.',
+    },
+  };
+
+  const status = statusConfig[overallStatus];
+
+  // Get top priority findings (critical and high, max 5)
+  const priorityFindings = report.findings
+    .filter(f => f.severity === 'critical' || f.severity === 'high')
+    .slice(0, 5);
+
+  // Calculate risk exposure
+  const riskLevel = criticalCount > 5 ? 'Critical' :
+                    criticalCount > 0 ? 'High' :
+                    highCount > 10 ? 'High' :
+                    highCount > 0 ? 'Medium' : 'Low';
+
+  const riskColor = riskLevel === 'Critical' ? '#dc2626' :
+                    riskLevel === 'High' ? '#ea580c' :
+                    riskLevel === 'Medium' ? '#f59e0b' : '#10b981';
+
+  // Categorize findings
+  const findingsByCategory = report.findings.reduce((acc, f) => {
+    acc[f.category] = (acc[f.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topCategories = Object.entries(findingsByCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  return `
+    <div class="executive-summary-section">
+      <div class="exec-header">
+        <h1>Executive Summary</h1>
+        <p class="exec-subtitle">HIPAA Compliance Assessment Report</p>
+        <div class="exec-meta">
+          <span>Generated: ${new Date(report.timestamp).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}</span>
+          <span>•</span>
+          <span>Scanned: ${report.scannedFiles} files</span>
+          <span>•</span>
+          <span>Duration: ${(report.scanDuration / 1000).toFixed(2)}s</span>
+        </div>
+      </div>
+
+      <div class="exec-status-card" style="border-left-color: ${status.color}">
+        <div class="exec-status-icon" style="color: ${status.color}">${status.icon}</div>
+        <div class="exec-status-content">
+          <h2 style="color: ${status.color}">${status.label}</h2>
+          <p>${status.message}</p>
+        </div>
+      </div>
+
+      <div class="exec-grid">
+        <div class="exec-metric-card">
+          <div class="exec-metric-label">Risk Exposure</div>
+          <div class="exec-metric-value" style="color: ${riskColor}">${riskLevel}</div>
+          <div class="exec-metric-desc">Overall risk level based on findings severity</div>
+        </div>
+
+        <div class="exec-metric-card">
+          <div class="exec-metric-label">Total Findings</div>
+          <div class="exec-metric-value">${totalFindings}</div>
+          <div class="exec-metric-desc">
+            <span style="color: #dc2626; font-weight: 600;">${criticalCount} critical</span>
+            ${highCount > 0 ? `, <span style="color: #ea580c; font-weight: 600;">${highCount} high</span>` : ''}
+          </div>
+        </div>
+
+        <div class="exec-metric-card">
+          <div class="exec-metric-label">Files Analyzed</div>
+          <div class="exec-metric-value">${report.scannedFiles}</div>
+          <div class="exec-metric-desc">Source code files scanned for HIPAA compliance</div>
+        </div>
+
+        <div class="exec-metric-card">
+          <div class="exec-metric-label">Technology Stack</div>
+          <div class="exec-metric-value" style="font-size: 1.25rem;">
+            ${report.stack?.frameworkDisplay || 'N/A'}
+          </div>
+          <div class="exec-metric-desc">
+            ${report.stack?.databaseDisplay || 'Unknown DB'} + ${report.stack?.authDisplay || 'Unknown Auth'}
+          </div>
+        </div>
+      </div>
+
+      ${priorityFindings.length > 0 ? `
+      <div class="exec-priority-section">
+        <h3>🚨 Priority Action Items</h3>
+        <p class="exec-priority-intro">
+          The following issues require immediate attention to ensure HIPAA compliance:
+        </p>
+        <div class="exec-priority-list">
+          ${priorityFindings.map((f, idx) => `
+            <div class="exec-priority-item" style="border-left-color: ${f.severity === 'critical' ? '#dc2626' : '#ea580c'}">
+              <div class="exec-priority-number">${idx + 1}</div>
+              <div class="exec-priority-content">
+                <div class="exec-priority-header">
+                  <span class="exec-priority-badge" style="background: ${f.severity === 'critical' ? '#dc2626' : '#ea580c'}">
+                    ${f.severity.toUpperCase()}
+                  </span>
+                  <span class="exec-priority-title">${escapeHtml(f.title)}</span>
+                </div>
+                <div class="exec-priority-desc">${escapeHtml(f.description)}</div>
+                <div class="exec-priority-action">
+                  <strong>Action:</strong> ${escapeHtml(f.recommendation)}
+                </div>
+                <div class="exec-priority-ref">
+                  <span class="exec-file-ref">${escapeHtml(f.file)}${f.line ? ':' + f.line : ''}</span>
+                  ${f.hipaaReference ? `<span class="exec-hipaa-ref">${escapeHtml(f.hipaaReference)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      ${topCategories.length > 0 ? `
+      <div class="exec-categories-section">
+        <h3>📊 Top Affected Areas</h3>
+        <div class="exec-category-bars">
+          ${topCategories.map(([category, count]) => {
+            const categoryLabel = formatCategory(category);
+            const percentage = Math.round((count / totalFindings) * 100);
+            return `
+              <div class="exec-category-item">
+                <div class="exec-category-header">
+                  <span class="exec-category-name">${escapeHtml(categoryLabel)}</span>
+                  <span class="exec-category-count">${count} finding${count !== 1 ? 's' : ''} (${percentage}%)</span>
+                </div>
+                <div class="exec-category-bar-bg">
+                  <div class="exec-category-bar" style="width: ${percentage}%"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="exec-recommendations">
+        <h3>💡 Recommended Next Steps</h3>
+        <ol class="exec-recommendations-list">
+          ${criticalCount > 0 ? `
+            <li>
+              <strong>Immediate (24-48 hours):</strong> Address all ${criticalCount} critical finding${criticalCount !== 1 ? 's' : ''}
+              that could lead to PHI exposure or regulatory violations.
+            </li>
+          ` : ''}
+          ${highCount > 0 ? `
+            <li>
+              <strong>Short-term (1-2 weeks):</strong> Resolve ${highCount} high-severity issue${highCount !== 1 ? 's' : ''}
+              to strengthen security posture and reduce audit risk.
+            </li>
+          ` : ''}
+          <li>
+            <strong>Review BAAs:</strong> Ensure Business Associate Agreements are in place for all external service providers
+            identified in the ePHI Data Flow Map section.
+          </li>
+          <li>
+            <strong>Document remediation:</strong> Track all fixes and maintain audit logs for compliance documentation.
+          </li>
+          <li>
+            <strong>Schedule regular scans:</strong> Run vlayer scans weekly to monitor ongoing compliance and catch new issues early.
+          </li>
+        </ol>
+      </div>
+
+      ${criticalCount === 0 && highCount === 0 ? `
+      <div class="exec-congrats">
+        <div class="exec-congrats-icon">🎉</div>
+        <div class="exec-congrats-content">
+          <h3>Excellent Work!</h3>
+          <p>
+            No critical or high-severity issues detected. Continue monitoring with regular scans
+            and stay current with HIPAA regulation updates.
+          </p>
+        </div>
+      </div>
+      ` : ''}
     </div>
   `;
 }
