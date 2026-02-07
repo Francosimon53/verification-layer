@@ -1617,4 +1617,23 @@ program
     }
   });
 
+program
+  .command('training')
+  .description('Interactive HIPAA security training for developers')
+  .option('--status', 'Show training completion status')
+  .action(async (options) => {
+    try {
+      const { runTraining, showTrainingStatus } = await import('./training/index.js');
+
+      if (options.status) {
+        await showTrainingStatus();
+      } else {
+        await runTraining();
+      }
+    } catch (error) {
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
 program.parse();
