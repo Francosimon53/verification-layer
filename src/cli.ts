@@ -269,6 +269,118 @@ program
   });
 
 program
+  .command('skill-scan')
+  .description('Scan AI Agent Skills (SKILL.md) for HIPAA violations')
+  .argument('<path>', 'Path to skill file or directory')
+  .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
+  .option('-o, --output <path>', 'Output file path for the report')
+  .action(async (path: string, options) => {
+    const spinner = ora('Scanning AI Agent Skill(s)...').start();
+    const absolutePath = resolve(path);
+
+    try {
+      const { skillsScanner } = await import('./scanners/skills/index.js');
+      const { glob } = await import('glob');
+      const { stat } = await import('fs/promises');
+
+      // Check if path is file or directory
+      const stats = await stat(absolutePath);
+      let skillFiles: string[] = [];
+
+      if (stats.isDirectory()) {
+        // Scan directory for SKILL.md files
+        skillFiles = await glob('**/*{SKILL,skill,Skill}.md', {
+          cwd: absolutePath,
+          nodir: true,
+          absolute: true,
+        });
+      } else {
+        // Single file
+        skillFiles = [absolutePath];
+      }
+
+      if (skillFiles.length === 0) {
+        spinner.warn('No SKILL.md files found');
+        console.log(chalk.yellow('\nLooking for files named: SKILL.md, skill.md, *.skill.md'));
+        return;
+      }
+
+      spinner.text = `Scanning ${skillFiles.length} skill file(s)...`;
+
+      const findings = await skillsScanner.scan(skillFiles, { path: absolutePath });
+
+      spinner.succeed(`Scan complete. Found ${findings.length} issue(s) in ${skillFiles.length} skill(s).`);
+
+      // Generate report
+      const { generateReport } = await import('./reporters/index.js');
+      const result = {
+        findings,
+        scannedFiles: skillFiles.length,
+        scanDuration: 0,
+      };
+
+      await generateReport(result, path, {
+        format: options.format,
+        outputPath: options.output,
+      });
+
+      // Print summary
+      const critical = findings.filter(f => f.severity === 'critical').length;
+      const high = findings.filter(f => f.severity === 'high').length;
+      const medium = findings.filter(f => f.severity === 'medium').length;
+
+      console.log('\n' + chalk.bold('AI Agent Skills Security Summary:'));
+      console.log(`  Skills scanned: ${skillFiles.length}`);
+      console.log(`  Total findings: ${findings.length}`);
+
+      if (critical > 0) {
+        console.log(chalk.red.bold(`  🚨 Critical: ${critical}`));
+      }
+      if (high > 0) {
+        console.log(chalk.red(`  ⚠️  High: ${high}`));
+      }
+      if (medium > 0) {
+        console.log(chalk.yellow(`  ⚡ Medium: ${medium}`));
+      }
+
+      // Show category breakdown
+      const byCategory: Record<string, number> = {};
+      for (const f of findings) {
+        const cat = f.id.split('-')[1] || 'other';
+        byCategory[cat] = (byCategory[cat] || 0) + 1;
+      }
+
+      if (Object.keys(byCategory).length > 0) {
+        console.log('\n' + chalk.bold('Issues by Type:'));
+        if (byCategory.phi) console.log(chalk.red(`  PHI Exposure: ${byCategory.phi}`));
+        if (byCategory.api) console.log(chalk.red(`  Credential Leaks: ${byCategory.api}`));
+        if (byCategory.data) console.log(chalk.red(`  Data Exfiltration: ${byCategory.data}`));
+        if (byCategory.http) console.log(chalk.yellow(`  HIPAA Violations: ${byCategory.http}`));
+      }
+
+      console.log('');
+
+      // Security recommendation
+      if (critical > 0 || high > 0) {
+        console.log(chalk.red.bold('❌ DO NOT INSTALL THIS SKILL'));
+        console.log(chalk.red('   Critical or high-severity security issues detected.'));
+        console.log(chalk.gray('   Installing this skill could compromise PHI and violate HIPAA.\n'));
+        process.exit(1);
+      } else if (medium > 0) {
+        console.log(chalk.yellow.bold('⚠️  REVIEW REQUIRED'));
+        console.log(chalk.yellow('   Medium-severity issues found. Review before installing.\n'));
+      } else {
+        console.log(chalk.green.bold('✅ SKILL APPEARS SAFE'));
+        console.log(chalk.green('   No critical HIPAA violations detected.\n'));
+      }
+    } catch (error) {
+      spinner.fail('Skill scan failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+program
   .command('baseline')
   .description('Generate a baseline file from current scan results')
   .argument('[path]', 'Path to the repository to scan', '.')

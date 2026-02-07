@@ -15,6 +15,7 @@ vlayer is a CLI tool that scans your codebase for HIPAA compliance issues. It's 
 
 **Key capabilities:**
 - Scan for 50+ security vulnerabilities and PHI exposure patterns
+- **AI Agent Skills scanner** - First HIPAA-focused scanner for SKILL.md files (Claude Code, MCP, Cursor)
 - **AI-powered analysis** with Claude API for complex violations and false positive reduction
 - Auto-fix common issues with one command
 - Generate professional audit reports (HTML, PDF, JSON)
@@ -47,7 +48,59 @@ node dist/cli.js score /path/to/project
 
 # Generate auditor-ready report
 node dist/cli.js report /path/to/project -o audit-report.html
+
+# Scan AI Agent Skills (NEW!)
+node dist/cli.js skill-scan ~/Downloads/patient-lookup.SKILL.md
 ```
+
+---
+
+## 🛡️ AI Agent Skills Security Scanner
+
+**vlayer is the first HIPAA-focused security scanner for AI Agent Skills.**
+
+Protect your healthcare environment from malicious skills before installation:
+
+```bash
+# Scan before installing any skill
+vlayer skill-scan ~/Downloads/patient-exporter.SKILL.md
+
+# Scan all skills in directory
+vlayer skill-scan ~/.claw/skills/
+
+# CI/CD integration
+vlayer skill-scan ./custom-skills/ || exit 1
+```
+
+### The Problem
+
+- **36.82%** of AI Agent Skills have security flaws (Snyk, Feb 2026)
+- **341 malicious skills** distribute Atomic Stealer malware
+- **283 skills** expose credentials in plaintext
+- **Zero existing scanners** have HIPAA-specific rules
+
+### What It Detects
+
+- ✅ PHI exposure (SSN, MRN, DOB in examples)
+- ✅ Hardcoded credentials (API keys, passwords)
+- ✅ Malicious patterns (reverse shells, data exfiltration)
+- ✅ HIPAA violations (HTTP transmission, no audit logging)
+
+### Example Output
+
+```
+🚨 Critical: 7  |  ⚠️ High: 14  |  ⚡ Medium: 1
+
+Issues:
+  PHI Exposure: 8
+  Credential Leaks: 1
+  Data Exfiltration: 1
+
+❌ DO NOT INSTALL THIS SKILL
+   Critical HIPAA violations detected.
+```
+
+📖 **[Full Documentation](docs/SKILLS-SCANNER.md)**
 
 ---
 

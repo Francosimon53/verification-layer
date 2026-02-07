@@ -7,6 +7,7 @@ import { auditScanner } from './scanners/audit/index.js';
 import { accessScanner } from './scanners/access/index.js';
 import { retentionScanner } from './scanners/retention/index.js';
 import { securityScanner } from './scanners/security/index.js';
+import { skillsScanner } from './scanners/skills/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
@@ -37,7 +38,7 @@ const scanners: Record<ComplianceCategory, Scanner> = {
 
 // Additional scanners that run with specific categories
 const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
-  'access-control': [securityScanner], // Security scanner runs with access-control
+  'access-control': [securityScanner, skillsScanner], // Security and Skills scanners run with access-control
 };
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
