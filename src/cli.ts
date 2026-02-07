@@ -1360,16 +1360,17 @@ const templatesCommand = program
 templatesCommand
   .command('export')
   .description('Export a compliance document template')
-  .argument('<template>', 'Template name: baa')
+  .argument('<template>', 'Template name: baa, physical')
   .option('-o, --output <path>', 'Output file path')
   .action(async (template: string, options) => {
     try {
-      const validTemplates = ['baa'];
+      const validTemplates = ['baa', 'physical'];
 
       if (!validTemplates.includes(template)) {
         console.error(chalk.red(`Unknown template: ${template}`));
         console.log(chalk.yellow('\nAvailable templates:'));
         console.log(chalk.gray('  • baa - Business Associate Agreement Verification Letter'));
+        console.log(chalk.gray('  • physical - Physical Safeguards Checklist'));
         process.exit(1);
       }
 
@@ -1381,25 +1382,46 @@ templatesCommand
       // Get the directory of the current module
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
-      const templatePath = join(__dirname, '..', 'templates', `${template}-verification-letter.md`);
+
+      // Map template names to file names
+      const templateFiles: Record<string, string> = {
+        'baa': 'baa-verification-letter.md',
+        'physical': 'physical-safeguards-checklist.md',
+      };
+
+      const templateFileName = templateFiles[template];
+      const templatePath = join(__dirname, '..', 'templates', templateFileName);
 
       const templateContent = await fsReadFile(templatePath, 'utf-8');
 
       // Determine output path
-      const outputPath = options.output || `./${template}-verification-letter.md`;
+      const outputPath = options.output || `./${templateFileName}`;
 
       // Write template to output location
       await writeFile(outputPath, templateContent, 'utf-8');
 
       console.log(chalk.green(`\n✓ Template exported successfully!`));
       console.log(chalk.cyan(`\nFile: ${outputPath}`));
-      console.log(chalk.gray('\nNext steps:'));
-      console.log(chalk.gray('  1. Open the file and fill in the bracketed placeholders:'));
-      console.log(chalk.gray('     [BA COMPANY NAME], [DATE], [SCORE], etc.'));
-      console.log(chalk.gray('  2. Check all applicable boxes (☐ → ☑)'));
-      console.log(chalk.gray('  3. Attach your vlayer compliance report as Exhibit A'));
-      console.log(chalk.gray('  4. Have both parties sign and date'));
-      console.log(chalk.gray('  5. Retain for 6 years per HIPAA requirements\n'));
+
+      // Provide template-specific instructions
+      if (template === 'baa') {
+        console.log(chalk.gray('\nNext steps:'));
+        console.log(chalk.gray('  1. Open the file and fill in the bracketed placeholders:'));
+        console.log(chalk.gray('     [BA COMPANY NAME], [DATE], [SCORE], etc.'));
+        console.log(chalk.gray('  2. Check all applicable boxes (☐ → ☑)'));
+        console.log(chalk.gray('  3. Attach your vlayer compliance report as Exhibit A'));
+        console.log(chalk.gray('  4. Have both parties sign and date'));
+        console.log(chalk.gray('  5. Retain for 6 years per HIPAA requirements\n'));
+      } else if (template === 'physical') {
+        console.log(chalk.gray('\nNext steps:'));
+        console.log(chalk.gray('  1. Review Section A (Remote/Cloud) - applies to ALL organizations'));
+        console.log(chalk.gray('  2. Review Section B (Physical Office) - only if you have a physical location'));
+        console.log(chalk.gray('  3. Check all applicable boxes (☐ → ☑)'));
+        console.log(chalk.gray('  4. Fill in verification details and dates'));
+        console.log(chalk.gray('  5. Complete remediation plan for non-compliant items'));
+        console.log(chalk.gray('  6. Sign and date the attestation'));
+        console.log(chalk.gray('  7. Retain for 6 years per HIPAA requirements\n'));
+      }
 
     } catch (error) {
       console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
@@ -1417,6 +1439,11 @@ templatesCommand
     console.log(chalk.gray('  Annual security verification letter for HIPAA Business Associates'));
     console.log(chalk.gray('  Includes technical safeguards checklist and compliance report attachment'));
     console.log(chalk.gray('  Usage: vlayer templates export baa\n'));
+
+    console.log(chalk.cyan('physical') + chalk.gray(' - Physical Safeguards Checklist'));
+    console.log(chalk.gray('  HIPAA Physical Safeguards compliance checklist (§164.310)'));
+    console.log(chalk.gray('  Section A: Remote/Cloud setup | Section B: Physical office controls'));
+    console.log(chalk.gray('  Usage: vlayer templates export physical\n'));
   });
 
 program.parse();
