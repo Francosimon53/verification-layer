@@ -1259,6 +1259,47 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     .remediation-cell { color: #4b5563; font-size: 0.875rem; max-width: 300px; }
     .hipaa-cell { color: #6b7280; font-size: 0.8rem; font-family: 'SF Mono', Monaco, monospace; white-space: nowrap; }
 
+    /* Backup & Recovery Styles */
+    .backup-recovery-section { margin: 2rem 0; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .backup-header h2 { color: #111827; margin: 0 0 0.5rem 0; }
+    .backup-subtitle { color: #6b7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; }
+    .backup-hipaa-notice { background: #fef3c7; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 2rem; color: #92400e; font-size: 0.9rem; line-height: 1.6; }
+    .backup-hipaa-notice strong { color: #78350f; }
+    .backup-guide-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 2rem; margin: 2rem 0; }
+    .backup-guide-card.backup-guide-warning { background: #fffbeb; border-color: #fcd34d; }
+    .backup-guide-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
+    .backup-guide-icon { font-size: 2rem; line-height: 1; }
+    .backup-guide-header h4 { margin: 0; color: #111827; font-size: 1.2rem; }
+    .backup-guide-content { }
+    .backup-step { display: flex; gap: 1rem; margin: 1.5rem 0; }
+    .backup-step-number { width: 36px; height: 36px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; flex-shrink: 0; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); }
+    .backup-step-content { flex: 1; }
+    .backup-step-content strong { display: block; color: #111827; margin-bottom: 0.5rem; font-size: 1.05rem; }
+    .backup-step-content p { color: #4b5563; margin: 0.5rem 0; font-size: 0.95rem; }
+    .backup-code-block { background: #1e1e1e; border-radius: 6px; padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+    .backup-code-block pre { margin: 0; }
+    .backup-code-block code { font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.85rem; color: #d4d4d4; white-space: pre; line-height: 1.5; }
+    .backup-checklist { list-style: none; margin: 0.75rem 0 0 0; padding: 0; }
+    .backup-checklist li { padding: 0.5rem 0; color: #374151; font-size: 0.9rem; }
+    .backup-verification-checklist { margin: 2.5rem 0; padding: 2rem; background: #f0fdf4; border-radius: 10px; border-left: 4px solid #10b981; }
+    .backup-verification-checklist h3 { color: #065f46; margin: 0 0 1.5rem 0; font-size: 1.2rem; }
+    .backup-checklist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .backup-checklist-item { background: white; padding: 1rem; border-radius: 8px; border: 1px solid #d1fae5; display: flex; align-items: start; gap: 0.75rem; }
+    .backup-checklist-item input[type="checkbox"] { width: 20px; height: 20px; margin-top: 0.25rem; cursor: pointer; flex-shrink: 0; accent-color: #10b981; }
+    .backup-checklist-item label { flex: 1; cursor: pointer; }
+    .backup-checklist-item label strong { display: block; color: #065f46; margin-bottom: 0.25rem; font-size: 0.95rem; }
+    .backup-checklist-item label span { display: block; color: #6b7280; font-size: 0.85rem; }
+    .backup-recovery-timeline { margin: 2.5rem 0; padding: 2rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; border-left: 4px solid #3b82f6; }
+    .backup-recovery-timeline h3 { color: #1e40af; margin: 0 0 1.5rem 0; font-size: 1.2rem; }
+    .rto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+    .rto-item { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid; text-align: center; }
+    .rto-item.rto-critical { border-left-color: #dc2626; }
+    .rto-item.rto-important { border-left-color: #f59e0b; }
+    .rto-item.rto-standard { border-left-color: #10b981; }
+    .rto-label { color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem; }
+    .rto-time { color: #111827; font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .rto-desc { color: #4b5563; font-size: 0.85rem; }
+
     @media (max-width: 768px) {
       body { padding: 1rem; }
       .summary { grid-template-columns: repeat(2, 1fr); }
@@ -1312,6 +1353,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     ${assetInventoryHtml}
 
     ${dataFlowMapHtml}
+
+    ${report.stack ? renderBackupRecoveryGuideHtml(report.stack) : ''}
 
     <h2>Findings</h2>
     <div class="findings">
@@ -1763,6 +1806,383 @@ function renderExecutiveSummaryHtml(report: Report): string {
         </div>
       </div>
       ` : ''}
+    </div>
+  `;
+}
+
+function renderBackupRecoveryGuideHtml(stack: StackInfo): string {
+  let guideContent = '';
+  let dbType = 'unknown';
+  let dbDisplay = stack?.databaseDisplay || 'Unknown';
+
+  // Detect database type from stack
+  const database = stack?.database || 'unknown';
+
+  if (database.includes('supabase')) {
+    dbType = 'supabase';
+    guideContent = `
+      <div class="backup-guide-card">
+        <div class="backup-guide-header">
+          <span class="backup-guide-icon">🗄️</span>
+          <h4>Supabase Database Backup Configuration</h4>
+        </div>
+        <div class="backup-guide-content">
+          <div class="backup-step">
+            <div class="backup-step-number">1</div>
+            <div class="backup-step-content">
+              <strong>Enable Point-in-Time Recovery (PITR)</strong>
+              <p>Navigate to Dashboard → Settings → Database → Enable PITR</p>
+              <div class="backup-code-block">
+                <code>PITR allows you to restore your database to any point within the last 7 days</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">2</div>
+            <div class="backup-step-content">
+              <strong>Configure Daily Automated Backups</strong>
+              <p>Supabase Pro+ plans include daily backups. Verify in your project settings.</p>
+              <ul class="backup-checklist">
+                <li>✓ Backup retention: 7-30 days (depending on plan)</li>
+                <li>✓ Automated daily snapshots</li>
+                <li>✓ Geographic redundancy enabled</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">3</div>
+            <div class="backup-step-content">
+              <strong>Test Restore Procedure (Quarterly)</strong>
+              <p>Regularly verify backup integrity by performing test restores:</p>
+              <div class="backup-code-block">
+                <pre><code># Create test restore
+# Dashboard → Database → Backups → Restore to new project
+# Verify data integrity and application functionality</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">4</div>
+            <div class="backup-step-content">
+              <strong>Additional Manual Backup (Optional)</strong>
+              <div class="backup-code-block">
+                <pre><code># Using pg_dump for additional backup
+pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup_\$(date +%Y%m%d).sql
+
+# Upload to secure offsite storage
+aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (database.includes('prisma') || database.includes('postgres')) {
+    dbType = 'postgresql';
+    guideContent = `
+      <div class="backup-guide-card">
+        <div class="backup-guide-header">
+          <span class="backup-guide-icon">🐘</span>
+          <h4>PostgreSQL + Prisma Backup Configuration</h4>
+        </div>
+        <div class="backup-guide-content">
+          <div class="backup-step">
+            <div class="backup-step-number">1</div>
+            <div class="backup-step-content">
+              <strong>Create Backup Script</strong>
+              <p>Save this script as <code>backup-db.sh</code> in your project root:</p>
+              <div class="backup-code-block">
+                <pre><code>#!/bin/bash
+# PostgreSQL Backup Script for HIPAA Compliance
+
+BACKUP_DIR="/path/to/backups"
+TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="\${BACKUP_DIR}/backup_\${TIMESTAMP}.sql"
+
+# Create backup directory if not exists
+mkdir -p \$BACKUP_DIR
+
+# Perform backup
+pg_dump \$DATABASE_URL > \$BACKUP_FILE
+
+# Compress backup
+gzip \$BACKUP_FILE
+
+# Upload to offsite storage (S3 example)
+aws s3 cp \${BACKUP_FILE}.gz s3://your-backup-bucket/postgresql/
+
+# Keep only last 30 days of local backups
+find \$BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
+
+echo "Backup completed: \${BACKUP_FILE}.gz"</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">2</div>
+            <div class="backup-step-content">
+              <strong>Schedule via Cron (Daily 2 AM)</strong>
+              <div class="backup-code-block">
+                <pre><code># Add to crontab: crontab -e
+0 2 * * * /path/to/backup-db.sh >> /var/log/backup.log 2>&1</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">3</div>
+            <div class="backup-step-content">
+              <strong>Test Restore Monthly</strong>
+              <div class="backup-code-block">
+                <pre><code># Download backup from S3
+aws s3 cp s3://your-backup-bucket/postgresql/backup_YYYYMMDD.sql.gz .
+
+# Decompress
+gunzip backup_YYYYMMDD.sql.gz
+
+# Restore to test database
+psql \$TEST_DATABASE_URL < backup_YYYYMMDD.sql
+
+# Verify data integrity
+psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">4</div>
+            <div class="backup-step-content">
+              <strong>Offsite Storage Options</strong>
+              <ul class="backup-checklist">
+                <li>✓ AWS S3 with versioning and encryption</li>
+                <li>✓ Google Cloud Storage with lifecycle policies</li>
+                <li>✓ Azure Blob Storage with geo-redundancy</li>
+                <li>✓ Ensure BAA in place with storage provider</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (database.includes('mongo')) {
+    dbType = 'mongodb';
+    guideContent = `
+      <div class="backup-guide-card">
+        <div class="backup-guide-header">
+          <span class="backup-guide-icon">🍃</span>
+          <h4>MongoDB + Mongoose Backup Configuration</h4>
+        </div>
+        <div class="backup-guide-content">
+          <div class="backup-step">
+            <div class="backup-step-number">1</div>
+            <div class="backup-step-content">
+              <strong>Using MongoDB Atlas (Recommended)</strong>
+              <p>Enable automated backups in Atlas dashboard:</p>
+              <ul class="backup-checklist">
+                <li>✓ Navigate to Project → Backup tab</li>
+                <li>✓ Enable Continuous Cloud Backup</li>
+                <li>✓ Configure snapshot schedule (daily recommended)</li>
+                <li>✓ Set retention policy (30 days minimum for HIPAA)</li>
+                <li>✓ Enable Point-in-Time Restore</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">2</div>
+            <div class="backup-step-content">
+              <strong>Manual Backup with mongodump</strong>
+              <p>Create backup script for self-hosted MongoDB:</p>
+              <div class="backup-code-block">
+                <pre><code>#!/bin/bash
+# MongoDB Backup Script
+
+TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/path/to/backups"
+BACKUP_NAME="mongodb_backup_\${TIMESTAMP}"
+
+# Perform backup
+mongodump --uri="\$MONGODB_URI" --out=\${BACKUP_DIR}/\${BACKUP_NAME}
+
+# Compress
+tar -czf \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz -C \${BACKUP_DIR} \${BACKUP_NAME}
+rm -rf \${BACKUP_DIR}/\${BACKUP_NAME}
+
+# Upload to S3
+aws s3 cp \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz s3://your-backup-bucket/mongodb/
+
+# Cleanup old local backups (keep 7 days)
+find \$BACKUP_DIR -name "mongodb_backup_*.tar.gz" -mtime +7 -delete</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <div class="backup-step-number">3</div>
+            <div class="backup-step-content">
+              <strong>Test Restore Quarterly</strong>
+              <div class="backup-code-block">
+                <pre><code># Download and extract backup
+aws s3 cp s3://your-backup-bucket/mongodb/mongodb_backup_YYYYMMDD.tar.gz .
+tar -xzf mongodb_backup_YYYYMMDD.tar.gz
+
+# Restore to test database
+mongorestore --uri="\$TEST_MONGODB_URI" mongodb_backup_YYYYMMDD/
+
+# Verify collections
+mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    dbType = 'none';
+    guideContent = `
+      <div class="backup-guide-card backup-guide-warning">
+        <div class="backup-guide-header">
+          <span class="backup-guide-icon">⚠️</span>
+          <h4>No Database Detected</h4>
+        </div>
+        <div class="backup-guide-content">
+          <p style="margin-bottom: 1rem;">
+            No database connection was detected in your codebase during the scan.
+          </p>
+          <div class="backup-step">
+            <div class="backup-step-content">
+              <strong>If you are using an external database service:</strong>
+              <ul class="backup-checklist">
+                <li>✓ Configure backup per your database provider's documentation</li>
+                <li>✓ Ensure automated daily backups are enabled</li>
+                <li>✓ Verify backup retention meets HIPAA requirements (30+ days recommended)</li>
+                <li>✓ Test restore procedures quarterly</li>
+                <li>✓ Document backup and restore procedures</li>
+                <li>✓ Ensure Business Associate Agreement (BAA) with provider</li>
+              </ul>
+            </div>
+          </div>
+          <div class="backup-step">
+            <div class="backup-step-content">
+              <strong>Common managed database providers:</strong>
+              <ul style="margin-top: 0.5rem;">
+                <li><strong>AWS RDS:</strong> Automated backups, point-in-time recovery</li>
+                <li><strong>Google Cloud SQL:</strong> Automated backups, on-demand snapshots</li>
+                <li><strong>Azure SQL:</strong> Automated backups with geo-redundancy</li>
+                <li><strong>MongoDB Atlas:</strong> Continuous cloud backup</li>
+                <li><strong>PlanetScale:</strong> Daily automated backups</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="backup-recovery-section">
+      <div class="backup-header">
+        <h2>💾 Backup & Recovery Guide</h2>
+        <p class="backup-subtitle">
+          Database backup and disaster recovery procedures for HIPAA compliance
+        </p>
+      </div>
+
+      <div class="backup-hipaa-notice">
+        <strong>⚖️ HIPAA NPRM Requirement:</strong> The HIPAA Notice of Proposed Rulemaking requires
+        organizations to maintain the ability to restore ePHI within <strong>72 hours</strong> of a disaster.
+        This guide covers code-level configuration. You must verify actual backup execution,
+        offsite storage, and restore testing independently through operational procedures.
+      </div>
+
+      ${guideContent}
+
+      <div class="backup-verification-checklist">
+        <h3>✅ Backup Verification Checklist</h3>
+        <div class="backup-checklist-grid">
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-enabled" />
+            <label for="backup-enabled">
+              <strong>Automated backups enabled</strong>
+              <span>Verify backups run daily without manual intervention</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-offsite" />
+            <label for="backup-offsite">
+              <strong>Offsite storage configured</strong>
+              <span>Backups stored in geographically separate location</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-encrypted" />
+            <label for="backup-encrypted">
+              <strong>Backup encryption enabled</strong>
+              <span>At-rest encryption for all backup files</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-tested" />
+            <label for="backup-tested">
+              <strong>Restore procedure tested</strong>
+              <span>Last restore test: [Document date]</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-retention" />
+            <label for="backup-retention">
+              <strong>Retention policy configured</strong>
+              <span>Minimum 30 days, aligned with business requirements</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-monitoring" />
+            <label for="backup-monitoring">
+              <strong>Backup monitoring/alerts</strong>
+              <span>Notifications for backup failures</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-baa" />
+            <label for="backup-baa">
+              <strong>BAA with storage provider</strong>
+              <span>Business Associate Agreement signed and current</span>
+            </label>
+          </div>
+          <div class="backup-checklist-item">
+            <input type="checkbox" id="backup-documented" />
+            <label for="backup-documented">
+              <strong>Procedures documented</strong>
+              <span>Backup and restore procedures in runbook</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="backup-recovery-timeline">
+        <h3>⏱️ Recovery Time Objectives (RTO)</h3>
+        <div class="rto-grid">
+          <div class="rto-item rto-critical">
+            <div class="rto-label">Critical Data</div>
+            <div class="rto-time">&lt; 4 hours</div>
+            <div class="rto-desc">Patient records, active appointments</div>
+          </div>
+          <div class="rto-item rto-important">
+            <div class="rto-label">Important Data</div>
+            <div class="rto-time">&lt; 24 hours</div>
+            <div class="rto-desc">Billing, historical records</div>
+          </div>
+          <div class="rto-item rto-standard">
+            <div class="rto-label">Standard Data</div>
+            <div class="rto-time">&lt; 72 hours</div>
+            <div class="rto-desc">Analytics, logs, reports (HIPAA max)</div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
