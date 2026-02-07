@@ -1409,7 +1409,7 @@ templatesCommand
         'baa': 'baa-verification-letter.md',
         'physical': 'physical-safeguards-checklist.md',
         'irp': 'irp.md',
-        'npp': 'npp.md',
+        'npp': 'notice-of-privacy-practices.md',
         'security-officer': 'security-officer.md',
       };
 
@@ -1457,12 +1457,12 @@ templatesCommand
       } else if (template === 'npp') {
         console.log(chalk.gray('\nNext steps:'));
         console.log(chalk.gray('  1. Replace all [PLACEHOLDERS] with your organization\'s information'));
-        console.log(chalk.gray('  2. Customize uses and disclosures to match your practices'));
-        console.log(chalk.gray('  3. Review with legal counsel for state-specific requirements'));
-        console.log(chalk.gray('  4. Have Privacy Officer approve the final version'));
-        console.log(chalk.gray('  5. Post prominently in your facility'));
-        console.log(chalk.gray('  6. Provide to all patients and obtain acknowledgment'));
-        console.log(chalk.gray('  7. Post on website if applicable\n'));
+        console.log(chalk.gray('  2. Review 2024 updates: 15-day timeline, in-person inspection rights'));
+        console.log(chalk.gray('  3. Customize uses and disclosures to match your practices'));
+        console.log(chalk.gray('  4. Review with healthcare attorney for state-specific requirements'));
+        console.log(chalk.gray('  5. Have Privacy Officer approve the final version'));
+        console.log(chalk.gray('  6. Post prominently in your facility and on website'));
+        console.log(chalk.gray('  7. Provide to all patients and obtain signed acknowledgment\n'));
       } else if (template === 'security-officer') {
         console.log(chalk.gray('\nNext steps:'));
         console.log(chalk.gray('  1. Fill in Security Officer name and contact information'));
@@ -1502,8 +1502,8 @@ templatesCommand
     console.log(chalk.gray('  Usage: vlayer templates export irp\n'));
 
     console.log(chalk.cyan('npp') + chalk.gray(' - Notice of Privacy Practices'));
-    console.log(chalk.gray('  HIPAA-required patient notice describing privacy rights and practices'));
-    console.log(chalk.gray('  Ready to post in facilities and distribute to patients'));
+    console.log(chalk.gray('  HIPAA §164.520 compliant patient notice (includes 2024 updates)'));
+    console.log(chalk.gray('  15-day access timeline, in-person inspection rights, electronic copy'));
     console.log(chalk.gray('  Usage: vlayer templates export npp\n'));
 
     console.log(chalk.cyan('security-officer') + chalk.gray(' - Security Officer Designation'));
