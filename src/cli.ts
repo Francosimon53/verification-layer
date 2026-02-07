@@ -1410,7 +1410,7 @@ templatesCommand
         'physical': 'physical-safeguards-checklist.md',
         'irp': 'irp.md',
         'npp': 'notice-of-privacy-practices.md',
-        'security-officer': 'security-officer.md',
+        'security-officer': 'security-officer-designation.md',
       };
 
       const templateFileName = templateFiles[template];
@@ -1507,8 +1507,8 @@ templatesCommand
     console.log(chalk.gray('  Usage: vlayer templates export npp\n'));
 
     console.log(chalk.cyan('security-officer') + chalk.gray(' - Security Officer Designation'));
-    console.log(chalk.gray('  Official HIPAA Security Officer appointment and authorization document'));
-    console.log(chalk.gray('  Defines responsibilities, authorities, and accountability measures'));
+    console.log(chalk.gray('  Official HIPAA §164.308(a)(2) required designation document'));
+    console.log(chalk.gray('  Defines responsibilities, authorities, reporting structure, and signatures'));
     console.log(chalk.gray('  Usage: vlayer templates export security-officer\n'));
   });
 
