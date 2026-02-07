@@ -1,8 +1,130 @@
-import { writeFile } from 'fs/promises';
+import { writeFile, readFile, readdir } from 'fs/promises';
+import * as path from 'path';
 import chalk from 'chalk';
 import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
+
+interface ComplianceScore {
+  overall: number;
+  grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  color: string;
+  byCategory: Record<string, { score: number; findings: number }>;
+}
+
+interface ScoreTrending {
+  direction: 'up' | 'down' | 'same';
+  previousScore: number;
+  change: number;
+}
+
+function calculateComplianceScore(findings: Finding[]): ComplianceScore {
+  // Count by severity
+  const criticals = findings.filter(f => f.severity === 'critical').length;
+  const highs = findings.filter(f => f.severity === 'high').length;
+  const mediums = findings.filter(f => f.severity === 'medium').length;
+  const lows = findings.filter(f => f.severity === 'low').length;
+
+  // Calculate overall score
+  const deductions = (criticals * 15) + (highs * 8) + (mediums * 3) + (lows * 1);
+  const overall = Math.max(0, Math.min(100, 100 - deductions));
+
+  // Determine grade and color
+  let grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  let color: string;
+
+  if (overall >= 95) {
+    grade = 'A+';
+    color = '#10b981'; // green
+  } else if (overall >= 80) {
+    grade = 'A';
+    color = '#10b981'; // green
+  } else if (overall >= 60) {
+    grade = 'B';
+    color = '#eab308'; // yellow
+  } else if (overall >= 40) {
+    grade = 'C';
+    color = '#f97316'; // orange
+  } else if (overall >= 20) {
+    grade = 'D';
+    color = '#ef4444'; // red
+  } else {
+    grade = 'F';
+    color = '#dc2626'; // dark red
+  }
+
+  // Calculate by category
+  const categoryMap: Record<string, string> = {
+    'phi-exposure': 'PHI Protection',
+    'encryption': 'Encryption',
+    'audit-logging': 'Audit & Logging',
+    'access-control': 'Access Control',
+    'data-retention': 'Data Retention',
+  };
+
+  const byCategory: Record<string, { score: number; findings: number }> = {};
+
+  for (const [key, label] of Object.entries(categoryMap)) {
+    const categoryFindings = findings.filter(f => f.category === key);
+    const catCriticals = categoryFindings.filter(f => f.severity === 'critical').length;
+    const catHighs = categoryFindings.filter(f => f.severity === 'high').length;
+    const catMediums = categoryFindings.filter(f => f.severity === 'medium').length;
+    const catLows = categoryFindings.filter(f => f.severity === 'low').length;
+
+    const catDeductions = (catCriticals * 15) + (catHighs * 8) + (catMediums * 3) + (catLows * 1);
+    const catScore = Math.max(0, Math.min(100, 100 - catDeductions));
+
+    byCategory[label] = {
+      score: catScore,
+      findings: categoryFindings.length,
+    };
+  }
+
+  return { overall, grade, color, byCategory };
+}
+
+async function getScoreTrending(targetPath: string, currentScore: number): Promise<ScoreTrending | null> {
+  try {
+    const historyDir = path.join(targetPath, '.vlayer', 'history');
+    const files = await readdir(historyDir);
+
+    // Find the most recent history file (exclude current)
+    const historyFiles = files
+      .filter(f => f.endsWith('.json'))
+      .sort()
+      .reverse();
+
+    if (historyFiles.length === 0) {
+      return null;
+    }
+
+    // Read the most recent previous scan
+    const previousFile = path.join(historyDir, historyFiles[0]);
+    const content = await readFile(previousFile, 'utf-8');
+    const previousReport = JSON.parse(content);
+
+    if (!previousReport.complianceScore) {
+      return null;
+    }
+
+    const previousScore = previousReport.complianceScore.overall;
+    const change = currentScore - previousScore;
+
+    let direction: 'up' | 'down' | 'same';
+    if (Math.abs(change) < 1) {
+      direction = 'same';
+    } else if (change > 0) {
+      direction = 'up';
+    } else {
+      direction = 'down';
+    }
+
+    return { direction, previousScore, change };
+  } catch (error) {
+    // No history available
+    return null;
+  }
+}
 
 function buildReport(result: ScanResult, targetPath: string): Report {
   const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
@@ -247,7 +369,8 @@ function renderStackSection(stack: StackInfo): string {
   `;
 }
 
-function generateHtml(report: Report): string {
+async function generateHtml(report: Report, targetPath: string): Promise<string> {
+  const complianceScoreHtml = await renderComplianceScoreHtml(report, targetPath);
   const severityColors = {
     critical: '#dc2626',
     high: '#ea580c',
@@ -339,6 +462,38 @@ function generateHtml(report: Report): string {
     .guide-category:last-child { margin-bottom: 0; }
     .stack-guide { margin: 0.75rem 0; }
 
+    /* Compliance Score Styles */
+    .compliance-score-section { margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
+    .score-header h2 { color: white; margin: 0 0 0.5rem 0; font-size: 1.75rem; }
+    .score-subtitle { color: rgba(255,255,255,0.9); margin: 0; font-size: 0.95rem; }
+    .score-main { display: grid; grid-template-columns: auto 1fr; gap: 2rem; margin: 2rem 0; align-items: center; }
+    .score-circle { width: 180px; height: 180px; border-radius: 50%; border: 8px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .score-value { font-size: 3.5rem; font-weight: bold; line-height: 1; }
+    .score-max { font-size: 1rem; color: #6b7280; margin-top: -0.5rem; }
+    .score-grade { position: absolute; bottom: -15px; padding: 0.35rem 1rem; border-radius: 20px; color: white; font-weight: bold; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .score-info { color: white; }
+    .score-description { font-size: 1.1rem; margin-bottom: 1rem; line-height: 1.6; }
+    .score-trending { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border-radius: 8px; margin-bottom: 1rem; }
+    .trending-icon { font-size: 1.5rem; font-weight: bold; }
+    .trending-up { border-left: 4px solid #10b981; }
+    .trending-up .trending-icon { color: #10b981; }
+    .trending-down { border-left: 4px solid #ef4444; }
+    .trending-down .trending-icon { color: #ef4444; }
+    .trending-same { border-left: 4px solid #94a3b8; }
+    .trending-same .trending-icon { color: #94a3b8; }
+    .trending-text { font-size: 0.9rem; }
+    .score-formula { font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 0.75rem; font-family: 'SF Mono', Monaco, monospace; }
+    .score-categories { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.2); }
+    .score-categories h3 { color: white; margin: 0 0 1.5rem 0; font-size: 1.3rem; }
+    .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .category-card { background: rgba(255,255,255,0.15); padding: 1.25rem; border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+    .category-name { font-weight: 600; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .category-score-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .category-bar-bg { flex: 1; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; }
+    .category-bar { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+    .category-score { font-weight: bold; font-size: 1.25rem; min-width: 40px; text-align: right; }
+    .category-findings { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+
     /* Risk Analysis Styles */
     .risk-analysis-section { margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .risk-analysis-section h2 { color: #111827; margin-bottom: 0.5rem; }
@@ -371,6 +526,10 @@ function generateHtml(report: Report): string {
       .stack-cards { grid-template-columns: 1fr; }
       .risk-detail-table table { font-size: 0.8rem; }
       .risk-detail-table th, .risk-detail-table td { padding: 0.5rem; }
+      .score-main { grid-template-columns: 1fr; justify-items: center; }
+      .score-circle { width: 150px; height: 150px; }
+      .score-value { font-size: 2.5rem; }
+      .category-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -402,6 +561,8 @@ function generateHtml(report: Report): string {
         <div>Low</div>
       </div>
     </div>
+
+    ${complianceScoreHtml}
 
     ${report.stack && report.stack.framework !== 'unknown' ? renderStackSection(report.stack) : ''}
 
@@ -487,6 +648,101 @@ function getMitigationStatus(finding: Finding): string {
     return 'Remediation Available (Auto-fix)';
   }
   return 'Open';
+}
+
+async function renderComplianceScoreHtml(report: Report, targetPath: string): Promise<string> {
+  const score = calculateComplianceScore(report.findings.filter(f => !f.acknowledged && !f.suppressed && !f.isBaseline));
+  const trending = await getScoreTrending(targetPath, score.overall);
+
+  const trendingIcon = trending
+    ? trending.direction === 'up'
+      ? '↑'
+      : trending.direction === 'down'
+      ? '↓'
+      : '→'
+    : '';
+
+  const trendingClass = trending
+    ? trending.direction === 'up'
+      ? 'trending-up'
+      : trending.direction === 'down'
+      ? 'trending-down'
+      : 'trending-same'
+    : '';
+
+  const trendingText = trending
+    ? trending.direction === 'up'
+      ? `+${trending.change.toFixed(1)} from previous scan`
+      : trending.direction === 'down'
+      ? `${trending.change.toFixed(1)} from previous scan`
+      : 'No change from previous scan'
+    : '';
+
+  return `
+    <div class="compliance-score-section">
+      <div class="score-header">
+        <h2>HIPAA Compliance Score</h2>
+        <p class="score-subtitle">Overall security posture based on identified findings</p>
+      </div>
+
+      <div class="score-main">
+        <div class="score-circle" style="border-color: ${score.color}">
+          <div class="score-value" style="color: ${score.color}">${Math.round(score.overall)}</div>
+          <div class="score-max">/100</div>
+          <div class="score-grade" style="background: ${score.color}">${score.grade}</div>
+        </div>
+
+        <div class="score-info">
+          <div class="score-description">
+            ${score.overall >= 80
+              ? '<strong>Excellent!</strong> Your codebase demonstrates strong HIPAA compliance practices.'
+              : score.overall >= 60
+              ? '<strong>Good progress.</strong> Address remaining issues to strengthen compliance.'
+              : score.overall >= 40
+              ? '<strong>Needs improvement.</strong> Several compliance gaps require attention.'
+              : '<strong>Critical issues detected.</strong> Immediate action required for HIPAA compliance.'
+            }
+          </div>
+
+          ${trending ? `
+          <div class="score-trending ${trendingClass}">
+            <span class="trending-icon">${trendingIcon}</span>
+            <span class="trending-text">${trendingText}</span>
+          </div>
+          ` : ''}
+
+          <div class="score-formula">
+            <strong>Score Calculation:</strong> 100 - (Critical×15 + High×8 + Medium×3 + Low×1)
+          </div>
+        </div>
+      </div>
+
+      <div class="score-categories">
+        <h3>Compliance by Category</h3>
+        <div class="category-grid">
+          ${Object.entries(score.byCategory)
+            .sort((a, b) => a[1].score - b[1].score)
+            .map(([category, data]) => {
+              const catColor = data.score >= 80 ? '#10b981' : data.score >= 60 ? '#eab308' : data.score >= 40 ? '#f97316' : '#ef4444';
+              const catWidth = data.score;
+              return `
+              <div class="category-card">
+                <div class="category-name">${escapeHtml(category)}</div>
+                <div class="category-score-container">
+                  <div class="category-bar-bg">
+                    <div class="category-bar" style="width: ${catWidth}%; background: ${catColor}"></div>
+                  </div>
+                  <div class="category-score" style="color: ${catColor}">${Math.round(data.score)}</div>
+                </div>
+                <div class="category-findings">${data.findings} finding${data.findings !== 1 ? 's' : ''}</div>
+              </div>
+            `;
+            })
+            .join('')}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderRiskAnalysisHtml(report: Report): string {
@@ -620,7 +876,7 @@ export async function generateReport(
 
   switch (options.format) {
     case 'html':
-      content = generateHtml(report);
+      content = await generateHtml(report, targetPath);
       extension = 'html';
       break;
     case 'markdown':
