@@ -18,6 +18,192 @@ interface ScoreTrending {
   change: number;
 }
 
+interface TechnologyAsset {
+  id: string;
+  name: string;
+  version: string;
+  type: 'software';
+  category: 'framework' | 'database' | 'auth' | 'cloud' | 'payment' | 'communication' | 'utility' | 'other';
+  provider: string;
+  responsiblePerson: string;
+  location: string;
+}
+
+interface AssetInventory {
+  assets: TechnologyAsset[];
+  detectedAt: string;
+  totalAssets: number;
+}
+
+const PACKAGE_CATEGORIES: Record<string, { category: string; provider: string }> = {
+  // Frameworks
+  'next': { category: 'framework', provider: 'Next.js Framework' },
+  'react': { category: 'framework', provider: 'React Library' },
+  'vue': { category: 'framework', provider: 'Vue.js Framework' },
+  'nuxt': { category: 'framework', provider: 'Nuxt Framework' },
+  'svelte': { category: 'framework', provider: 'Svelte Framework' },
+  'express': { category: 'framework', provider: 'Express.js Framework' },
+  'fastify': { category: 'framework', provider: 'Fastify Framework' },
+  'hono': { category: 'framework', provider: 'Hono Framework' },
+  'elysia': { category: 'framework', provider: 'Elysia Framework' },
+  'nestjs': { category: 'framework', provider: 'NestJS Framework' },
+
+  // Databases & ORMs
+  '@prisma/client': { category: 'database', provider: 'Prisma ORM' },
+  'prisma': { category: 'database', provider: 'Prisma ORM' },
+  'mongoose': { category: 'database', provider: 'Mongoose ODM (MongoDB)' },
+  'drizzle-orm': { category: 'database', provider: 'Drizzle ORM' },
+  'typeorm': { category: 'database', provider: 'TypeORM' },
+  'sequelize': { category: 'database', provider: 'Sequelize ORM' },
+  'knex': { category: 'database', provider: 'Knex.js Query Builder' },
+  'pg': { category: 'database', provider: 'PostgreSQL Driver' },
+  'mysql2': { category: 'database', provider: 'MySQL Driver' },
+  'mongodb': { category: 'database', provider: 'MongoDB Driver' },
+  'redis': { category: 'database', provider: 'Redis Client' },
+
+  // Authentication
+  'next-auth': { category: 'auth', provider: 'NextAuth.js' },
+  '@auth/core': { category: 'auth', provider: 'Auth.js' },
+  'passport': { category: 'auth', provider: 'Passport.js' },
+  'jsonwebtoken': { category: 'auth', provider: 'JWT (JSON Web Tokens)' },
+  'bcrypt': { category: 'auth', provider: 'bcrypt Password Hashing' },
+  'argon2': { category: 'auth', provider: 'Argon2 Password Hashing' },
+  '@clerk/nextjs': { category: 'auth', provider: 'Clerk Authentication' },
+  '@supabase/auth-helpers': { category: 'auth', provider: 'Supabase Auth' },
+  'lucia': { category: 'auth', provider: 'Lucia Auth' },
+
+  // Cloud / BaaS
+  '@supabase/supabase-js': { category: 'cloud', provider: 'Supabase BaaS' },
+  '@aws-sdk': { category: 'cloud', provider: 'AWS SDK' },
+  'aws-sdk': { category: 'cloud', provider: 'AWS SDK' },
+  '@google-cloud': { category: 'cloud', provider: 'Google Cloud SDK' },
+  '@azure': { category: 'cloud', provider: 'Azure SDK' },
+  'firebase': { category: 'cloud', provider: 'Firebase' },
+  'firebase-admin': { category: 'cloud', provider: 'Firebase Admin' },
+  '@vercel/analytics': { category: 'cloud', provider: 'Vercel Analytics' },
+  '@vercel/edge': { category: 'cloud', provider: 'Vercel Edge Functions' },
+
+  // Payment
+  'stripe': { category: 'payment', provider: 'Stripe Payments' },
+  '@stripe/stripe-js': { category: 'payment', provider: 'Stripe.js' },
+  'paypal': { category: 'payment', provider: 'PayPal SDK' },
+
+  // Communication
+  '@sendgrid/mail': { category: 'communication', provider: 'SendGrid Email' },
+  'nodemailer': { category: 'communication', provider: 'Nodemailer Email' },
+  'twilio': { category: 'communication', provider: 'Twilio SMS/Voice' },
+  '@twilio/conversations': { category: 'communication', provider: 'Twilio Conversations' },
+  'resend': { category: 'communication', provider: 'Resend Email' },
+
+  // Utility (commonly used)
+  'axios': { category: 'utility', provider: 'Axios HTTP Client' },
+  'lodash': { category: 'utility', provider: 'Lodash Utility Library' },
+  'date-fns': { category: 'utility', provider: 'date-fns Date Utility' },
+  'dayjs': { category: 'utility', provider: 'Day.js Date Library' },
+  'zod': { category: 'utility', provider: 'Zod Validation' },
+  'joi': { category: 'utility', provider: 'Joi Validation' },
+  'yup': { category: 'utility', provider: 'Yup Validation' },
+};
+
+function categorizePackage(packageName: string): { category: string; provider: string } {
+  // Check exact match
+  if (PACKAGE_CATEGORIES[packageName]) {
+    return PACKAGE_CATEGORIES[packageName];
+  }
+
+  // Check prefix match (for scoped packages)
+  for (const [key, value] of Object.entries(PACKAGE_CATEGORIES)) {
+    if (packageName.startsWith(key)) {
+      return value;
+    }
+  }
+
+  // Default to utility/other
+  return { category: 'other', provider: packageName };
+}
+
+async function generateAssetInventory(targetPath: string): Promise<AssetInventory> {
+  const assets: TechnologyAsset[] = [];
+
+  try {
+    // Read package.json
+    const packageJsonPath = path.join(targetPath, 'package.json');
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8'));
+
+    const dependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+
+    let assetId = 1;
+
+    for (const [name, version] of Object.entries(dependencies)) {
+      const { category, provider } = categorizePackage(name);
+
+      // Skip dev-only packages that aren't relevant for asset inventory
+      if (name.startsWith('@types/') ||
+          name === 'typescript' ||
+          name === 'eslint' ||
+          name.startsWith('eslint-') ||
+          name === 'prettier' ||
+          name.startsWith('@testing-library/') ||
+          name === 'vitest' ||
+          name === 'jest') {
+        continue;
+      }
+
+      assets.push({
+        id: `TECH-${String(assetId).padStart(3, '0')}`,
+        name,
+        version: String(version).replace(/[\^~]/g, ''),
+        type: 'software',
+        category: category as any,
+        provider,
+        responsiblePerson: '', // To be filled by client
+        location: '', // To be filled by client
+      });
+
+      assetId++;
+    }
+  } catch (error) {
+    // If package.json doesn't exist or can't be read, return empty inventory
+    console.warn('Could not read package.json for asset inventory:', error);
+  }
+
+  // Sort by category, then by name
+  assets.sort((a, b) => {
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return {
+    assets,
+    detectedAt: new Date().toISOString(),
+    totalAssets: assets.length,
+  };
+}
+
+function generateAssetInventoryCsv(inventory: AssetInventory): string {
+  const header = 'ID,Name,Version,Type,Category,Provider,Responsible Person,Location\n';
+
+  const rows = inventory.assets.map(asset => {
+    return [
+      asset.id,
+      `"${asset.name}"`,
+      `"${asset.version}"`,
+      asset.type,
+      asset.category,
+      `"${asset.provider}"`,
+      `"${asset.responsiblePerson}"`,
+      `"${asset.location}"`,
+    ].join(',');
+  }).join('\n');
+
+  return header + rows;
+}
+
 function calculateComplianceScore(findings: Finding[]): ComplianceScore {
   // Count by severity
   const criticals = findings.filter(f => f.severity === 'critical').length;
@@ -371,6 +557,7 @@ function renderStackSection(stack: StackInfo): string {
 
 async function generateHtml(report: Report, targetPath: string): Promise<string> {
   const complianceScoreHtml = await renderComplianceScoreHtml(report, targetPath);
+  const assetInventoryHtml = await renderAssetInventoryHtml(targetPath);
   const severityColors = {
     critical: '#dc2626',
     high: '#ea580c',
@@ -499,6 +686,34 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     .risk-analysis-section h2 { color: #111827; margin-bottom: 0.5rem; }
     .risk-analysis-section h3 { color: #374151; margin: 1.5rem 0 1rem; font-size: 1.1rem; }
 
+    /* Asset Inventory Styles */
+    .asset-inventory-section { margin: 2rem 0; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .inventory-header h2 { color: #111827; margin: 0 0 0.5rem 0; }
+    .inventory-subtitle { color: #6b7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; }
+    .inventory-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-box { background: #f9fafb; padding: 1.25rem; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; }
+    .stat-value { font-size: 1.75rem; font-weight: bold; color: #1f2937; margin-bottom: 0.25rem; }
+    .stat-label { color: #6b7280; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .inventory-notice { background: #eff6ff; padding: 1rem 1.25rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1.5rem; color: #1e40af; font-size: 0.9rem; }
+    .inventory-notice strong { color: #1e3a8a; }
+    .export-csv-link { color: #2563eb; font-weight: 600; text-decoration: none; margin-left: 0.5rem; }
+    .export-csv-link:hover { text-decoration: underline; }
+    .inventory-table-container { overflow-x: auto; }
+    .inventory-table { width: 100%; border-collapse: collapse; }
+    .inventory-table th { background: #f9fafb; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; font-size: 0.85rem; white-space: nowrap; }
+    .inventory-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    .inventory-table tr:hover { background: #f9fafb; }
+    .inventory-table .category-row { background: #f3f4f6; }
+    .inventory-table .category-row td { padding: 0.5rem 1rem; font-weight: 600; color: #1f2937; border-bottom: 1px solid #d1d5db; }
+    .asset-id { font-family: 'SF Mono', Monaco, monospace; color: #6b7280; font-size: 0.85rem; }
+    .asset-name code { background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; color: #1f2937; }
+    .asset-version { color: #6b7280; font-size: 0.85rem; }
+    .asset-provider { color: #374151; font-size: 0.9rem; }
+    .category-badge { display: inline-block; padding: 0.2rem 0.6rem; background: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 0.75rem; font-weight: 500; text-transform: capitalize; }
+    .editable-field input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; color: #1f2937; }
+    .editable-field input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .editable-field input::placeholder { color: #9ca3af; }
+
     .risk-summary-table table, .risk-detail-table table { width: 100%; border-collapse: collapse; background: white; }
     .risk-summary-table { margin: 1rem 0; overflow-x: auto; }
     .risk-detail-table { margin: 1rem 0; overflow-x: auto; }
@@ -567,6 +782,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     ${report.stack && report.stack.framework !== 'unknown' ? renderStackSection(report.stack) : ''}
 
     ${renderRiskAnalysisHtml(report)}
+
+    ${assetInventoryHtml}
 
     <h2>Findings</h2>
     <div class="findings">
@@ -648,6 +865,162 @@ function getMitigationStatus(finding: Finding): string {
     return 'Remediation Available (Auto-fix)';
   }
   return 'Open';
+}
+
+async function renderAssetInventoryHtml(targetPath: string): Promise<string> {
+  const inventory = await generateAssetInventory(targetPath);
+
+  if (inventory.totalAssets === 0) {
+    return `
+      <div class="asset-inventory-section">
+        <h2>📦 Technology Asset Inventory</h2>
+        <p style="color: #6b7280;">No package.json found or no dependencies detected.</p>
+      </div>
+    `;
+  }
+
+  const categoryIcons: Record<string, string> = {
+    framework: '⚡',
+    database: '🗄️',
+    auth: '🔐',
+    cloud: '☁️',
+    payment: '💳',
+    communication: '📧',
+    utility: '🔧',
+    other: '📦',
+  };
+
+  const categoryLabels: Record<string, string> = {
+    framework: 'Frameworks',
+    database: 'Databases & ORMs',
+    auth: 'Authentication',
+    cloud: 'Cloud & BaaS',
+    payment: 'Payment Services',
+    communication: 'Communication',
+    utility: 'Utilities',
+    other: 'Other',
+  };
+
+  // Group by category
+  const byCategory = inventory.assets.reduce((acc, asset) => {
+    if (!acc[asset.category]) {
+      acc[asset.category] = [];
+    }
+    acc[asset.category].push(asset);
+    return acc;
+  }, {} as Record<string, TechnologyAsset[]>);
+
+  return `
+    <div class="asset-inventory-section">
+      <div class="inventory-header">
+        <h2>📦 Technology Asset Inventory</h2>
+        <p class="inventory-subtitle">
+          Software assets detected from package.json analysis
+        </p>
+      </div>
+
+      <div class="inventory-stats">
+        <div class="stat-box">
+          <div class="stat-value">${inventory.totalAssets}</div>
+          <div class="stat-label">Total Assets</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${Object.keys(byCategory).length}</div>
+          <div class="stat-label">Categories</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${new Date(inventory.detectedAt).toLocaleDateString()}</div>
+          <div class="stat-label">Detected</div>
+        </div>
+      </div>
+
+      <div class="inventory-notice">
+        <strong>📋 Note:</strong> This inventory covers software assets detected in code (package.json).
+        Please complete the "Responsible Person" and "Location" fields, and add any hardware,
+        infrastructure, or third-party services not detected automatically.
+        <a href="#" class="export-csv-link" onclick="event.preventDefault(); exportInventoryCsv();">
+          Export as CSV →
+        </a>
+      </div>
+
+      <div class="inventory-table-container">
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Provider</th>
+              <th>Responsible Person</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(byCategory)
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([category, assets]) => `
+                <tr class="category-row">
+                  <td colspan="8">
+                    <strong>${categoryIcons[category]} ${categoryLabels[category]}</strong>
+                  </td>
+                </tr>
+                ${assets.map(asset => `
+                  <tr>
+                    <td class="asset-id">${escapeHtml(asset.id)}</td>
+                    <td class="asset-name"><code>${escapeHtml(asset.name)}</code></td>
+                    <td class="asset-version">${escapeHtml(asset.version)}</td>
+                    <td>${escapeHtml(asset.type)}</td>
+                    <td><span class="category-badge">${escapeHtml(asset.category)}</span></td>
+                    <td class="asset-provider">${escapeHtml(asset.provider)}</td>
+                    <td class="editable-field">
+                      <input type="text" placeholder="Enter name..." class="person-input" />
+                    </td>
+                    <td class="editable-field">
+                      <input type="text" placeholder="e.g., AWS us-east-1" class="location-input" />
+                    </td>
+                  </tr>
+                `).join('')}
+              `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        const inventoryData = ${JSON.stringify(inventory.assets)};
+
+        function exportInventoryCsv() {
+          const header = 'ID,Name,Version,Type,Category,Provider,Responsible Person,Location\\n';
+
+          const rows = inventoryData.map((asset, idx) => {
+            const personInput = document.querySelectorAll('.person-input')[idx];
+            const locationInput = document.querySelectorAll('.location-input')[idx];
+
+            return [
+              asset.id,
+              '"' + asset.name + '"',
+              '"' + asset.version + '"',
+              asset.type,
+              asset.category,
+              '"' + asset.provider + '"',
+              '"' + (personInput?.value || '') + '"',
+              '"' + (locationInput?.value || '') + '"',
+            ].join(',');
+          }).join('\\n');
+
+          const csv = header + rows;
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'technology-asset-inventory.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      </script>
+    </div>
+  `;
 }
 
 async function renderComplianceScoreHtml(report: Report, targetPath: string): Promise<string> {
