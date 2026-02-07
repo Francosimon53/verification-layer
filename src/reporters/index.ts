@@ -1,7 +1,7 @@
 import { writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
@@ -740,7 +740,11 @@ async function getScoreTrending(targetPath: string, currentScore: number): Promi
   }
 }
 
-function buildReport(result: ScanResult, targetPath: string): Report {
+function buildReport(
+  result: ScanResult,
+  targetPath: string,
+  vulnerabilities?: DependencyVulnerability[]
+): Report {
   const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
   const suppressed = result.findings.filter(f => f.suppressed);
   const baseline = result.findings.filter(f => f.isBaseline);
@@ -750,7 +754,7 @@ function buildReport(result: ScanResult, targetPath: string): Report {
     !f.acknowledged && !f.suppressed && !f.isBaseline
   );
 
-  const summary = {
+  const summary: Report['summary'] = {
     total: result.findings.length,
     acknowledged: acknowledged.length,
     suppressed: suppressed.length,
@@ -763,6 +767,17 @@ function buildReport(result: ScanResult, targetPath: string): Report {
     info: newFindings.filter(f => f.severity === 'info').length,
   };
 
+  // Add vulnerability summary if present
+  if (vulnerabilities && vulnerabilities.length > 0) {
+    summary.vulnerabilities = {
+      total: vulnerabilities.length,
+      critical: vulnerabilities.filter(v => v.severity === 'critical').length,
+      high: vulnerabilities.filter(v => v.severity === 'high').length,
+      moderate: vulnerabilities.filter(v => v.severity === 'moderate').length,
+      low: vulnerabilities.filter(v => v.severity === 'low').length,
+    };
+  }
+
   return {
     timestamp: new Date().toISOString(),
     targetPath,
@@ -771,6 +786,7 @@ function buildReport(result: ScanResult, targetPath: string): Report {
     scannedFiles: result.scannedFiles,
     scanDuration: result.scanDuration,
     stack: result.stack,
+    vulnerabilities,
   };
 }
 
@@ -811,6 +827,48 @@ function generateMarkdown(report: Report): string {
     `| **Total** | **${report.summary.total}** |`,
     '',
   ];
+
+  // Add vulnerability summary if present
+  if (report.vulnerabilities && report.vulnerabilities.length > 0) {
+    lines.push(
+      '## Dependency Vulnerabilities',
+      '',
+      `> Security vulnerabilities detected in project dependencies via \`npm audit\``,
+      '',
+      '### Summary',
+      '',
+      '| Severity | Count |',
+      '|----------|-------|',
+      `| Critical | ${report.summary.vulnerabilities?.critical || 0} |`,
+      `| High | ${report.summary.vulnerabilities?.high || 0} |`,
+      `| Moderate | ${report.summary.vulnerabilities?.moderate || 0} |`,
+      `| Low | ${report.summary.vulnerabilities?.low || 0} |`,
+      `| **Total** | **${report.vulnerabilities.length}** |`,
+      '',
+      '### Affected Packages',
+      ''
+    );
+
+    for (const vuln of report.vulnerabilities) {
+      const fixInfo = vuln.fixAvailable
+        ? typeof vuln.fixAvailable === 'object'
+          ? `✅ Fix: ${vuln.fixAvailable.name}@${vuln.fixAvailable.version}`
+          : '✅ Fix Available'
+        : '⚠️ No Fix Yet';
+
+      lines.push(
+        `#### ${vuln.severity.toUpperCase()}: \`${vuln.name}\``,
+        '',
+        `- **Vulnerability:** ${vuln.via}`,
+        `- **Affected Range:** \`${vuln.range}\``,
+        `- **Status:** ${fixInfo}`,
+        vuln.url ? `- **Advisory:** ${vuln.url}` : '',
+        ''
+      );
+    }
+
+    lines.push('---', '');
+  }
 
   if (report.findings.length > 0) {
     lines.push('## Findings', '');
@@ -1445,6 +1503,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     ${report.stack ? renderBackupRecoveryGuideHtml(report.stack) : ''}
 
     ${renderIncidentResponsePlanHtml(report.summary.critical, report.summary.high)}
+
+    ${report.vulnerabilities ? renderDependencyVulnerabilitiesHtml(report.vulnerabilities) : ''}
 
     <h2>Findings</h2>
     <div class="findings">
@@ -2685,6 +2745,138 @@ function renderIncidentResponsePlanHtml(criticalFindings: number, highFindings: 
   `;
 }
 
+function renderDependencyVulnerabilitiesHtml(vulnerabilities: DependencyVulnerability[]): string {
+  if (!vulnerabilities || vulnerabilities.length === 0) {
+    return '';
+  }
+
+  const vulnCounts = {
+    critical: vulnerabilities.filter(v => v.severity === 'critical').length,
+    high: vulnerabilities.filter(v => v.severity === 'high').length,
+    moderate: vulnerabilities.filter(v => v.severity === 'moderate').length,
+    low: vulnerabilities.filter(v => v.severity === 'low').length,
+  };
+
+  const severityColors = {
+    critical: '#dc2626',
+    high: '#ea580c',
+    moderate: '#ca8a04',
+    low: '#2563eb',
+    info: '#6b7280',
+  };
+
+  return `
+    <div class="vulnerability-section" style="margin: 3rem 0; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+        <span style="font-size: 2.5rem;">📦</span>
+        <div>
+          <h2 style="margin: 0; color: #111827; font-size: 1.8rem;">Dependency Vulnerabilities</h2>
+          <p style="margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+            Security vulnerabilities detected in project dependencies via <code>npm audit</code>
+          </p>
+        </div>
+      </div>
+
+      ${vulnCounts.critical > 0 || vulnCounts.high > 0 ? `
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">⚠️</span>
+            <strong style="color: #991b1b; font-size: 1.1rem;">Action Required</strong>
+          </div>
+          <p style="color: #7f1d1d; margin: 0;">
+            ${vulnCounts.critical > 0 ? `${vulnCounts.critical} critical` : ''}${vulnCounts.critical > 0 && vulnCounts.high > 0 ? ' and ' : ''}${vulnCounts.high > 0 ? `${vulnCounts.high} high` : ''}
+            severity vulnerabilities detected. Update affected packages immediately.
+          </p>
+        </div>
+      ` : ''}
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fee2e2; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);">
+          <div style="color: #dc2626; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Critical</div>
+          <div style="color: #dc2626; font-size: 2.5rem; font-weight: bold; line-height: 1;">${vulnCounts.critical}</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fed7aa; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1);">
+          <div style="color: #ea580c; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">High</div>
+          <div style="color: #ea580c; font-size: 2.5rem; font-weight: bold; line-height: 1;">${vulnCounts.high}</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #fefce8 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fef08a; box-shadow: 0 2px 4px rgba(202, 138, 4, 0.1);">
+          <div style="color: #ca8a04; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Moderate</div>
+          <div style="color: #ca8a04; font-size: 2.5rem; font-weight: bold; line-height: 1;">${vulnCounts.moderate}</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #dbeafe; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);">
+          <div style="color: #2563eb; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Low</div>
+          <div style="color: #2563eb; font-size: 2.5rem; font-weight: bold; line-height: 1;">${vulnCounts.low}</div>
+        </div>
+      </div>
+
+      <h3 style="color: #111827; margin: 2rem 0 1.5rem 0; font-size: 1.3rem;">Affected Packages</h3>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        ${vulnerabilities.map(vuln => `
+          <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid ${severityColors[vuln.severity]};">
+            <div style="display: flex; justify-content: between; align-items: start; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                  <span style="padding: 0.25rem 0.6rem; border-radius: 4px; color: white; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; background: ${severityColors[vuln.severity]};">
+                    ${vuln.severity}
+                  </span>
+                  <code style="font-family: 'SF Mono', Monaco, monospace; font-size: 0.95rem; font-weight: 600; color: #111827;">${escapeHtml(vuln.name)}</code>
+                </div>
+                <div style="color: #4b5563; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                  ${escapeHtml(vuln.via)}
+                </div>
+                <div style="font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem; color: #6b7280;">
+                  Vulnerable range: <code style="background: #e5e7eb; padding: 0.125rem 0.375rem; border-radius: 3px;">${escapeHtml(vuln.range)}</code>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                ${vuln.fixAvailable
+                  ? typeof vuln.fixAvailable === 'object'
+                    ? `<div style="background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                         Fix Available
+                         <div style="font-size: 0.75rem; font-weight: 400; margin-top: 0.25rem; opacity: 0.9;">
+                           ${escapeHtml(vuln.fixAvailable.name)}@${escapeHtml(vuln.fixAvailable.version)}
+                         </div>
+                       </div>`
+                    : `<div style="background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                         Fix Available
+                       </div>`
+                  : `<div style="background: #6b7280; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                       No Fix Yet
+                     </div>`
+                }
+              </div>
+            </div>
+            ${vuln.url ? `
+              <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                <a href="${escapeHtml(vuln.url)}" target="_blank" rel="noopener" style="color: #3b82f6; text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 0.375rem;">
+                  📄 Advisory Details
+                  <span style="font-size: 0.7rem;">↗</span>
+                </a>
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="background: #eff6ff; padding: 1.5rem; margin-top: 2rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <div style="display: flex; align-items: start; gap: 0.75rem;">
+          <span style="font-size: 1.5rem;">💡</span>
+          <div>
+            <strong style="color: #1e40af; font-size: 1rem;">Remediation Steps</strong>
+            <ol style="margin: 0.75rem 0 0 0; padding-left: 1.5rem; color: #1e3a8a;">
+              <li style="margin: 0.5rem 0;">Run <code style="background: white; padding: 0.125rem 0.375rem; border-radius: 3px; font-family: 'SF Mono', Monaco, monospace;">npm audit fix</code> to automatically install compatible updates</li>
+              <li style="margin: 0.5rem 0;">For breaking changes, use <code style="background: white; padding: 0.125rem 0.375rem; border-radius: 3px; font-family: 'SF Mono', Monaco, monospace;">npm audit fix --force</code> (test thoroughly after)</li>
+              <li style="margin: 0.5rem 0;">Review advisory details for packages without automated fixes</li>
+              <li style="margin: 0.5rem 0;">Consider alternative packages if vulnerabilities cannot be resolved</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function renderComplianceScoreHtml(report: Report, targetPath: string): Promise<string> {
   const score = calculateComplianceScore(report.findings.filter(f => !f.acknowledged && !f.suppressed && !f.isBaseline));
   const trending = await getScoreTrending(targetPath, score.overall);
@@ -2904,7 +3096,7 @@ export async function generateReport(
   targetPath: string,
   options: ReportOptions
 ): Promise<void> {
-  const report = buildReport(result, targetPath);
+  const report = buildReport(result, targetPath, options.vulnerabilities);
 
   let content: string;
   let extension: string;

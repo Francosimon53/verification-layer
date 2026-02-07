@@ -132,16 +132,34 @@ export interface Report {
     medium: number;
     low: number;
     info: number;
+    vulnerabilities?: {
+      total: number;
+      critical: number;
+      high: number;
+      moderate: number;
+      low: number;
+    };
   };
   findings: Finding[];
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;
+  vulnerabilities?: DependencyVulnerability[];
 }
 
 export interface ReportOptions {
   format: 'json' | 'html' | 'markdown';
   outputPath?: string;
+  vulnerabilities?: DependencyVulnerability[];
+}
+
+export interface DependencyVulnerability {
+  name: string;
+  severity: 'critical' | 'high' | 'moderate' | 'low' | 'info';
+  via: string;
+  range: string;
+  fixAvailable: boolean | { name: string; version: string };
+  url?: string;
 }
 
 export interface AcknowledgedFinding {

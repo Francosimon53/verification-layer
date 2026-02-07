@@ -37,6 +37,7 @@ program
   .option('--min-confidence <level>', 'Minimum confidence level (high, medium, low)', 'low')
   .option('--fix', 'Automatically fix detected issues where possible')
   .option('--no-ai', 'Disable AI-powered triage and analysis')
+  .option('--audit', 'Run npm audit and include dependency vulnerabilities in report')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
     const absolutePath = resolve(path);
@@ -79,6 +80,22 @@ program
 
       spinner.succeed(`Scan complete. Found ${result.findings.length} issues.`);
 
+      // Run npm audit if --audit flag is provided
+      let vulnerabilities: import('./types.js').DependencyVulnerability[] | undefined;
+      if (options.audit) {
+        const auditSpinner = ora('Running npm audit...').start();
+        const { runNpmAudit } = await import('./utils/npm-audit.js');
+        const auditResult = await runNpmAudit(absolutePath);
+
+        if (auditResult.error) {
+          auditSpinner.warn(`npm audit: ${auditResult.error}`);
+        } else {
+          const vulnCount = auditResult.vulnerabilities.length;
+          auditSpinner.succeed(`npm audit complete. Found ${vulnCount} vulnerabilities.`);
+          vulnerabilities = auditResult.vulnerabilities;
+        }
+      }
+
       // Apply fixes if --fix flag is provided
       if (options.fix) {
         const fixSpinner = ora('Applying automatic fixes...').start();
@@ -104,6 +121,7 @@ program
       const reportOptions: ReportOptions = {
         format: options.format,
         outputPath: options.output,
+        vulnerabilities,
       };
 
       await generateReport(result, path, reportOptions);
@@ -141,6 +159,31 @@ program
       }
       if (high > 0) {
         console.log(chalk.yellow(`  High (new): ${high}`));
+      }
+
+      // Display vulnerability summary if audit was run
+      if (vulnerabilities && vulnerabilities.length > 0) {
+        const vulnCounts = {
+          critical: vulnerabilities.filter(v => v.severity === 'critical').length,
+          high: vulnerabilities.filter(v => v.severity === 'high').length,
+          moderate: vulnerabilities.filter(v => v.severity === 'moderate').length,
+          low: vulnerabilities.filter(v => v.severity === 'low').length,
+        };
+
+        console.log('\n' + chalk.bold('Dependency Vulnerabilities:'));
+        console.log(`  Total: ${vulnerabilities.length}`);
+        if (vulnCounts.critical > 0) {
+          console.log(chalk.red(`  Critical: ${vulnCounts.critical}`));
+        }
+        if (vulnCounts.high > 0) {
+          console.log(chalk.yellow(`  High: ${vulnCounts.high}`));
+        }
+        if (vulnCounts.moderate > 0) {
+          console.log(chalk.hex('#ca8a04')(`  Moderate: ${vulnCounts.moderate}`));
+        }
+        if (vulnCounts.low > 0) {
+          console.log(chalk.blue(`  Low: ${vulnCounts.low}`));
+        }
       }
 
       // Exit with error code if new critical issues found (only if not fixing)
