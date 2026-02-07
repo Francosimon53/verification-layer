@@ -1300,6 +1300,94 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     .rto-time { color: #111827; font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; }
     .rto-desc { color: #4b5563; font-size: 0.85rem; }
 
+    /* Incident Response Styles */
+    .incident-response-section { margin: 2rem 0; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .incident-header h2 { color: #111827; margin: 0 0 0.5rem 0; }
+    .incident-subtitle { color: #6b7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; }
+    .incident-alert { display: flex; align-items: start; gap: 1rem; padding: 1.5rem; margin-bottom: 2rem; background: #fef2f2; border-radius: 10px; border-left: 4px solid #dc2626; }
+    .incident-alert-icon { font-size: 2rem; line-height: 1; }
+    .incident-alert-content strong { display: block; color: #991b1b; margin-bottom: 0.5rem; font-size: 1.1rem; }
+    .incident-alert-content p { color: #7f1d1d; margin: 0; }
+    .incident-hipaa-notice { background: #eff6ff; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 2rem; color: #1e40af; font-size: 0.9rem; line-height: 1.6; }
+    .incident-hipaa-notice strong { color: #1e3a8a; }
+    .incident-team-section { margin: 2.5rem 0; }
+    .incident-team-section h3 { color: #111827; margin: 0 0 1.5rem 0; font-size: 1.2rem; }
+    .incident-team-table { overflow-x: auto; }
+    .incident-team-table table { width: 100%; border-collapse: collapse; background: #f9fafb; border-radius: 8px; overflow: hidden; }
+    .incident-team-table th { background: #374151; color: white; padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; }
+    .incident-team-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    .incident-team-table tr:last-child td { border-bottom: none; }
+    .incident-team-table tr:hover { background: white; }
+    .editable-cell { background: white; }
+    .contact-input { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; }
+    .contact-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .severity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .severity-card { background: #f9fafb; border-radius: 10px; padding: 1.5rem; border-left: 4px solid; }
+    .severity-card.severity-critical { border-left-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, #f9fafb 100%); }
+    .severity-card.severity-high { border-left-color: #ea580c; background: linear-gradient(135deg, #fff7ed 0%, #f9fafb 100%); }
+    .severity-card.severity-medium { border-left-color: #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #f9fafb 100%); }
+    .severity-card.severity-low { border-left-color: #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #f9fafb 100%); }
+    .severity-badge { display: inline-block; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; margin-bottom: 1rem; }
+    .severity-critical .severity-badge { background: #dc2626; color: white; }
+    .severity-high .severity-badge { background: #ea580c; color: white; }
+    .severity-medium .severity-badge { background: #f59e0b; color: white; }
+    .severity-low .severity-badge { background: #3b82f6; color: white; }
+    .severity-examples { margin-bottom: 1rem; }
+    .severity-examples strong { display: block; color: #374151; margin-bottom: 0.5rem; }
+    .severity-examples ul { margin: 0.5rem 0 0 1.5rem; padding: 0; }
+    .severity-examples li { color: #4b5563; font-size: 0.9rem; margin: 0.25rem 0; }
+    .severity-response { padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+    .severity-response strong { color: #111827; font-size: 0.9rem; }
+    .phase-card { display: flex; gap: 1.5rem; margin: 1.5rem 0; padding: 1.5rem; background: #f9fafb; border-radius: 10px; border-left: 4px solid #3b82f6; }
+    .phase-number { width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); }
+    .phase-content { flex: 1; }
+    .phase-content h4 { margin: 0 0 1rem 0; color: #111827; font-size: 1.1rem; }
+    .phase-checklist { }
+    .phase-checklist ul { margin: 0.5rem 0 0 1.5rem; padding: 0; }
+    .phase-checklist li { color: #374151; font-size: 0.9rem; margin: 0.5rem 0; }
+    .phase-item { margin-bottom: 1rem; }
+    .phase-item:last-child { margin-bottom: 0; }
+    .phase-item strong { display: block; color: #1f2937; margin-bottom: 0.5rem; }
+    .incident-breach-timeline { margin: 2.5rem 0; padding: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border-radius: 10px; border-left: 4px solid #f59e0b; }
+    .incident-breach-timeline h3 { color: #78350f; margin: 0 0 1.5rem 0; font-size: 1.2rem; }
+    .timeline-container { position: relative; padding-left: 2rem; }
+    .timeline-container::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #f59e0b; }
+    .timeline-item { position: relative; margin-bottom: 2rem; }
+    .timeline-item:last-child { margin-bottom: 0; }
+    .timeline-marker { position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #f59e0b; }
+    .timeline-marker.timeline-discovery { background: #dc2626; }
+    .timeline-marker.timeline-assessment { background: #f59e0b; }
+    .timeline-marker.timeline-notification { background: #3b82f6; }
+    .timeline-marker.timeline-documentation { background: #10b981; }
+    .timeline-content { background: white; padding: 1rem 1.25rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .timeline-content strong { display: block; color: #111827; margin-bottom: 0.5rem; font-size: 1rem; }
+    .timeline-content p { color: #4b5563; margin: 0; font-size: 0.9rem; line-height: 1.6; }
+    .contacts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .contact-card { background: #f9fafb; padding: 1.25rem; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .contact-title { font-weight: 700; color: #111827; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .contact-info { color: #4b5563; font-size: 0.85rem; }
+    .contact-info div { margin: 0.25rem 0; }
+    .contact-info a { color: #3b82f6; text-decoration: none; }
+    .contact-info a:hover { text-decoration: underline; }
+    .editable-contact input { width: 100%; margin: 0.25rem 0; }
+    .contact-input-wide { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; margin: 0.25rem 0; }
+    .contact-input-wide:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .incident-log-template { margin: 2.5rem 0; }
+    .incident-log-template h3 { color: #111827; margin: 0 0 0.75rem 0; font-size: 1.2rem; }
+    .template-note { color: #6b7280; margin-bottom: 1rem; font-size: 0.9rem; }
+    .log-template-box { background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; padding: 1.5rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.85rem; }
+    .log-field { margin: 0.75rem 0; padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb; }
+    .log-field:last-child { border-bottom: none; }
+    .log-field strong { color: #374151; display: inline-block; min-width: 180px; }
+    .log-placeholder { color: #6b7280; font-style: italic; }
+    .incident-testing-section { margin: 2.5rem 0; padding: 2rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 10px; border-left: 4px solid #10b981; }
+    .incident-testing-section h3 { color: #065f46; margin: 0 0 1.5rem 0; font-size: 1.2rem; }
+    .testing-recommendations { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .testing-item { background: white; padding: 1.25rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .testing-frequency { display: inline-block; background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .testing-activity strong { display: block; color: #111827; margin-bottom: 0.5rem; }
+    .testing-activity p { color: #4b5563; margin: 0; font-size: 0.9rem; }
+
     @media (max-width: 768px) {
       body { padding: 1rem; }
       .summary { grid-template-columns: repeat(2, 1fr); }
@@ -1355,6 +1443,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     ${dataFlowMapHtml}
 
     ${report.stack ? renderBackupRecoveryGuideHtml(report.stack) : ''}
+
+    ${renderIncidentResponsePlanHtml(report.summary.critical, report.summary.high)}
 
     <h2>Findings</h2>
     <div class="findings">
@@ -2180,6 +2270,414 @@ mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
             <div class="rto-label">Standard Data</div>
             <div class="rto-time">&lt; 72 hours</div>
             <div class="rto-desc">Analytics, logs, reports (HIPAA max)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderIncidentResponsePlanHtml(criticalFindings: number, highFindings: number): string {
+  const hasActiveIncident = criticalFindings > 0;
+  const riskLevel = criticalFindings > 0 ? 'HIGH' : highFindings > 0 ? 'MEDIUM' : 'LOW';
+
+  return `
+    <div class="incident-response-section">
+      <div class="incident-header">
+        <h2>🚨 Incident Response Plan</h2>
+        <p class="incident-subtitle">
+          HIPAA-compliant incident response and breach notification procedures
+        </p>
+      </div>
+
+      ${hasActiveIncident ? `
+      <div class="incident-alert">
+        <div class="incident-alert-icon">⚠️</div>
+        <div class="incident-alert-content">
+          <strong>Active Security Issues Detected</strong>
+          <p>
+            ${criticalFindings} critical issue${criticalFindings !== 1 ? 's' : ''} detected that may constitute a security incident.
+            Review findings immediately and follow incident response procedures below.
+          </p>
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="incident-hipaa-notice">
+        <strong>📋 HIPAA Breach Notification Rule:</strong> If a breach affects 500 or more individuals,
+        you must notify HHS within <strong>60 days</strong>. For breaches affecting fewer than 500 individuals,
+        notification must be made within 60 days of discovery. Maintain detailed documentation of all incidents.
+      </div>
+
+      <div class="incident-team-section">
+        <h3>👥 Incident Response Team (IRT)</h3>
+        <div class="incident-team-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Responsibilities</th>
+                <th>Contact Person</th>
+                <th>Phone/Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Incident Commander</strong></td>
+                <td>Overall incident coordination, decision-making authority, external communication</td>
+                <td class="editable-cell"><input type="text" placeholder="Name" class="contact-input" /></td>
+                <td class="editable-cell"><input type="text" placeholder="Contact" class="contact-input" /></td>
+              </tr>
+              <tr>
+                <td><strong>Security Lead</strong></td>
+                <td>Technical investigation, containment actions, forensic analysis</td>
+                <td class="editable-cell"><input type="text" placeholder="Name" class="contact-input" /></td>
+                <td class="editable-cell"><input type="text" placeholder="Contact" class="contact-input" /></td>
+              </tr>
+              <tr>
+                <td><strong>Compliance Officer</strong></td>
+                <td>HIPAA breach assessment, regulatory notifications, documentation</td>
+                <td class="editable-cell"><input type="text" placeholder="Name" class="contact-input" /></td>
+                <td class="editable-cell"><input type="text" placeholder="Contact" class="contact-input" /></td>
+              </tr>
+              <tr>
+                <td><strong>Legal Counsel</strong></td>
+                <td>Legal guidance, law enforcement coordination, liability assessment</td>
+                <td class="editable-cell"><input type="text" placeholder="Name" class="contact-input" /></td>
+                <td class="editable-cell"><input type="text" placeholder="Contact" class="contact-input" /></td>
+              </tr>
+              <tr>
+                <td><strong>Communications Lead</strong></td>
+                <td>Patient notifications, media relations, stakeholder communication</td>
+                <td class="editable-cell"><input type="text" placeholder="Name" class="contact-input" /></td>
+                <td class="editable-cell"><input type="text" placeholder="Contact" class="contact-input" /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="incident-severity-section">
+        <h3>📊 Incident Severity Levels</h3>
+        <div class="severity-grid">
+          <div class="severity-card severity-critical">
+            <div class="severity-badge">P0 - CRITICAL</div>
+            <div class="severity-examples">
+              <strong>Examples:</strong>
+              <ul>
+                <li>PHI exposed to unauthorized parties</li>
+                <li>Ransomware affecting production systems</li>
+                <li>Active data breach in progress</li>
+                <li>Complete system compromise</li>
+              </ul>
+            </div>
+            <div class="severity-response">
+              <strong>Response Time:</strong> Immediate (within 15 minutes)
+            </div>
+          </div>
+
+          <div class="severity-card severity-high">
+            <div class="severity-badge">P1 - HIGH</div>
+            <div class="severity-examples">
+              <strong>Examples:</strong>
+              <ul>
+                <li>Unauthorized access attempt detected</li>
+                <li>Malware on non-production systems</li>
+                <li>Potential PHI exposure (unconfirmed)</li>
+                <li>DDoS attack affecting availability</li>
+              </ul>
+            </div>
+            <div class="severity-response">
+              <strong>Response Time:</strong> Within 1 hour
+            </div>
+          </div>
+
+          <div class="severity-card severity-medium">
+            <div class="severity-badge">P2 - MEDIUM</div>
+            <div class="severity-examples">
+              <strong>Examples:</strong>
+              <ul>
+                <li>Suspicious login activity</li>
+                <li>Policy violation detected</li>
+                <li>Non-PHI data anomaly</li>
+                <li>Failed security control</li>
+              </ul>
+            </div>
+            <div class="severity-response">
+              <strong>Response Time:</strong> Within 4 hours
+            </div>
+          </div>
+
+          <div class="severity-card severity-low">
+            <div class="severity-badge">P3 - LOW</div>
+            <div class="severity-examples">
+              <strong>Examples:</strong>
+              <ul>
+                <li>Minor configuration issue</li>
+                <li>Informational security alert</li>
+                <li>Routine security event</li>
+                <li>Non-urgent vulnerability</li>
+              </ul>
+            </div>
+            <div class="severity-response">
+              <strong>Response Time:</strong> Within 24 hours
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="incident-phases-section">
+        <h3>🔄 Incident Response Phases</h3>
+
+        <div class="phase-card">
+          <div class="phase-number">1</div>
+          <div class="phase-content">
+            <h4>Detection & Analysis</h4>
+            <div class="phase-checklist">
+              <div class="phase-item">
+                <strong>⚡ Immediate Actions (0-15 min):</strong>
+                <ul>
+                  <li>Document initial detection time and source</li>
+                  <li>Assess severity using criteria above</li>
+                  <li>Alert Incident Commander and Security Lead</li>
+                  <li>Begin incident log documentation</li>
+                </ul>
+              </div>
+              <div class="phase-item">
+                <strong>🔍 Investigation (15 min - 2 hours):</strong>
+                <ul>
+                  <li>Determine scope: systems affected, data involved</li>
+                  <li>Identify if PHI is involved or at risk</li>
+                  <li>Collect initial evidence (logs, screenshots, network captures)</li>
+                  <li>Determine root cause (preliminary)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-number">2</div>
+          <div class="phase-content">
+            <h4>Containment</h4>
+            <div class="phase-checklist">
+              <div class="phase-item">
+                <strong>🛡️ Short-term Containment:</strong>
+                <ul>
+                  <li>Isolate affected systems from network</li>
+                  <li>Disable compromised user accounts</li>
+                  <li>Block malicious IPs/domains at firewall</li>
+                  <li>Preserve evidence before taking systems offline</li>
+                </ul>
+              </div>
+              <div class="phase-item">
+                <strong>🔒 Long-term Containment:</strong>
+                <ul>
+                  <li>Apply temporary security patches</li>
+                  <li>Implement additional monitoring</li>
+                  <li>Establish secure backup systems</li>
+                  <li>Document all containment actions</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-number">3</div>
+          <div class="phase-content">
+            <h4>Eradication</h4>
+            <div class="phase-checklist">
+              <ul>
+                <li>Remove malware from all affected systems</li>
+                <li>Close security vulnerabilities exploited</li>
+                <li>Reset all compromised credentials</li>
+                <li>Apply permanent security patches</li>
+                <li>Verify threat has been completely removed</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-number">4</div>
+          <div class="phase-content">
+            <h4>Recovery</h4>
+            <div class="phase-checklist">
+              <ul>
+                <li>Restore systems from clean backups</li>
+                <li>Verify system integrity before reconnecting</li>
+                <li>Gradually restore services to production</li>
+                <li>Monitor closely for signs of re-infection</li>
+                <li>Validate business operations are normal</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-number">5</div>
+          <div class="phase-content">
+            <h4>Post-Incident Activity</h4>
+            <div class="phase-checklist">
+              <ul>
+                <li>Conduct post-incident review meeting</li>
+                <li>Document lessons learned</li>
+                <li>Update incident response procedures</li>
+                <li>Implement preventive measures</li>
+                <li>Complete HIPAA breach determination</li>
+                <li>File required regulatory notifications</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="incident-breach-timeline">
+        <h3>⏰ HIPAA Breach Notification Timeline</h3>
+        <div class="timeline-container">
+          <div class="timeline-item">
+            <div class="timeline-marker timeline-discovery"></div>
+            <div class="timeline-content">
+              <strong>Day 0: Discovery</strong>
+              <p>Incident discovered. Begin investigation and documentation.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker timeline-assessment"></div>
+            <div class="timeline-content">
+              <strong>Days 1-5: Assessment</strong>
+              <p>Complete breach risk assessment. Determine if PHI compromised.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker timeline-notification"></div>
+            <div class="timeline-content">
+              <strong>Within 60 Days: Notifications</strong>
+              <p>
+                • Notify affected individuals (written notice)<br/>
+                • Notify HHS if 500+ individuals affected<br/>
+                • Notify media if 500+ individuals in same state
+              </p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker timeline-documentation"></div>
+            <div class="timeline-content">
+              <strong>Ongoing: Documentation</strong>
+              <p>Maintain records for 6 years minimum per HIPAA requirements.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="incident-contacts-section">
+        <h3>📞 Critical Contacts</h3>
+        <div class="contacts-grid">
+          <div class="contact-card">
+            <div class="contact-title">HHS Office for Civil Rights</div>
+            <div class="contact-info">
+              <div>Website: <a href="https://ocrportal.hhs.gov/ocr/breach/wizard_breach.jsf" target="_blank">ocrportal.hhs.gov</a></div>
+              <div>Phone: 1-800-368-1019</div>
+            </div>
+          </div>
+          <div class="contact-card">
+            <div class="contact-title">FBI Cyber Division</div>
+            <div class="contact-info">
+              <div>Website: <a href="https://www.fbi.gov/contact-us" target="_blank">fbi.gov/contact-us</a></div>
+              <div>IC3: <a href="https://www.ic3.gov" target="_blank">ic3.gov</a></div>
+            </div>
+          </div>
+          <div class="contact-card">
+            <div class="contact-title">Business Associates</div>
+            <div class="contact-info editable-contact">
+              <input type="text" placeholder="Primary BA Contact" class="contact-input-wide" />
+              <input type="text" placeholder="Contact Info" class="contact-input-wide" />
+            </div>
+          </div>
+          <div class="contact-card">
+            <div class="contact-title">Cyber Insurance Provider</div>
+            <div class="contact-info editable-contact">
+              <input type="text" placeholder="Insurance Company" class="contact-input-wide" />
+              <input type="text" placeholder="Policy # / Phone" class="contact-input-wide" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="incident-log-template">
+        <h3>📝 Incident Log Template</h3>
+        <p class="template-note">Use this template to document security incidents. Maintain logs for 6 years minimum.</p>
+        <div class="log-template-box">
+          <div class="log-field">
+            <strong>Incident ID:</strong> <span class="log-placeholder">[AUTO-GENERATED or YYYY-MM-DD-###]</span>
+          </div>
+          <div class="log-field">
+            <strong>Date/Time Discovered:</strong> <span class="log-placeholder">[YYYY-MM-DD HH:MM UTC]</span>
+          </div>
+          <div class="log-field">
+            <strong>Discovered By:</strong> <span class="log-placeholder">[Name, Role]</span>
+          </div>
+          <div class="log-field">
+            <strong>Severity Level:</strong> <span class="log-placeholder">[P0/P1/P2/P3]</span>
+          </div>
+          <div class="log-field">
+            <strong>Systems Affected:</strong> <span class="log-placeholder">[List all systems, applications, databases]</span>
+          </div>
+          <div class="log-field">
+            <strong>PHI Involved:</strong> <span class="log-placeholder">[YES/NO/UNKNOWN] - If yes, describe data types and # of individuals</span>
+          </div>
+          <div class="log-field">
+            <strong>Initial Description:</strong> <span class="log-placeholder">[What happened? How was it detected?]</span>
+          </div>
+          <div class="log-field">
+            <strong>Containment Actions:</strong> <span class="log-placeholder">[Actions taken and timestamps]</span>
+          </div>
+          <div class="log-field">
+            <strong>Root Cause:</strong> <span class="log-placeholder">[Technical cause, vulnerability exploited]</span>
+          </div>
+          <div class="log-field">
+            <strong>Resolution:</strong> <span class="log-placeholder">[How was incident resolved?]</span>
+          </div>
+          <div class="log-field">
+            <strong>Breach Determination:</strong> <span class="log-placeholder">[BREACH / NOT A BREACH - Justification]</span>
+          </div>
+          <div class="log-field">
+            <strong>Notifications Sent:</strong> <span class="log-placeholder">[HHS, Individuals, Media - with dates]</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="incident-testing-section">
+        <h3>🧪 Plan Testing & Drills</h3>
+        <div class="testing-recommendations">
+          <div class="testing-item">
+            <div class="testing-frequency">Quarterly</div>
+            <div class="testing-activity">
+              <strong>Tabletop Exercises</strong>
+              <p>Simulate breach scenarios with IRT. Review and update procedures.</p>
+            </div>
+          </div>
+          <div class="testing-item">
+            <div class="testing-frequency">Bi-Annual</div>
+            <div class="testing-activity">
+              <strong>Technical Drills</strong>
+              <p>Test actual incident response tools, backup restores, and communication channels.</p>
+            </div>
+          </div>
+          <div class="testing-item">
+            <div class="testing-frequency">Annual</div>
+            <div class="testing-activity">
+              <strong>Full-Scale Simulation</strong>
+              <p>End-to-end breach simulation with all stakeholders including executives and legal.</p>
+            </div>
+          </div>
+          <div class="testing-item">
+            <div class="testing-frequency">Annual</div>
+            <div class="testing-activity">
+              <strong>Plan Review & Update</strong>
+              <p>Review incident response plan against current threats and regulations.</p>
+            </div>
           </div>
         </div>
       </div>
