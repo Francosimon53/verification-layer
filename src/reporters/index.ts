@@ -35,6 +35,21 @@ interface AssetInventory {
   totalAssets: number;
 }
 
+interface DataFlowComponent {
+  id: string;
+  name: string;
+  type: 'entry-point' | 'data-store' | 'external-service' | 'auth-provider';
+  hasIssues: boolean;
+  details?: string;
+}
+
+interface DataFlowMap {
+  entryPoints: DataFlowComponent[];
+  dataStores: DataFlowComponent[];
+  externalServices: DataFlowComponent[];
+  authProviders: DataFlowComponent[];
+}
+
 const PACKAGE_CATEGORIES: Record<string, { category: string; provider: string }> = {
   // Frameworks
   'next': { category: 'framework', provider: 'Next.js Framework' },
@@ -202,6 +217,419 @@ function generateAssetInventoryCsv(inventory: AssetInventory): string {
   }).join('\n');
 
   return header + rows;
+}
+
+async function analyzeDataFlow(targetPath: string, findings: Finding[]): Promise<DataFlowMap> {
+  const entryPoints: DataFlowComponent[] = [];
+  const dataStores: DataFlowComponent[] = [];
+  const externalServices: DataFlowComponent[] = [];
+  const authProviders: DataFlowComponent[] = [];
+
+  try {
+    // Read package.json to detect dependencies
+    const packageJsonPath = path.join(targetPath, 'package.json');
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8'));
+    const dependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+
+    // Detect data stores
+    const dbPackages = [
+      { pattern: '@prisma/client', name: 'Prisma ORM', id: 'prisma' },
+      { pattern: 'prisma', name: 'Prisma', id: 'prisma' },
+      { pattern: '@supabase/supabase-js', name: 'Supabase', id: 'supabase' },
+      { pattern: 'mongoose', name: 'MongoDB (Mongoose)', id: 'mongodb' },
+      { pattern: 'mongodb', name: 'MongoDB', id: 'mongodb' },
+      { pattern: 'pg', name: 'PostgreSQL', id: 'postgresql' },
+      { pattern: 'mysql2', name: 'MySQL', id: 'mysql' },
+      { pattern: 'redis', name: 'Redis', id: 'redis' },
+      { pattern: 'drizzle-orm', name: 'Drizzle ORM', id: 'drizzle' },
+    ];
+
+    for (const pkg of dbPackages) {
+      if (dependencies[pkg.pattern]) {
+        const hasIssues = findings.some(f =>
+          f.file.toLowerCase().includes(pkg.id) ||
+          f.category === 'encryption' ||
+          f.category === 'data-retention'
+        );
+        dataStores.push({
+          id: pkg.id,
+          name: pkg.name,
+          type: 'data-store',
+          hasIssues,
+        });
+      }
+    }
+
+    // Detect auth providers
+    const authPackages = [
+      { pattern: 'next-auth', name: 'NextAuth.js', id: 'nextauth' },
+      { pattern: '@clerk/nextjs', name: 'Clerk', id: 'clerk' },
+      { pattern: '@auth0/nextjs-auth0', name: 'Auth0', id: 'auth0' },
+      { pattern: 'passport', name: 'Passport.js', id: 'passport' },
+      { pattern: '@supabase/auth-helpers', name: 'Supabase Auth', id: 'supabase-auth' },
+      { pattern: 'lucia', name: 'Lucia Auth', id: 'lucia' },
+    ];
+
+    for (const pkg of authPackages) {
+      if (dependencies[pkg.pattern]) {
+        const hasIssues = findings.some(f =>
+          f.category === 'access-control' ||
+          f.category === 'audit-logging'
+        );
+        authProviders.push({
+          id: pkg.id,
+          name: pkg.name,
+          type: 'auth-provider',
+          hasIssues,
+        });
+      }
+    }
+
+    // Detect external services
+    const externalPackages = [
+      { pattern: 'stripe', name: 'Stripe (Payments)', id: 'stripe' },
+      { pattern: '@sendgrid/mail', name: 'SendGrid (Email)', id: 'sendgrid' },
+      { pattern: 'nodemailer', name: 'Nodemailer (Email)', id: 'nodemailer' },
+      { pattern: 'twilio', name: 'Twilio (SMS)', id: 'twilio' },
+      { pattern: 'resend', name: 'Resend (Email)', id: 'resend' },
+      { pattern: '@aws-sdk', name: 'AWS Services', id: 'aws' },
+      { pattern: 'aws-sdk', name: 'AWS Services', id: 'aws' },
+      { pattern: '@google-cloud', name: 'Google Cloud', id: 'gcp' },
+      { pattern: 'firebase', name: 'Firebase', id: 'firebase' },
+    ];
+
+    for (const pkg of externalPackages) {
+      if (Object.keys(dependencies).some(dep => dep.includes(pkg.pattern))) {
+        const hasIssues = findings.some(f =>
+          f.category === 'encryption' ||
+          f.title.toLowerCase().includes('api') ||
+          f.title.toLowerCase().includes('external')
+        );
+        externalServices.push({
+          id: pkg.id,
+          name: pkg.name,
+          type: 'external-service',
+          hasIssues,
+        });
+      }
+    }
+
+    // Detect entry points (API routes)
+    // Look for common API route patterns
+    const apiPatterns = [
+      'pages/api',
+      'app/api',
+      'src/pages/api',
+      'src/app/api',
+    ];
+
+    let apiRouteCount = 0;
+    for (const pattern of apiPatterns) {
+      try {
+        const apiPath = path.join(targetPath, pattern);
+        const files = await readdir(apiPath, { recursive: true });
+        apiRouteCount += files.filter(f =>
+          typeof f === 'string' && (f.endsWith('.ts') || f.endsWith('.js'))
+        ).length;
+      } catch {
+        // Directory doesn't exist, continue
+      }
+    }
+
+    if (apiRouteCount > 0) {
+      const hasIssues = findings.some(f =>
+        f.file.includes('/api/') ||
+        f.category === 'access-control' ||
+        f.category === 'phi-exposure'
+      );
+      entryPoints.push({
+        id: 'api-routes',
+        name: `API Routes (${apiRouteCount} detected)`,
+        type: 'entry-point',
+        hasIssues,
+        details: `${apiRouteCount} API route files found`,
+      });
+    } else {
+      // Generic API endpoint if framework detected
+      if (dependencies['express'] || dependencies['fastify'] || dependencies['next']) {
+        const hasIssues = findings.some(f =>
+          f.category === 'access-control' || f.category === 'phi-exposure'
+        );
+        entryPoints.push({
+          id: 'api-endpoints',
+          name: 'API Endpoints',
+          type: 'entry-point',
+          hasIssues,
+        });
+      }
+    }
+
+  } catch (error) {
+    console.warn('Could not analyze data flow:', error);
+  }
+
+  return {
+    entryPoints,
+    dataStores,
+    externalServices,
+    authProviders,
+  };
+}
+
+function generateMermaidDiagram(dataFlow: DataFlowMap): string {
+  const lines: string[] = [];
+
+  lines.push('flowchart TD');
+
+  // Define nodes
+  lines.push('  User[👤 User/Patient]');
+  lines.push('  Frontend[🖥️ Frontend Application]');
+
+  // Entry points
+  if (dataFlow.entryPoints.length > 0) {
+    dataFlow.entryPoints.forEach(ep => {
+      const icon = '🔌';
+      lines.push(`  ${ep.id}[${icon} ${ep.name}]`);
+    });
+  } else {
+    lines.push('  api[🔌 API Layer]');
+  }
+
+  // Auth providers
+  if (dataFlow.authProviders.length > 0) {
+    dataFlow.authProviders.forEach(auth => {
+      const icon = '🔐';
+      lines.push(`  ${auth.id}[${icon} ${auth.name}]`);
+    });
+  }
+
+  // Data stores
+  if (dataFlow.dataStores.length > 0) {
+    dataFlow.dataStores.forEach(ds => {
+      const icon = '🗄️';
+      lines.push(`  ${ds.id}[(${icon} ${ds.name})]`);
+    });
+  } else {
+    lines.push('  db[(🗄️ Database)]');
+  }
+
+  // External services
+  dataFlow.externalServices.forEach(svc => {
+    const icon = svc.name.includes('Payment') || svc.name.includes('Stripe') ? '💳' :
+                 svc.name.includes('Email') || svc.name.includes('Mail') ? '📧' :
+                 svc.name.includes('SMS') || svc.name.includes('Twilio') ? '📱' :
+                 '☁️';
+    lines.push(`  ${svc.id}[${icon} ${svc.name}]`);
+  });
+
+  // Define connections
+  lines.push('');
+  lines.push('  %% Main data flow');
+  lines.push('  User --> Frontend');
+
+  if (dataFlow.entryPoints.length > 0) {
+    lines.push('  Frontend --> ' + dataFlow.entryPoints[0].id);
+
+    // Auth flow
+    if (dataFlow.authProviders.length > 0) {
+      lines.push('  ' + dataFlow.entryPoints[0].id + ' --> ' + dataFlow.authProviders[0].id);
+    }
+
+    // Database flow
+    if (dataFlow.dataStores.length > 0) {
+      lines.push('  ' + dataFlow.entryPoints[0].id + ' --> ' + dataFlow.dataStores[0].id);
+    } else {
+      lines.push('  ' + dataFlow.entryPoints[0].id + ' --> db');
+    }
+  } else {
+    lines.push('  Frontend --> api');
+    lines.push('  api --> db');
+  }
+
+  // External services connections
+  dataFlow.externalServices.forEach(svc => {
+    const source = dataFlow.entryPoints.length > 0 ? dataFlow.entryPoints[0].id : 'api';
+    lines.push('  ' + source + ' --> ' + svc.id);
+  });
+
+  // Apply styling for components with issues
+  lines.push('');
+  lines.push('  %% Styling');
+  lines.push('  classDef issueNode fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b');
+  lines.push('  classDef normalNode fill:#dbeafe,stroke:#3b82f6,stroke-width:2px');
+  lines.push('  classDef externalNode fill:#fef3c7,stroke:#f59e0b,stroke-width:2px');
+
+  // Apply classes
+  const issueNodes: string[] = [];
+  const normalNodes: string[] = [];
+  const externalNodes: string[] = [];
+
+  [...dataFlow.entryPoints, ...dataFlow.authProviders, ...dataFlow.dataStores].forEach(component => {
+    if (component.hasIssues) {
+      issueNodes.push(component.id);
+    } else {
+      normalNodes.push(component.id);
+    }
+  });
+
+  dataFlow.externalServices.forEach(svc => {
+    if (svc.hasIssues) {
+      issueNodes.push(svc.id);
+    } else {
+      externalNodes.push(svc.id);
+    }
+  });
+
+  if (issueNodes.length > 0) {
+    lines.push('  class ' + issueNodes.join(',') + ' issueNode');
+  }
+  if (normalNodes.length > 0) {
+    lines.push('  class ' + normalNodes.join(',') + ' normalNode');
+  }
+  if (externalNodes.length > 0) {
+    lines.push('  class ' + externalNodes.join(',') + ' externalNode');
+  }
+
+  return lines.join('\n');
+}
+
+async function renderDataFlowMapHtml(targetPath: string, findings: Finding[]): Promise<string> {
+  const dataFlow = await analyzeDataFlow(targetPath, findings);
+  const mermaidCode = generateMermaidDiagram(dataFlow);
+
+  const totalComponents = dataFlow.entryPoints.length + dataFlow.dataStores.length +
+                         dataFlow.externalServices.length + dataFlow.authProviders.length;
+
+  const componentsWithIssues = [
+    ...dataFlow.entryPoints,
+    ...dataFlow.dataStores,
+    ...dataFlow.externalServices,
+    ...dataFlow.authProviders,
+  ].filter(c => c.hasIssues).length;
+
+  return `
+    <div class="data-flow-map-section">
+      <div class="flow-header">
+        <h2>🔄 ePHI Data Flow Map</h2>
+        <p class="flow-subtitle">
+          Visual representation of Protected Health Information (ePHI) data flow through your application
+        </p>
+      </div>
+
+      <div class="flow-stats">
+        <div class="flow-stat-box">
+          <div class="flow-stat-value">${totalComponents}</div>
+          <div class="flow-stat-label">Components</div>
+        </div>
+        <div class="flow-stat-box">
+          <div class="flow-stat-value">${dataFlow.entryPoints.length}</div>
+          <div class="flow-stat-label">Entry Points</div>
+        </div>
+        <div class="flow-stat-box">
+          <div class="flow-stat-value">${dataFlow.dataStores.length}</div>
+          <div class="flow-stat-label">Data Stores</div>
+        </div>
+        <div class="flow-stat-box ${componentsWithIssues > 0 ? 'flow-stat-warning' : ''}">
+          <div class="flow-stat-value">${componentsWithIssues}</div>
+          <div class="flow-stat-label">With Issues</div>
+        </div>
+      </div>
+
+      <div class="mermaid-container">
+        <pre class="mermaid">
+${mermaidCode}
+        </pre>
+      </div>
+
+      <div class="flow-legend">
+        <h3>Legend</h3>
+        <div class="legend-items">
+          <div class="legend-item">
+            <span class="legend-box legend-normal"></span>
+            <span>Secure Component</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-box legend-issue"></span>
+            <span>Component with Security Issues</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-box legend-external"></span>
+            <span>External Service (requires BAA)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-notice">
+        <strong>⚠️ Important:</strong> Este diagrama muestra el flujo de datos detectado en el código fuente.
+        Debe complementarse con documentación de infraestructura de red, VPNs, firewalls, segmentación de red,
+        y otros controles de seguridad no visibles en el análisis de código estático.
+      </div>
+
+      <div class="flow-components">
+        <h3>Detected Components</h3>
+
+        ${dataFlow.entryPoints.length > 0 ? `
+        <div class="component-group">
+          <h4>🔌 Entry Points</h4>
+          <ul>
+            ${dataFlow.entryPoints.map(ep => `
+              <li class="${ep.hasIssues ? 'component-with-issues' : ''}">
+                ${escapeHtml(ep.name)}
+                ${ep.hasIssues ? '<span class="issue-badge">⚠️ Has Issues</span>' : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
+        ${dataFlow.authProviders.length > 0 ? `
+        <div class="component-group">
+          <h4>🔐 Authentication Providers</h4>
+          <ul>
+            ${dataFlow.authProviders.map(auth => `
+              <li class="${auth.hasIssues ? 'component-with-issues' : ''}">
+                ${escapeHtml(auth.name)}
+                ${auth.hasIssues ? '<span class="issue-badge">⚠️ Has Issues</span>' : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
+        ${dataFlow.dataStores.length > 0 ? `
+        <div class="component-group">
+          <h4>🗄️ Data Stores</h4>
+          <ul>
+            ${dataFlow.dataStores.map(ds => `
+              <li class="${ds.hasIssues ? 'component-with-issues' : ''}">
+                ${escapeHtml(ds.name)}
+                ${ds.hasIssues ? '<span class="issue-badge">⚠️ Has Issues</span>' : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
+        ${dataFlow.externalServices.length > 0 ? `
+        <div class="component-group">
+          <h4>☁️ External Services (BAA Required)</h4>
+          <ul>
+            ${dataFlow.externalServices.map(svc => `
+              <li class="${svc.hasIssues ? 'component-with-issues' : ''}">
+                ${escapeHtml(svc.name)}
+                <span class="baa-badge">BAA</span>
+                ${svc.hasIssues ? '<span class="issue-badge">⚠️ Has Issues</span>' : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
 }
 
 function calculateComplianceScore(findings: Finding[]): ComplianceScore {
@@ -558,6 +986,7 @@ function renderStackSection(stack: StackInfo): string {
 async function generateHtml(report: Report, targetPath: string): Promise<string> {
   const complianceScoreHtml = await renderComplianceScoreHtml(report, targetPath);
   const assetInventoryHtml = await renderAssetInventoryHtml(targetPath);
+  const dataFlowMapHtml = await renderDataFlowMapHtml(targetPath, report.findings);
   const severityColors = {
     critical: '#dc2626',
     high: '#ea580c',
@@ -572,6 +1001,18 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HIPAA Compliance Report - vlayer</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; padding: 2rem; }
@@ -714,6 +1155,38 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     .editable-field input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
     .editable-field input::placeholder { color: #9ca3af; }
 
+    /* Data Flow Map Styles */
+    .data-flow-map-section { margin: 2rem 0; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .flow-header h2 { color: #111827; margin: 0 0 0.5rem 0; }
+    .flow-subtitle { color: #6b7280; margin: 0 0 1.5rem 0; font-size: 0.95rem; }
+    .flow-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .flow-stat-box { background: #f9fafb; padding: 1.25rem; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; }
+    .flow-stat-box.flow-stat-warning { background: #fef2f2; border-color: #fecaca; }
+    .flow-stat-value { font-size: 1.75rem; font-weight: bold; color: #1f2937; margin-bottom: 0.25rem; }
+    .flow-stat-warning .flow-stat-value { color: #dc2626; }
+    .flow-stat-label { color: #6b7280; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .mermaid-container { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 2rem; margin: 2rem 0; overflow-x: auto; }
+    .mermaid-container pre.mermaid { background: transparent; margin: 0; padding: 0; text-align: center; }
+    .flow-legend { margin: 2rem 0; padding: 1.5rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid #3b82f6; }
+    .flow-legend h3 { margin: 0 0 1rem 0; color: #374151; font-size: 1rem; }
+    .legend-items { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+    .legend-box { width: 40px; height: 20px; border-radius: 4px; border: 2px solid; }
+    .legend-normal { background: #dbeafe; border-color: #3b82f6; }
+    .legend-issue { background: #fee2e2; border-color: #dc2626; }
+    .legend-external { background: #fef3c7; border-color: #f59e0b; }
+    .flow-notice { background: #fef3c7; padding: 1rem 1.25rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 2rem 0; color: #92400e; font-size: 0.9rem; }
+    .flow-notice strong { color: #78350f; }
+    .flow-components { margin-top: 2rem; }
+    .flow-components h3 { color: #374151; margin: 0 0 1.5rem 0; font-size: 1.1rem; }
+    .component-group { margin-bottom: 1.5rem; }
+    .component-group h4 { color: #4b5563; margin: 0 0 0.75rem 0; font-size: 0.95rem; }
+    .component-group ul { list-style: none; margin: 0; padding: 0; }
+    .component-group li { padding: 0.5rem 0.75rem; margin: 0.25rem 0; background: #f9fafb; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .component-with-issues { background: #fef2f2 !important; border-left: 3px solid #dc2626; }
+    .issue-badge { background: #dc2626; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .baa-badge { background: #f59e0b; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+
     .risk-summary-table table, .risk-detail-table table { width: 100%; border-collapse: collapse; background: white; }
     .risk-summary-table { margin: 1rem 0; overflow-x: auto; }
     .risk-detail-table { margin: 1rem 0; overflow-x: auto; }
@@ -784,6 +1257,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     ${renderRiskAnalysisHtml(report)}
 
     ${assetInventoryHtml}
+
+    ${dataFlowMapHtml}
 
     <h2>Findings</h2>
     <div class="findings">
