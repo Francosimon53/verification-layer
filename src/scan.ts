@@ -15,6 +15,7 @@ import { credentialsScanner } from './scanners/credentials/index.js';
 import { errorsScanner } from './scanners/errors/index.js';
 import { sanitizationScanner } from './scanners/sanitization/index.js';
 import { revocationScanner } from './scanners/revocation/index.js';
+import { configurationScanner } from './scanners/configuration/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
@@ -47,7 +48,7 @@ const scanners: Record<ComplianceCategory, Scanner> = {
 const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
   'access-control': [securityScanner, skillsScanner, hipaa2026Scanner, authenticationScanner, rbacScanner, sanitizationScanner, revocationScanner], // Security, Skills, HIPAA 2026, Authentication, RBAC, Sanitization, and Revocation scanners run with access-control
   'encryption': [credentialsScanner], // Credentials scanner runs with encryption
-  'audit-logging': [errorsScanner], // Errors scanner runs with audit-logging
+  'audit-logging': [errorsScanner, configurationScanner], // Errors and Configuration scanners run with audit-logging
   'phi-exposure': [errorsScanner], // Errors scanner also runs with phi-exposure
 };
 
