@@ -1,7 +1,7 @@
 import { writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
@@ -1041,7 +1041,7 @@ function renderStackSection(stack: StackInfo): string {
   `;
 }
 
-async function generateHtml(report: Report, targetPath: string): Promise<string> {
+async function generateHtml(report: Report, targetPath: string, options: ReportOptions): Promise<string> {
   const complianceScoreHtml = await renderComplianceScoreHtml(report, targetPath);
   const assetInventoryHtml = await renderAssetInventoryHtml(targetPath);
   const dataFlowMapHtml = await renderDataFlowMapHtml(targetPath, report.findings);
@@ -1491,6 +1491,8 @@ async function generateHtml(report: Report, targetPath: string): Promise<string>
     </div>
 
     ${complianceScoreHtml}
+
+    ${renderScanComparisonHtml(options.scanComparison)}
 
     ${report.stack && report.stack.framework !== 'unknown' ? renderStackSection(report.stack) : ''}
 
@@ -2745,6 +2747,155 @@ function renderIncidentResponsePlanHtml(criticalFindings: number, highFindings: 
   `;
 }
 
+function renderScanComparisonHtml(comparison: ScanComparison | null | undefined): string {
+  if (!comparison || !comparison.previousScan) {
+    return '';
+  }
+
+  const { previousScan, scoreChange, severityChanges, newIssues, resolvedIssues } = comparison;
+
+  const scoreArrow = scoreChange > 0 ? '↑' : scoreChange < 0 ? '↓' : '→';
+  const scoreColor = scoreChange > 0 ? '#10b981' : scoreChange < 0 ? '#dc2626' : '#6b7280';
+  const scoreSign = scoreChange > 0 ? '+' : '';
+
+  const formatChange = (change: number, inverted: boolean = false): { arrow: string; color: string; sign: string } => {
+    // For severity counts, a decrease is good (inverted = true)
+    const isPositive = inverted ? change < 0 : change > 0;
+    const isNegative = inverted ? change > 0 : change < 0;
+
+    return {
+      arrow: isPositive ? '↑' : isNegative ? '↓' : '→',
+      color: isPositive ? '#10b981' : isNegative ? '#dc2626' : '#6b7280',
+      sign: change > 0 ? '+' : '',
+    };
+  };
+
+  const criticalChange = formatChange(severityChanges.critical, true);
+  const highChange = formatChange(severityChanges.high, true);
+  const mediumChange = formatChange(severityChanges.medium, true);
+  const lowChange = formatChange(severityChanges.low, true);
+
+  // Format previous scan date
+  const prevDate = new Date(previousScan.timestamp);
+  const formattedDate = prevDate.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return `
+    <div class="comparison-section" style="margin: 3rem 0; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+        <span style="font-size: 2.5rem;">📊</span>
+        <div>
+          <h2 style="margin: 0; color: #111827; font-size: 1.8rem;">Comparison with Previous Scan</h2>
+          <p style="margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+            Previous scan: ${escapeHtml(formattedDate)}
+          </p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        <!-- Score Comparison -->
+        <div style="background: linear-gradient(135deg, ${scoreChange >= 0 ? '#f0fdf4' : '#fef2f2'} 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid ${scoreChange >= 0 ? '#bbf7d0' : '#fecaca'}; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+          <div style="color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Compliance Score</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #9ca3af; font-size: 1.2rem; font-weight: 600;">${previousScan.complianceScore}</span>
+            <span style="color: #6b7280; font-size: 1rem;">→</span>
+            <span style="color: ${scoreColor}; font-size: 2rem; font-weight: bold;">${previousScan.complianceScore + scoreChange}</span>
+          </div>
+          <div style="color: ${scoreColor}; font-size: 1rem; font-weight: 600;">
+            (${scoreSign}${scoreChange}) ${scoreArrow}
+          </div>
+        </div>
+
+        <!-- Critical Comparison -->
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fee2e2; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+          <div style="color: #dc2626; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Critical Issues</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #9ca3af; font-size: 1.2rem; font-weight: 600;">${previousScan.severity.critical}</span>
+            <span style="color: #6b7280; font-size: 1rem;">→</span>
+            <span style="color: #dc2626; font-size: 2rem; font-weight: bold;">${previousScan.severity.critical + severityChanges.critical}</span>
+          </div>
+          <div style="color: ${criticalChange.color}; font-size: 1rem; font-weight: 600;">
+            (${criticalChange.sign}${severityChanges.critical}) ${criticalChange.arrow}
+          </div>
+        </div>
+
+        <!-- High Comparison -->
+        <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fed7aa; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+          <div style="color: #ea580c; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">High Issues</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #9ca3af; font-size: 1.2rem; font-weight: 600;">${previousScan.severity.high}</span>
+            <span style="color: #6b7280; font-size: 1rem;">→</span>
+            <span style="color: #ea580c; font-size: 2rem; font-weight: bold;">${previousScan.severity.high + severityChanges.high}</span>
+          </div>
+          <div style="color: ${highChange.color}; font-size: 1rem; font-weight: 600;">
+            (${highChange.sign}${severityChanges.high}) ${highChange.arrow}
+          </div>
+        </div>
+
+        <!-- Medium Comparison -->
+        <div style="background: linear-gradient(135deg, #fefce8 0%, #ffffff 100%); padding: 1.5rem; border-radius: 12px; border: 1px solid #fef08a; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+          <div style="color: #ca8a04; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem;">Medium Issues</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #9ca3af; font-size: 1.2rem; font-weight: 600;">${previousScan.severity.medium}</span>
+            <span style="color: #6b7280; font-size: 1rem;">→</span>
+            <span style="color: #ca8a04; font-size: 2rem; font-weight: bold;">${previousScan.severity.medium + severityChanges.medium}</span>
+          </div>
+          <div style="color: ${mediumChange.color}; font-size: 1rem; font-weight: 600;">
+            (${mediumChange.sign}${severityChanges.medium}) ${mediumChange.arrow}
+          </div>
+        </div>
+      </div>
+
+      ${newIssues.length > 0 || resolvedIssues.length > 0 ? `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+          ${newIssues.length > 0 ? `
+            <div style="background: #fef2f2; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #dc2626;">
+              <h3 style="margin: 0 0 1rem 0; color: #991b1b; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚠️</span> New Issues (${newIssues.length})
+              </h3>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                ${newIssues.slice(0, 10).map(id => `
+                  <code style="background: white; color: #991b1b; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-family: 'SF Mono', Monaco, monospace;">
+                    ${escapeHtml(id)}
+                  </code>
+                `).join('')}
+                ${newIssues.length > 10 ? `<span style="color: #7f1d1d; font-size: 0.9rem;">... and ${newIssues.length - 10} more</span>` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          ${resolvedIssues.length > 0 ? `
+            <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981;">
+              <h3 style="margin: 0 0 1rem 0; color: #065f46; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>✅</span> Resolved Issues (${resolvedIssues.length})
+              </h3>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                ${resolvedIssues.slice(0, 10).map(id => `
+                  <code style="background: white; color: #065f46; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-family: 'SF Mono', Monaco, monospace;">
+                    ${escapeHtml(id)}
+                  </code>
+                `).join('')}
+                ${resolvedIssues.length > 10 ? `<span style="color: #047857; font-size: 0.9rem;">... and ${resolvedIssues.length - 10} more</span>` : ''}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      ` : `
+        <div style="background: #eff6ff; padding: 1.5rem; border-radius: 8px; text-align: center;">
+          <p style="margin: 0; color: #1e40af; font-weight: 500;">
+            No new issues appeared and no issues were resolved since the last scan.
+          </p>
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function renderDependencyVulnerabilitiesHtml(vulnerabilities: DependencyVulnerability[]): string {
   if (!vulnerabilities || vulnerabilities.length === 0) {
     return '';
@@ -3103,7 +3254,7 @@ export async function generateReport(
 
   switch (options.format) {
     case 'html':
-      content = await generateHtml(report, targetPath);
+      content = await generateHtml(report, targetPath, options);
       extension = 'html';
       break;
     case 'markdown':

@@ -151,6 +151,32 @@ export interface ReportOptions {
   format: 'json' | 'html' | 'markdown';
   outputPath?: string;
   vulnerabilities?: DependencyVulnerability[];
+  scanComparison?: ScanComparison | null;
+}
+
+export interface ScanComparison {
+  previousScan?: {
+    timestamp: string;
+    date: string;
+    complianceScore: number;
+    severity: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+    };
+    failedRuleIds: string[];
+    totalFilesScanned: number;
+  };
+  scoreChange: number;
+  severityChanges: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  newIssues: string[];
+  resolvedIssues: string[];
 }
 
 export interface DependencyVulnerability {

@@ -118,13 +118,31 @@ program
         }
       }
 
+      // Get previous scan history and create comparison
+      const { getMostRecentScan, compareScan, saveScanHistory } = await import('./utils/scan-history.js');
+      const previousScan = await getMostRecentScan(absolutePath);
+      const comparison = result.complianceScore
+        ? compareScan(result.complianceScore.score, result.findings, previousScan)
+        : null;
+
       const reportOptions: ReportOptions = {
         format: options.format,
         outputPath: options.output,
         vulnerabilities,
+        scanComparison: comparison,
       };
 
       await generateReport(result, path, reportOptions);
+
+      // Save current scan to history
+      if (result.complianceScore) {
+        await saveScanHistory(
+          absolutePath,
+          result.complianceScore.score,
+          result.findings,
+          result.scannedFiles
+        );
+      }
 
       // Print summary
       const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired).length;
@@ -1444,6 +1462,111 @@ templatesCommand
     console.log(chalk.gray('  HIPAA Physical Safeguards compliance checklist (§164.310)'));
     console.log(chalk.gray('  Section A: Remote/Cloud setup | Section B: Physical office controls'));
     console.log(chalk.gray('  Usage: vlayer templates export physical\n'));
+  });
+
+program
+  .command('history')
+  .description('Show scan history with compliance scores over time')
+  .argument('[path]', 'Path to the project', '.')
+  .option('-l, --limit <number>', 'Maximum number of scans to show', '10')
+  .action(async (path: string, options) => {
+    const absolutePath = resolve(path);
+
+    try {
+      const { getAllScans, formatHistoryDate } = await import('./utils/scan-history.js');
+      const scans = await getAllScans(absolutePath);
+
+      if (scans.length === 0) {
+        console.log(chalk.yellow('\nNo scan history found.'));
+        console.log(chalk.gray('Run `vlayer scan .` to create your first scan history entry.\n'));
+        return;
+      }
+
+      const limit = parseInt(options.limit);
+      const displayScans = scans.slice(0, limit);
+
+      console.log(chalk.bold('\n📊 Scan History\n'));
+      console.log(chalk.gray(`Showing ${displayScans.length} of ${scans.length} scan(s)\n`));
+
+      // Find max and min scores for context
+      const scores = scans.map(s => s.complianceScore);
+      const maxScore = Math.max(...scores);
+      const minScore = Math.min(...scores);
+
+      for (let i = 0; i < displayScans.length; i++) {
+        const scan = displayScans[i];
+        const prevScan = i < scans.length - 1 ? scans[i + 1] : null;
+        const scoreChange = prevScan ? scan.complianceScore - prevScan.complianceScore : 0;
+
+        const scoreColor = scan.complianceScore >= 90 ? chalk.green
+          : scan.complianceScore >= 70 ? chalk.yellow
+          : chalk.red;
+
+        const changeArrow = scoreChange > 0 ? chalk.green('↑')
+          : scoreChange < 0 ? chalk.red('↓')
+          : chalk.gray('→');
+
+        const changeStr = prevScan
+          ? ` (${scoreChange >= 0 ? '+' : ''}${scoreChange}) ${changeArrow}`
+          : '';
+
+        const date = formatHistoryDate(scan.date);
+        const isBest = scan.complianceScore === maxScore;
+        const isWorst = scan.complianceScore === minScore;
+
+        console.log(
+          chalk.cyan(date) +
+          '  ' +
+          scoreColor.bold(`${scan.complianceScore}/100`) +
+          changeStr +
+          (isBest ? chalk.green.bold(' 🏆 Best') : '') +
+          (isWorst ? chalk.red(' ⚠️ Lowest') : '')
+        );
+
+        // Show severity breakdown
+        const severityStr = [
+          scan.severity.critical > 0 ? chalk.red(`${scan.severity.critical}C`) : null,
+          scan.severity.high > 0 ? chalk.yellow(`${scan.severity.high}H`) : null,
+          scan.severity.medium > 0 ? chalk.hex('#ca8a04')(`${scan.severity.medium}M`) : null,
+          scan.severity.low > 0 ? chalk.blue(`${scan.severity.low}L`) : null,
+        ].filter(Boolean).join(' ');
+
+        if (severityStr) {
+          console.log(chalk.gray(`         Issues: ${severityStr}  •  Files: ${scan.totalFilesScanned}`));
+        } else {
+          console.log(chalk.gray(`         No active issues  •  Files: ${scan.totalFilesScanned}`));
+        }
+
+        console.log('');
+      }
+
+      if (scans.length > limit) {
+        console.log(chalk.gray(`Use --limit ${scans.length} to see all scans\n`));
+      }
+
+      // Show statistics
+      const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      const trend = scans.length > 1
+        ? scans[0].complianceScore - scans[scans.length - 1].complianceScore
+        : 0;
+
+      console.log(chalk.bold('Statistics:'));
+      console.log(`  Total scans: ${scans.length}`);
+      console.log(`  Average score: ${avgScore}/100`);
+      console.log(`  Best score: ${chalk.green(maxScore)}/100`);
+      console.log(`  Lowest score: ${chalk.red(minScore)}/100`);
+
+      if (trend !== 0) {
+        const trendColor = trend > 0 ? chalk.green : chalk.red;
+        const trendArrow = trend > 0 ? '↑' : '↓';
+        console.log(`  Overall trend: ${trendColor(`${trend >= 0 ? '+' : ''}${trend} ${trendArrow}`)}`);
+      }
+
+      console.log('');
+    } catch (error) {
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
   });
 
 program.parse();
