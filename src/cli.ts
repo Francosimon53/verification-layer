@@ -1010,4 +1010,303 @@ rulesCommand
     }
   });
 
+// Marketplace commands
+const marketplaceCommand = program
+  .command('marketplace')
+  .alias('market')
+  .description('Community Rules Marketplace - Share and discover healthcare compliance rules');
+
+marketplaceCommand
+  .command('search')
+  .description('Search for rules in the marketplace')
+  .argument('[query]', 'Search query (rule name, description, tags)', '')
+  .option('--framework <framework>', 'Filter by compliance framework (hipaa, state-law, payer-specific)')
+  .option('--jurisdiction <state>', 'Filter by state jurisdiction (california, new-york, texas, etc.)')
+  .option('--payer <payer>', 'Filter by payer (medicare, medicaid, bcbs, etc.)')
+  .option('--tech <stack>', 'Filter by tech stack (fhir, hl7, nextjs, etc.)')
+  .option('--verified', 'Show only verified rules')
+  .option('--min-rating <rating>', 'Minimum rating (1-5)', '0')
+  .option('--limit <number>', 'Maximum results to show', '20')
+  .action(async (query: string, options) => {
+    const spinner = ora('Searching marketplace...').start();
+
+    try {
+      const { MarketplaceRegistry } = await import('./marketplace/index.js');
+      const registry = new MarketplaceRegistry();
+
+      const filters: any = {};
+      if (options.framework) filters.framework = options.framework;
+      if (options.jurisdiction) filters.jurisdiction = options.jurisdiction;
+      if (options.payer) filters.payer = options.payer;
+      if (options.tech) filters.techStack = options.tech;
+      if (options.verified) filters.verified = true;
+      if (options.minRating) filters.minRating = parseFloat(options.minRating);
+
+      const result = await registry.search(query, filters, 1, parseInt(options.limit));
+
+      spinner.succeed(`Found ${result.total} rule(s)`);
+
+      if (result.rules.length === 0) {
+        console.log(chalk.yellow('\nNo rules found matching your criteria.'));
+        console.log(chalk.gray('Try broadening your search or removing filters.'));
+        return;
+      }
+
+      console.log(chalk.bold('\n📦 Marketplace Rules:\n'));
+
+      for (const rule of result.rules) {
+        const verified = rule.verified ? chalk.green('✓ Verified') : chalk.gray('Unverified');
+        const rating = '⭐'.repeat(Math.round(rule.rating));
+
+        console.log(chalk.cyan.bold(`${rule.id}`));
+        console.log(`  ${rule.name} ${verified}`);
+        console.log(chalk.gray(`  ${rule.description}`));
+        console.log(`  ${rating} ${rule.rating.toFixed(1)} (${rule.reviews} reviews) | ${rule.downloads} downloads`);
+        console.log(chalk.gray(`  Author: ${rule.author.name}${rule.author.organization ? ` (${rule.author.organization})` : ''}`));
+        console.log(chalk.gray(`  Framework: ${rule.framework} | Severity: ${rule.severity} | Version: ${rule.version}`));
+
+        if (rule.jurisdiction) {
+          console.log(chalk.gray(`  Jurisdiction: ${rule.jurisdiction}`));
+        }
+        if (rule.payer) {
+          console.log(chalk.gray(`  Payer: ${rule.payer}`));
+        }
+
+        console.log(chalk.gray(`  Tags: ${rule.tags.join(', ')}`));
+        console.log('');
+      }
+
+      console.log(chalk.gray(`\nShowing ${result.rules.length} of ${result.total} results`));
+      console.log(chalk.cyan('\nInstall a rule:') + chalk.white(' vlayer marketplace install <rule-id>'));
+    } catch (error) {
+      spinner.fail('Search failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('install')
+  .description('Install a rule from the marketplace')
+  .argument('<rule-id>', 'Rule ID to install')
+  .option('--version <version>', 'Specific version to install')
+  .option('--package', 'Install as a package (collection of rules)')
+  .action(async (ruleId: string, options) => {
+    const spinner = ora(`Installing ${ruleId}...`).start();
+
+    try {
+      const { RulesInstaller } = await import('./marketplace/index.js');
+      const installer = new RulesInstaller(process.cwd());
+
+      if (options.package) {
+        const installed = await installer.installPackage(ruleId);
+        spinner.succeed(`Installed package with ${installed.length} rule(s)`);
+
+        console.log(chalk.green('\n✓ Package installed successfully!'));
+        console.log(chalk.gray(`\nInstalled rules:`));
+        installed.forEach(r => console.log(chalk.gray(`  • ${r.id} (v${r.version})`)));
+      } else {
+        const installed = await installer.install(ruleId, options.version);
+        spinner.succeed('Rule installed');
+
+        console.log(chalk.green('\n✓ Rule installed successfully!'));
+        console.log(chalk.gray(`\nRule: ${installed.id}`));
+        console.log(chalk.gray(`Version: ${installed.version}`));
+        console.log(chalk.gray(`Location: .vlayer/marketplace/${installed.id}.yaml`));
+      }
+
+      console.log(chalk.cyan('\nRun a scan:') + chalk.white(' vlayer scan .'));
+    } catch (error) {
+      spinner.fail('Installation failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('list')
+  .description('List installed marketplace rules')
+  .option('--enabled', 'Show only enabled rules')
+  .option('--disabled', 'Show only disabled rules')
+  .action(async (options) => {
+    try {
+      const { RulesInstaller } = await import('./marketplace/index.js');
+      const installer = new RulesInstaller(process.cwd());
+
+      let installed = await installer.listInstalled();
+
+      if (options.enabled) {
+        installed = installed.filter(r => r.enabled);
+      } else if (options.disabled) {
+        installed = installed.filter(r => !r.enabled);
+      }
+
+      if (installed.length === 0) {
+        console.log(chalk.yellow('No marketplace rules installed.'));
+        console.log(chalk.gray('\nSearch for rules:') + chalk.white(' vlayer marketplace search'));
+        return;
+      }
+
+      console.log(chalk.bold(`\n📦 Installed Rules (${installed.length}):\n`));
+
+      for (const rule of installed) {
+        const status = rule.enabled ? chalk.green('✓ Enabled') : chalk.gray('○ Disabled');
+        const source = rule.source === 'marketplace' ? chalk.blue('[Marketplace]') : chalk.gray('[Local]');
+
+        console.log(`${status} ${chalk.cyan(rule.id)} ${source}`);
+        console.log(chalk.gray(`  Version: ${rule.version} | Installed: ${new Date(rule.installedAt).toLocaleDateString()}`));
+        console.log('');
+      }
+
+      console.log(chalk.gray('Update all:') + chalk.white(' vlayer marketplace update'));
+    } catch (error) {
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('update')
+  .description('Update installed rules to latest versions')
+  .option('--dry-run', 'Show what would be updated without installing')
+  .action(async (options) => {
+    const spinner = ora('Checking for updates...').start();
+
+    try {
+      const { RulesInstaller } = await import('./marketplace/index.js');
+      const installer = new RulesInstaller(process.cwd());
+
+      const result = await installer.updateAll();
+
+      spinner.succeed('Update check complete');
+
+      if (result.updated.length === 0 && result.failed.length === 0) {
+        console.log(chalk.green('\n✓ All rules are up to date!'));
+        return;
+      }
+
+      if (result.updated.length > 0) {
+        console.log(chalk.green(`\n✓ Updated ${result.updated.length} rule(s):`));
+        result.updated.forEach(id => console.log(chalk.gray(`  • ${id}`)));
+      }
+
+      if (result.failed.length > 0) {
+        console.log(chalk.red(`\n✗ Failed to update ${result.failed.length} rule(s):`));
+        result.failed.forEach(id => console.log(chalk.gray(`  • ${id}`)));
+      }
+    } catch (error) {
+      spinner.fail('Update failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('uninstall')
+  .description('Uninstall a marketplace rule')
+  .argument('<rule-id>', 'Rule ID to uninstall')
+  .action(async (ruleId: string) => {
+    const spinner = ora(`Uninstalling ${ruleId}...`).start();
+
+    try {
+      const { RulesInstaller } = await import('./marketplace/index.js');
+      const installer = new RulesInstaller(process.cwd());
+
+      await installer.uninstall(ruleId);
+
+      spinner.succeed('Rule uninstalled');
+      console.log(chalk.green(`\n✓ ${ruleId} has been removed.`));
+    } catch (error) {
+      spinner.fail('Uninstall failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('featured')
+  .description('Show featured/popular rules')
+  .option('--limit <number>', 'Number of rules to show', '10')
+  .action(async (options) => {
+    const spinner = ora('Loading featured rules...').start();
+
+    try {
+      const { MarketplaceRegistry } = await import('./marketplace/index.js');
+      const registry = new MarketplaceRegistry();
+
+      const featured = await registry.getFeatured(parseInt(options.limit));
+
+      spinner.succeed(`Found ${featured.length} featured rule(s)`);
+
+      console.log(chalk.bold('\n⭐ Featured Rules:\n'));
+
+      for (const rule of featured) {
+        const rating = '⭐'.repeat(Math.round(rule.rating));
+
+        console.log(chalk.cyan.bold(`${rule.id}`));
+        console.log(`  ${rule.name} ${chalk.green('✓')}`);
+        console.log(chalk.gray(`  ${rule.description}`));
+        console.log(`  ${rating} ${rule.rating.toFixed(1)} | ${rule.downloads} downloads`);
+        console.log(chalk.gray(`  ${rule.framework} • ${rule.category} • ${rule.severity}`));
+        console.log('');
+      }
+
+      console.log(chalk.cyan('\nInstall:') + chalk.white(' vlayer marketplace install <rule-id>'));
+    } catch (error) {
+      spinner.fail('Failed to load featured rules');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+marketplaceCommand
+  .command('stats')
+  .description('Show marketplace statistics')
+  .action(async () => {
+    const spinner = ora('Loading marketplace stats...').start();
+
+    try {
+      const { MarketplaceRegistry } = await import('./marketplace/index.js');
+      const registry = new MarketplaceRegistry();
+
+      const metadata = await registry.getMetadata();
+
+      spinner.succeed('Stats loaded');
+
+      console.log(chalk.bold('\n📊 Marketplace Statistics:\n'));
+      console.log(`Total Rules: ${chalk.cyan(metadata.totalRules)}`);
+      console.log(`Total Packages: ${chalk.cyan(metadata.totalPackages)}`);
+      console.log('');
+
+      console.log(chalk.bold('Rules by Framework:'));
+      Object.entries(metadata.frameworks)
+        .sort(([, a], [, b]) => b - a)
+        .forEach(([framework, count]) => {
+          console.log(`  ${framework}: ${chalk.cyan(count)}`);
+        });
+      console.log('');
+
+      console.log(chalk.bold('Rules by Category:'));
+      Object.entries(metadata.categories)
+        .sort(([, a], [, b]) => b - a)
+        .forEach(([category, count]) => {
+          console.log(`  ${category}: ${chalk.cyan(count)}`);
+        });
+      console.log('');
+
+      console.log(chalk.bold('Top Contributors:'));
+      metadata.topContributors.slice(0, 5).forEach((contributor, i) => {
+        console.log(`  ${i + 1}. ${contributor.name}`);
+        console.log(chalk.gray(`     ${contributor.rulesPublished} rules | ${contributor.downloads} downloads`));
+      });
+      console.log('');
+
+      console.log(chalk.gray('Search rules:') + chalk.white(' vlayer marketplace search'));
+    } catch (error) {
+      spinner.fail('Failed to load stats');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
 program.parse();
