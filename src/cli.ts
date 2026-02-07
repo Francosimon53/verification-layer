@@ -1378,17 +1378,20 @@ const templatesCommand = program
 templatesCommand
   .command('export')
   .description('Export a compliance document template')
-  .argument('<template>', 'Template name: baa, physical')
+  .argument('<template>', 'Template name: baa, physical, irp, npp, security-officer')
   .option('-o, --output <path>', 'Output file path')
   .action(async (template: string, options) => {
     try {
-      const validTemplates = ['baa', 'physical'];
+      const validTemplates = ['baa', 'physical', 'irp', 'npp', 'security-officer'];
 
       if (!validTemplates.includes(template)) {
         console.error(chalk.red(`Unknown template: ${template}`));
         console.log(chalk.yellow('\nAvailable templates:'));
         console.log(chalk.gray('  • baa - Business Associate Agreement Verification Letter'));
         console.log(chalk.gray('  • physical - Physical Safeguards Checklist'));
+        console.log(chalk.gray('  • irp - Incident Response Plan'));
+        console.log(chalk.gray('  • npp - Notice of Privacy Practices'));
+        console.log(chalk.gray('  • security-officer - Security Officer Designation'));
         process.exit(1);
       }
 
@@ -1405,6 +1408,9 @@ templatesCommand
       const templateFiles: Record<string, string> = {
         'baa': 'baa-verification-letter.md',
         'physical': 'physical-safeguards-checklist.md',
+        'irp': 'irp.md',
+        'npp': 'npp.md',
+        'security-officer': 'security-officer.md',
       };
 
       const templateFileName = templateFiles[template];
@@ -1439,6 +1445,33 @@ templatesCommand
         console.log(chalk.gray('  5. Complete remediation plan for non-compliant items'));
         console.log(chalk.gray('  6. Sign and date the attestation'));
         console.log(chalk.gray('  7. Retain for 6 years per HIPAA requirements\n'));
+      } else if (template === 'irp') {
+        console.log(chalk.gray('\nNext steps:'));
+        console.log(chalk.gray('  1. Fill in organization and IRT contact information'));
+        console.log(chalk.gray('  2. Customize severity levels and response times for your organization'));
+        console.log(chalk.gray('  3. Update external contact information (HHS, FBI, insurance, etc.)'));
+        console.log(chalk.gray('  4. Review and customize incident response procedures'));
+        console.log(chalk.gray('  5. Obtain executive approval and signatures'));
+        console.log(chalk.gray('  6. Distribute to all IRT members'));
+        console.log(chalk.gray('  7. Schedule quarterly drills and annual updates\n'));
+      } else if (template === 'npp') {
+        console.log(chalk.gray('\nNext steps:'));
+        console.log(chalk.gray('  1. Replace all [PLACEHOLDERS] with your organization\'s information'));
+        console.log(chalk.gray('  2. Customize uses and disclosures to match your practices'));
+        console.log(chalk.gray('  3. Review with legal counsel for state-specific requirements'));
+        console.log(chalk.gray('  4. Have Privacy Officer approve the final version'));
+        console.log(chalk.gray('  5. Post prominently in your facility'));
+        console.log(chalk.gray('  6. Provide to all patients and obtain acknowledgment'));
+        console.log(chalk.gray('  7. Post on website if applicable\n'));
+      } else if (template === 'security-officer') {
+        console.log(chalk.gray('\nNext steps:'));
+        console.log(chalk.gray('  1. Fill in Security Officer name and contact information'));
+        console.log(chalk.gray('  2. Customize responsibilities and authorities for your organization'));
+        console.log(chalk.gray('  3. Define budget, resources, and staff allocation'));
+        console.log(chalk.gray('  4. Identify backup/interim Security Officers'));
+        console.log(chalk.gray('  5. Obtain executive signature (CEO/COO)'));
+        console.log(chalk.gray('  6. Obtain Security Officer signature accepting designation'));
+        console.log(chalk.gray('  7. Distribute to stakeholders and HR\n'));
       }
 
     } catch (error) {
@@ -1462,6 +1495,21 @@ templatesCommand
     console.log(chalk.gray('  HIPAA Physical Safeguards compliance checklist (§164.310)'));
     console.log(chalk.gray('  Section A: Remote/Cloud setup | Section B: Physical office controls'));
     console.log(chalk.gray('  Usage: vlayer templates export physical\n'));
+
+    console.log(chalk.cyan('irp') + chalk.gray(' - Incident Response Plan'));
+    console.log(chalk.gray('  Complete incident response procedures and breach notification guidelines'));
+    console.log(chalk.gray('  Includes IRT roles, severity levels, 5-phase response, and HIPAA timeline'));
+    console.log(chalk.gray('  Usage: vlayer templates export irp\n'));
+
+    console.log(chalk.cyan('npp') + chalk.gray(' - Notice of Privacy Practices'));
+    console.log(chalk.gray('  HIPAA-required patient notice describing privacy rights and practices'));
+    console.log(chalk.gray('  Ready to post in facilities and distribute to patients'));
+    console.log(chalk.gray('  Usage: vlayer templates export npp\n'));
+
+    console.log(chalk.cyan('security-officer') + chalk.gray(' - Security Officer Designation'));
+    console.log(chalk.gray('  Official HIPAA Security Officer appointment and authorization document'));
+    console.log(chalk.gray('  Defines responsibilities, authorities, and accountability measures'));
+    console.log(chalk.gray('  Usage: vlayer templates export security-officer\n'));
   });
 
 program
