@@ -339,10 +339,38 @@ function generateHtml(report: Report): string {
     .guide-category:last-child { margin-bottom: 0; }
     .stack-guide { margin: 0.75rem 0; }
 
+    /* Risk Analysis Styles */
+    .risk-analysis-section { margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .risk-analysis-section h2 { color: #111827; margin-bottom: 0.5rem; }
+    .risk-analysis-section h3 { color: #374151; margin: 1.5rem 0 1rem; font-size: 1.1rem; }
+
+    .risk-summary-table table, .risk-detail-table table { width: 100%; border-collapse: collapse; background: white; }
+    .risk-summary-table { margin: 1rem 0; overflow-x: auto; }
+    .risk-detail-table { margin: 1rem 0; overflow-x: auto; }
+
+    .risk-summary-table th, .risk-detail-table th { background: #f9fafb; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+    .risk-summary-table td, .risk-detail-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .risk-summary-table tr:hover, .risk-detail-table tr:hover { background: #f9fafb; }
+
+    .threat-cell { font-weight: 500; color: #1f2937; max-width: 200px; }
+    .vulnerability-cell { max-width: 250px; }
+    .vulnerability-cell strong { display: block; margin-bottom: 0.25rem; color: #111827; }
+    .file-ref { font-family: 'SF Mono', Monaco, monospace; font-size: 0.75rem; color: #6b7280; word-break: break-all; }
+    .risk-level-cell { text-align: center; }
+    .risk-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: white; text-transform: uppercase; }
+    .status-cell { text-align: center; }
+    .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
+    .status-open { background: #fee2e2; color: #991b1b; }
+    .status-available { background: #d1fae5; color: #065f46; }
+    .remediation-cell { color: #4b5563; font-size: 0.875rem; max-width: 300px; }
+    .hipaa-cell { color: #6b7280; font-size: 0.8rem; font-family: 'SF Mono', Monaco, monospace; white-space: nowrap; }
+
     @media (max-width: 768px) {
       body { padding: 1rem; }
       .summary { grid-template-columns: repeat(2, 1fr); }
       .stack-cards { grid-template-columns: 1fr; }
+      .risk-detail-table table { font-size: 0.8rem; }
+      .risk-detail-table th, .risk-detail-table td { padding: 0.5rem; }
     }
   </style>
 </head>
@@ -376,6 +404,8 @@ function generateHtml(report: Report): string {
     </div>
 
     ${report.stack && report.stack.framework !== 'unknown' ? renderStackSection(report.stack) : ''}
+
+    ${renderRiskAnalysisHtml(report)}
 
     <h2>Findings</h2>
     <div class="findings">
@@ -428,6 +458,143 @@ function formatCategory(category: string): string {
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+function getCategoryThreat(category: string): string {
+  const threats: Record<string, string> = {
+    'phi-exposure': 'Unauthorized PHI Disclosure',
+    'encryption': 'Data Breach / Interception',
+    'audit-logging': 'Lack of Accountability / Forensics',
+    'access-control': 'Unauthorized Access / Privilege Escalation',
+    'data-retention': 'Non-Compliance with Retention Requirements',
+  };
+  return threats[category] || 'Security Vulnerability';
+}
+
+function getRiskLevel(severity: string): string {
+  const levels: Record<string, string> = {
+    critical: 'CRITICAL',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    low: 'LOW',
+    info: 'INFO',
+  };
+  return levels[severity] || 'MEDIUM';
+}
+
+function getMitigationStatus(finding: Finding): string {
+  if (finding.fixType) {
+    return 'Remediation Available (Auto-fix)';
+  }
+  return 'Open';
+}
+
+function renderRiskAnalysisHtml(report: Report): string {
+  const severityColors = {
+    critical: '#dc2626',
+    high: '#ea580c',
+    medium: '#ca8a04',
+    low: '#2563eb',
+    info: '#6b7280',
+  };
+
+  // Summary table
+  const summaryHtml = `
+    <div class="risk-summary-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Risk Level</th>
+            <th>Count</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-left: 4px solid ${severityColors.critical}">
+            <td><strong>Critical</strong></td>
+            <td>${report.summary.critical}</td>
+            <td>${report.summary.total > 0 ? Math.round((report.summary.critical / report.summary.total) * 100) : 0}%</td>
+          </tr>
+          <tr style="border-left: 4px solid ${severityColors.high}">
+            <td><strong>High</strong></td>
+            <td>${report.summary.high}</td>
+            <td>${report.summary.total > 0 ? Math.round((report.summary.high / report.summary.total) * 100) : 0}%</td>
+          </tr>
+          <tr style="border-left: 4px solid ${severityColors.medium}">
+            <td><strong>Medium</strong></td>
+            <td>${report.summary.medium}</td>
+            <td>${report.summary.total > 0 ? Math.round((report.summary.medium / report.summary.total) * 100) : 0}%</td>
+          </tr>
+          <tr style="border-left: 4px solid ${severityColors.low}">
+            <td><strong>Low</strong></td>
+            <td>${report.summary.low}</td>
+            <td>${report.summary.total > 0 ? Math.round((report.summary.low / report.summary.total) * 100) : 0}%</td>
+          </tr>
+          <tr style="border-top: 2px solid #e5e7eb; font-weight: 600;">
+            <td><strong>Total</strong></td>
+            <td>${report.summary.total}</td>
+            <td>100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Detailed risk table
+  const detailedHtml = report.findings.length > 0 ? `
+    <div class="risk-detail-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Threat</th>
+            <th>Vulnerability</th>
+            <th>Risk Level</th>
+            <th>Mitigation Status</th>
+            <th>Remediation Plan</th>
+            <th>HIPAA Reference</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${report.findings.map(f => `
+            <tr style="border-left: 4px solid ${severityColors[f.severity]}">
+              <td class="threat-cell">${escapeHtml(getCategoryThreat(f.category))}</td>
+              <td class="vulnerability-cell">
+                <strong>${escapeHtml(f.title)}</strong>
+                <div class="file-ref">${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}</div>
+              </td>
+              <td class="risk-level-cell">
+                <span class="risk-badge" style="background: ${severityColors[f.severity]}">
+                  ${getRiskLevel(f.severity)}
+                </span>
+              </td>
+              <td class="status-cell">
+                <span class="status-badge ${f.fixType ? 'status-available' : 'status-open'}">
+                  ${escapeHtml(getMitigationStatus(f))}
+                </span>
+              </td>
+              <td class="remediation-cell">${escapeHtml(f.recommendation)}</td>
+              <td class="hipaa-cell">${escapeHtml(f.hipaaReference || 'N/A')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '<p style="text-align: center; color: #6b7280; padding: 2rem;">No risks identified.</p>';
+
+  return `
+    <div class="risk-analysis-section">
+      <h2>📊 Risk Analysis</h2>
+      <p style="color: #6b7280; margin-bottom: 1.5rem;">
+        Comprehensive risk assessment of identified HIPAA compliance findings with threat categorization and remediation tracking.
+      </p>
+
+      <h3>Risk Summary</h3>
+      ${summaryHtml}
+
+      <h3 style="margin-top: 2rem;">Detailed Risk Assessment</h3>
+      ${detailedHtml}
+    </div>
+  `;
 }
 
 function severityBadge(severity: string): string {
