@@ -10,6 +10,7 @@ import { securityScanner } from './scanners/security/index.js';
 import { skillsScanner } from './scanners/skills/index.js';
 import { hipaa2026Scanner } from './scanners/hipaa2026/index.js';
 import { authenticationScanner } from './scanners/authentication/index.js';
+import { rbacScanner } from './scanners/rbac/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
@@ -40,7 +41,7 @@ const scanners: Record<ComplianceCategory, Scanner> = {
 
 // Additional scanners that run with specific categories
 const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
-  'access-control': [securityScanner, skillsScanner, hipaa2026Scanner, authenticationScanner], // Security, Skills, HIPAA 2026, and Authentication scanners run with access-control
+  'access-control': [securityScanner, skillsScanner, hipaa2026Scanner, authenticationScanner, rbacScanner], // Security, Skills, HIPAA 2026, Authentication, and RBAC scanners run with access-control
 };
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
