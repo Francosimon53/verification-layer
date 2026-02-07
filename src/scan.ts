@@ -17,6 +17,7 @@ import { sanitizationScanner } from './scanners/sanitization/index.js';
 import { revocationScanner } from './scanners/revocation/index.js';
 import { configurationScanner } from './scanners/configuration/index.js';
 import { apiSecurityScanner } from './scanners/api-security/index.js';
+import { operationalScanner } from './scanners/operational/index.js';
 import { detectStack, getStackDisplayName } from './stack-detector/index.js';
 import { getStackSummary } from './stack-detector/stack-guides.js';
 import { loadCustomRules, scanWithCustomRules } from './rules/index.js';
@@ -51,6 +52,7 @@ const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
   'encryption': [credentialsScanner], // Credentials scanner runs with encryption
   'audit-logging': [errorsScanner, configurationScanner], // Errors and Configuration scanners run with audit-logging
   'phi-exposure': [errorsScanner], // Errors scanner also runs with phi-exposure
+  'data-retention': [operationalScanner], // Operational scanner runs with data-retention
 };
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
