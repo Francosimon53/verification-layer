@@ -1,4 +1,38 @@
+'use client';
+
+import { useState } from 'react';
+
 export default function PricingPage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleProUpgrade = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingPeriod: 'monthly' }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Error creating checkout session. Please try again.');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Error starting checkout. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleContactSales = () => {
+    window.location.href = 'mailto:sales@vlayer.app';
+  };
+
   const plans = [
     {
       name: 'Free',
@@ -14,6 +48,7 @@ export default function PricingPage() {
       ],
       cta: 'Current Plan',
       disabled: true,
+      onClick: undefined,
     },
     {
       name: 'Pro',
@@ -30,8 +65,10 @@ export default function PricingPage() {
         'Slack notifications',
         'Custom rules library',
       ],
-      cta: 'Upgrade to Pro',
+      cta: loading ? 'Loading...' : 'Start Free Trial',
       highlighted: true,
+      disabled: loading,
+      onClick: handleProUpgrade,
     },
     {
       name: 'Enterprise',
@@ -49,6 +86,8 @@ export default function PricingPage() {
         'Compliance consulting',
       ],
       cta: 'Contact Sales',
+      disabled: false,
+      onClick: handleContactSales,
     },
   ];
 
@@ -106,6 +145,7 @@ export default function PricingPage() {
 
                 <button
                   disabled={plan.disabled}
+                  onClick={plan.onClick}
                   className={`w-full px-6 py-3 font-medium rounded-lg transition-all ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20'
