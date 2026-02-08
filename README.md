@@ -1,231 +1,282 @@
-# vlayer - HIPAA Compliance Scanner
+# vlayer - HIPAA Compliance on Every Commit
 
-**Automated security scanning for healthcare applications.** Detect PHI exposure, fix vulnerabilities, and generate audit-ready compliance reports.
+**Automated security scanning for healthcare applications.** 163+ detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.
 
 [![CI](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/verification-layer)](https://www.npmjs.com/package/verification-layer)
+[![HIPAA 2026](https://img.shields.io/badge/HIPAA%202026-15%2F15%20Ready-brightgreen)](https://vlayer.app)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](package.json)
 
 ---
 
-## What is vlayer?
-
-vlayer is a CLI tool that scans your codebase for HIPAA compliance issues. It's designed for healthcare startups and developers building applications that handle Protected Health Information (PHI).
-
-**Key capabilities:**
-- Scan for 50+ security vulnerabilities and PHI exposure patterns
-- **AI Agent Skills scanner** - First HIPAA-focused scanner for SKILL.md files (Claude Code, MCP, Cursor)
-- **AI-powered analysis** with Claude API for complex violations and false positive reduction
-- Auto-fix common issues with one command
-- Generate professional audit reports (HTML, PDF, JSON)
-- Detect your tech stack and provide tailored recommendations
-- Create cryptographic audit trails for compliance documentation
-- **Professional suppression system** with inline comments and justifications
-- **Baseline support** to focus on new findings while tracking existing issues
-- **Confidence levels** for progressive strictness adoption
-
----
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Install
-npm install
-npm run build
+# Install globally
+npm install -g verification-layer
 
-# Scan a project
-node dist/cli.js scan /path/to/your/project
+# Or use with npx (no install needed)
+npx vlayer scan ./src
 
-# Generate HTML report
-node dist/cli.js scan /path/to/project -f html -o report.html
-
-# Auto-fix issues
-node dist/cli.js scan /path/to/project --fix
+# Scan with HTML report
+npx vlayer scan ./src -f html -o report.html
 
 # Check compliance score
-node dist/cli.js score /path/to/project
+npx vlayer score ./src
 
-# Generate auditor-ready report
-node dist/cli.js report /path/to/project -o audit-report.html
-
-# Scan AI Agent Skills (NEW!)
-node dist/cli.js skill-scan ~/Downloads/patient-lookup.SKILL.md
+# Auto-fix issues
+npx vlayer scan ./src --fix
 ```
 
 ---
 
-## 🛡️ AI Agent Skills Security Scanner
+## What is vlayer?
 
-**vlayer is the first HIPAA-focused security scanner for AI Agent Skills.**
+vlayer is a CLI tool and platform that scans your codebase for HIPAA compliance issues. Built for healthcare startups and developers building applications that handle Protected Health Information (PHI).
 
-Protect your healthcare environment from malicious skills before installation:
+**🎯 Key Features:**
+- **163+ detection rules** across 12 categories (PHI exposure, encryption, access control, audit logging, data retention, and more)
+- **HIPAA 2026 NPRM ready** - Covers all 15 new cybersecurity requirements
+- **10 training modules** with 45+ questions and SHA-256 verifiable certificates
+- **5 HIPAA templates** - IRP, BAA, NPP, Security Officer role, Physical Safeguards
+- **Compliance scoring (0-100)** - Track your HIPAA readiness over time
+- **CI/CD integration** - GitHub Actions, pre-commit hooks, PR comments
+- **PDF audit reports** - Executive summaries and technical findings for auditors
+- **VS Code Extension** - Real-time scanning with inline diagnostics
+- **Pro Dashboard** - Historical scans, team management, templates access at [app.vlayer.app](https://app.vlayer.app)
+
+---
+
+## 🌐 Links
+
+- **Landing**: [vlayer.app](https://vlayer.app) - Product overview and pricing
+- **Dashboard**: [app.vlayer.app](https://app.vlayer.app) - Pro dashboard with historical scans and team management
+- **Documentation**: [docs.vlayer.app](https://docs.vlayer.app) - Complete guides and API reference
+- **GitHub**: [github.com/Francosimon53/verification-layer](https://github.com/Francosimon53/verification-layer) - Open source CLI
+- **npm**: [npmjs.com/package/verification-layer](https://www.npmjs.com/package/verification-layer) - Install the scanner
+
+---
+
+## 💰 Pricing
+
+| Plan | Price | Features |
+|------|-------|----------|
+| **Open Source** | **$0/forever** | Full scanner, CLI, 163+ rules, compliance scoring, training module, community support |
+| **Pro** | **$49/month** ($490/year) | Everything in OSS + GitHub App with PR comments, pre-commit hooks, historical scan dashboard, HIPAA document templates, team tracking (10 users), PDF audit reports, email support (48h SLA). **14-day free trial** |
+| **Enterprise** | **Custom** | Everything in Pro + custom detection rules, self-hosted deployment, SSO/RBAC integration, dedicated compliance consultant, custom training modules, audit preparation support, priority support (4h SLA). Contact: [sales@vlayer.app](mailto:sales@vlayer.app) |
+
+[Start Free Trial](https://app.vlayer.app/pricing) • [View Pricing](https://vlayer.app/#pricing)
+
+---
+
+## 🛡️ HIPAA 2026 Ready
+
+The new HIPAA Security Rule (NPRM 2026) adds 15 cybersecurity requirements. vlayer covers **all 15**:
+
+✅ Network Segmentation
+✅ Encryption Standards
+✅ Multi-Factor Auth
+✅ Audit Log Monitoring
+✅ Incident Response
+✅ Vulnerability Scanning
+✅ Asset Inventory
+✅ Access Controls
+✅ Data Minimization
+✅ Secure Configuration
+✅ Patch Management
+✅ Risk Assessments
+✅ Business Continuity
+✅ Security Training
+✅ Third-Party Risk
+
+**Non-Compliance Costs:**
+- $2M average breach cost
+- $100-$50K per violation (Tier 1-4)
+- $1.5M annual cap per violation type
+- Criminal penalties: $250K + 10 years jail
+
+---
+
+## 📊 Detection Categories
+
+vlayer scans for **163+ security patterns** across 12 HIPAA compliance categories:
+
+| Category | Rules | What it detects |
+|----------|-------|-----------------|
+| **PHI Exposure** | 28 | SSN/MRN in code, PHI in logs, localStorage, URLs, diagnosis codes, unencrypted patient data |
+| **Encryption** | 18 | Weak crypto (MD5, DES), disabled SSL/TLS, HTTP URLs, missing at-rest encryption |
+| **Access Control** | 24 | SQL injection, XSS, CORS wildcards, hardcoded credentials, IDOR vulnerabilities, missing auth |
+| **Audit Logging** | 15 | Missing logging framework, unlogged PHI operations, insufficient audit trails |
+| **Data Retention** | 12 | Bulk deletes without audit, missing retention policies, improper data deletion |
+| **Network Segmentation** | 14 | Missing network isolation, insecure API endpoints, unrestricted PHI access |
+| **Multi-Factor Auth** | 8 | Missing MFA, weak authentication, password-only access to PHI |
+| **Incident Response** | 10 | Missing IRP, unmonitored security events, no breach notification process |
+| **Vulnerability Management** | 11 | Unpatched dependencies, missing security updates, known CVEs |
+| **Asset Inventory** | 9 | Undocumented PHI storage, shadow IT, untracked data flows |
+| **Session Management** | 8 | Weak session configs, missing timeouts, insecure cookies |
+| **Third-Party Risk** | 6 | Unsafe vendor integrations, missing BAAs, unvetted third-party code |
+
+**Total: 163+ rules**
+
+---
+
+## 🎓 Training Module
+
+Turn your developers into HIPAA-aware engineers with built-in training:
 
 ```bash
-# Scan before installing any skill
-vlayer skill-scan ~/Downloads/patient-exporter.SKILL.md
-
-# Scan all skills in directory
-vlayer skill-scan ~/.claw/skills/
-
-# CI/CD integration
-vlayer skill-scan ./custom-skills/ || exit 1
+vlayer train
 ```
 
-### The Problem
+- **10 interactive modules** covering HIPAA fundamentals, technical safeguards, and best practices
+- **45+ quiz questions** with immediate feedback
+- **SHA-256 verifiable certificates** for audit documentation
+- Track team progress and completion rates (Pro plan)
 
-- **36.82%** of AI Agent Skills have security flaws (Snyk, Feb 2026)
-- **341 malicious skills** distribute Atomic Stealer malware
-- **283 skills** expose credentials in plaintext
-- **Zero existing scanners** have HIPAA-specific rules
-
-### What It Detects
-
-- ✅ PHI exposure (SSN, MRN, DOB in examples)
-- ✅ Hardcoded credentials (API keys, passwords)
-- ✅ Malicious patterns (reverse shells, data exfiltration)
-- ✅ HIPAA violations (HTTP transmission, no audit logging)
-
-### Example Output
-
-```
-🚨 Critical: 7  |  ⚠️ High: 14  |  ⚡ Medium: 1
-
-Issues:
-  PHI Exposure: 8
-  Credential Leaks: 1
-  Data Exfiltration: 1
-
-❌ DO NOT INSTALL THIS SKILL
-   Critical HIPAA violations detected.
-```
-
-📖 **[Full Documentation](docs/SKILLS-SCANNER.md)**
+**Topics covered:**
+- HIPAA Privacy & Security Rules
+- PHI identification and handling
+- Encryption standards and implementation
+- Access controls and authentication
+- Audit logging and monitoring
+- Incident response procedures
+- Business Associate Agreements
+- Data breach notification requirements
+- Physical and technical safeguards
+- Compliance penalties and enforcement
 
 ---
 
-## 🌐 VLayer Ecosystem
+## 📄 HIPAA Templates
 
-**Dashboard**: [https://app.vlayer.app](https://app.vlayer.app) - Compliance monitoring platform
-**Playground**: [https://play.vlayer.app](https://play.vlayer.app) - Try vlayer in your browser
-**Documentation**: [https://docs.vlayer.app](https://docs.vlayer.app) - Complete guides and API reference
-**Landing Page**: [https://vlayer.app](https://vlayer.app) - Marketing site
-
-Enterprise-grade HIPAA compliance monitoring platform for tracking violations, compliance scores, and generating audit reports.
-
-### Design
-
-**Professional Enterprise UI:**
-- 🎨 **Dark Navy Theme** - Professional color palette (#0A1628, #0F172A) with emerald/teal accents
-- 📐 **Fixed Sidebar Navigation** - Icon-based menu with VLayer branding and system status
-- 💎 **Glassmorphism Effects** - Gradient cards with subtle shadows and transparency
-- 🎯 **Circular Progress Gauges** - Animated SVG gauges for compliance scores (0-100)
-- 🏷️ **Status Badges** - Color-coded indicators (Compliant/At Risk/Critical)
-- ⚡ **Smooth Transitions** - Hover effects and state changes with professional animations
-
-### Features
-
-- 🔐 **Supabase Authentication** - Secure email/password authentication with session management
-- 📊 **Visual Compliance Dashboard** - 4-metric overview with real-time scores and status distribution
-- 📈 **Historical Score Tracking** - Interactive charts showing compliance trends over time
-- 🗂️ **Multi-Project Management** - Monitor unlimited projects with inline progress indicators
-- 🔍 **Detailed Findings View** - Filter by severity with comprehensive issue breakdowns
-- 📋 **Executive Summaries** - Professional reports with grade assignments (A-F)
-- 🎨 **Enterprise Tables** - Sortable project lists with circular scores and status badges
-- 📱 **Responsive Design** - Optimized for desktop, tablet, and mobile devices
-- 👤 **User Management** - User profiles with logout functionality in sidebar
-
-### Quick Start
-
-1. **Create Account**: Sign up at [app.vlayer.app/signup](https://app.vlayer.app/signup) with your email
-2. **Login**: Access the dashboard at [app.vlayer.app](https://app.vlayer.app)
-3. **Create Project**: Click "+ New Project" and enter your project details
-4. **Run Scan**: Execute a compliance scan on your codebase
-   ```bash
-   node dist/cli.js scan ./src --format json --output scan.json
-   ```
-5. **Upload Results**: Send scan data to your project via API
-   ```bash
-   curl -X POST https://app.vlayer.app/api/projects/{projectId}/scans \
-     -H "Content-Type: application/json" \
-     -d @scan.json
-   ```
-
-### Demo Data
-
-The dashboard includes 4 demo projects with realistic compliance data:
-- **HealthCare Portal** - 92/100 (Grade A - Excellent)
-- **Telemedicine API** - 78/100 (Grade C - Fair)
-- **Insurance Claims System** - 56/100 (Grade F - Critical)
-- **Mobile Health App** - 95/100 (Grade A - Excellent)
-
-### API & Documentation
-
-See [dashboard/README.md](dashboard/README.md) for complete API documentation and deployment instructions.
-
----
-
-## 🆕 Compliance Score & Dashboard
-
-### HIPAA Compliance Score (0-100)
-
-VLayer calculates a compliance score based on findings weighted by severity and confidence:
+5 production-ready policy templates (Pro plan):
 
 ```bash
-# Calculate compliance score
-node dist/cli.js score ./src
-
-# Output as JSON
-node dist/cli.js score ./src -f json
+vlayer templates list
+vlayer templates export irp
 ```
 
-**Scoring System:**
-- 🔴 Critical: -10 points each
-- 🟠 High: -5 points each
-- 🟡 Medium: -2 points each
-- 🔵 Low: -1 point each
-- ✅ Acknowledged findings: 25% penalty reduction
+| Template | Description |
+|----------|-------------|
+| **Incident Response Plan (IRP)** | Step-by-step breach response procedures |
+| **Business Associate Agreement (BAA)** | Standard BAA for third-party vendors |
+| **Notice of Privacy Practices (NPP)** | Patient rights and PHI usage disclosure |
+| **Security Officer Role** | Responsibilities and authority documentation |
+| **Physical Safeguards** | Facility access controls and workstation security |
 
-**Grading:**
-- A (90-100): Excellent compliance posture
-- B (80-89): Good compliance
-- C (70-79): Fair compliance
-- D (60-69): Poor compliance
-- F (<60): Critical - requires immediate attention
-
-### Auditor-Ready Reports
-
-Generate professional compliance reports with SHA256 hash verification:
-
-```bash
-# Basic auditor report
-node dist/cli.js report ./src
-
-# Full-featured report
-node dist/cli.js report ./src \
-  -o compliance-report.html \
-  --org "HealthTech Inc" \
-  --period "Q1 2024" \
-  --auditor "John Doe" \
-  --include-baseline
-```
-
-**Report Features:**
-- 📊 Compliance score with visual gauge (green/yellow/red)
-- 📈 Executive summary with key metrics
-- 📋 Findings table with filtering by severity
-- 🔒 Suppression and acknowledgment audit trails
-- 📄 Baseline comparison (if enabled)
-- 🔐 SHA256 hash for document integrity
-- 🖨️ Print-friendly CSS for PDF export
+All templates are:
+- ✅ HIPAA-compliant and audit-ready
+- ✅ Customizable to your organization
+- ✅ Available in Word and PDF formats
+- ✅ Regularly updated for regulatory changes
 
 ---
 
-## 🆕 IDE & Developer Experience
+## 🔧 CLI Commands
 
-### VS Code Extension
+```bash
+# Scanning
+vlayer scan <path>                      # Basic scan
+vlayer scan <path> -f html -o report.html   # HTML report
+vlayer scan <path> -f markdown -o report.md # Markdown report
+vlayer scan <path> --fix                     # Auto-fix issues
+vlayer scan <path> -c phi-exposure encryption # Specific categories
 
-Get real-time HIPAA compliance feedback directly in your editor:
+# Compliance Score
+vlayer score <path>                     # Calculate compliance score (0-100)
+vlayer score <path> -f json             # JSON output
+
+# Watch Mode
+vlayer watch <path>                     # Watch for changes
+vlayer watch <path> -c phi-exposure     # Watch specific categories
+
+# Audit Reports
+vlayer report <path>                    # Generate auditor-ready report
+vlayer report <path> -o report.html     # Custom output path
+vlayer report <path> --org "Company"    # Set organization name
+
+# Training
+vlayer train                            # Start interactive training
+vlayer train --module 2                 # Specific module
+vlayer train --certificate              # Generate certificate
+
+# Templates (Pro)
+vlayer templates list                   # List available templates
+vlayer templates export irp             # Export Incident Response Plan
+vlayer templates export baa             # Export Business Associate Agreement
+
+# Baseline
+vlayer baseline <path>                  # Generate baseline
+vlayer scan <path> --baseline .vlayer-baseline.json # Scan with baseline
+
+# Configuration
+vlayer init                             # Generate .vlayerrc.json
+```
+
+**Exit codes:**
+- `0` - No critical issues
+- `1` - Critical issues found (useful for CI/CD)
+
+---
+
+## ⚙️ CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: HIPAA Compliance
+on: [push, pull_request]
+
+jobs:
+  vlayer-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npx vlayer scan ./src
+```
+
+### Pre-commit Hook
+
+```bash
+# Install pre-commit hook
+npx vlayer install-hook
+
+# .git/hooks/pre-commit will now run vlayer on staged files
+```
+
+### Pull Request Comments (Pro)
+
+Install the [vlayer GitHub App](https://app.vlayer.app) to get automatic PR comments with compliance findings.
+
+---
+
+## 📊 Compliance Dashboard (Pro)
+
+Access historical scans, team management, and audit reports at [app.vlayer.app](https://app.vlayer.app):
+
+- **Historical Scans** - Track compliance trends over time
+- **Team Management** - Invite team members (10 seats on Pro)
+- **Templates Library** - Access all 5 HIPAA document templates
+- **PDF Reports** - Generate audit-ready reports
+- **Training Dashboard** - Track team training completion
+- **Compliance Score Tracking** - Monitor your 0-100 score over time
+
+**Features:**
+- Dark theme with professional UI
+- Filter findings by severity and category
+- Export data in JSON, CSV, or PDF
+- Email notifications for critical findings
+- Integration with Slack/Teams (coming soon)
+
+---
+
+## 🔍 VS Code Extension
+
+Real-time HIPAA compliance feedback in your editor:
 
 ```bash
 # Install from the vscode-extension directory
@@ -237,354 +288,39 @@ npm run compile
 **Features:**
 - ✅ Real-time scanning on file save
 - ✅ Inline diagnostics with severity markers
-- ✅ Hover tooltips with HIPAA references and recommendations
+- ✅ Hover tooltips with HIPAA references
 - ✅ Quick-fix actions for auto-remediation
 - ✅ Status bar compliance score
 - ✅ Commands: "VLayer: Scan Current File", "VLayer: Scan Workspace"
 
-**Configuration:**
-```json
-{
-  "vlayer.enableAutoScan": true,
-  "vlayer.minConfidence": "low",
-  "vlayer.showStatusBar": true,
-  "vlayer.configPath": ".vlayerrc.json"
-}
-```
+---
 
-### Watch Mode
+## 🤖 AI-Powered Scanning (Optional)
 
-Continuous monitoring with real-time feedback:
+Reduce false positives and catch complex violations with Claude AI:
 
 ```bash
-# Watch a directory for changes
-node dist/cli.js watch ./src
-
-# Watch with specific categories
-node dist/cli.js watch ./src --categories phi-exposure encryption
-
-# Watch with custom config
-node dist/cli.js watch ./src --config .vlayerrc.json
-```
-
-**Features:**
-- 🔍 Automatic scan on file save/create
-- 🎨 Colored terminal output by severity
-- 📊 Diff tracking (new findings vs. previous scan)
-- 🚨 Alerts for new critical/high severity findings
-- ⚡ Smart file filtering (excludes node_modules, dist, etc.)
-
----
-
-## Suppression & Baseline
-
-### Inline Suppressions
-
-Suppress specific findings with inline comments (justification required):
-
-```typescript
-// vlayer-ignore phi-ssn-hardcoded -- Test data for unit tests
-const testSSN = "123-45-6789";
-```
-
-### Baseline for Existing Codebases
-
-Generate a baseline to track existing findings without blocking progress:
-
-```bash
-# Generate baseline from current state
-node dist/cli.js baseline . -o .vlayer-baseline.json
-
-# Scan with baseline (only NEW findings cause failures)
-node dist/cli.js scan . --baseline .vlayer-baseline.json
-```
-
-### Confidence Levels
-
-Filter findings by confidence level for progressive adoption:
-
-```bash
-# Only fail on high-confidence findings
-node dist/cli.js scan . --min-confidence high
-```
-
----
-
-## Features
-
-### 1. Vulnerability Detection
-
-Scans for **50+ security patterns** across 5 HIPAA compliance categories:
-
-| Category | What it detects |
-|----------|-----------------|
-| **PHI Exposure** | SSN/MRN in code, PHI in logs, localStorage, URLs |
-| **Encryption** | Weak crypto (MD5, DES), disabled SSL/TLS, HTTP URLs |
-| **Access Control** | SQL injection, XSS, CORS wildcards, hardcoded credentials |
-| **Audit Logging** | Missing logging framework, unlogged PHI operations |
-| **Data Retention** | Bulk deletes without audit, missing retention policies |
-
-<details>
-<summary><strong>View all detection patterns</strong></summary>
-
-**PHI Exposure (18 patterns)**
-- Social Security Numbers (XXX-XX-XXXX)
-- Medical Record Numbers (MRN patterns)
-- Date of Birth handling
-- Diagnosis codes (ICD-10)
-- PHI in console.log statements
-- PHI in localStorage/sessionStorage
-- Patient data in URLs
-- Unencrypted patient contact info
-
-**Security Vulnerabilities (20+ patterns)**
-- Hardcoded passwords and secrets
-- API keys (generic, Stripe, AWS)
-- Database URIs with credentials
-- SQL injection (template literals & concatenation)
-- innerHTML without sanitization
-- eval() and Function constructor
-- dangerouslySetInnerHTML in React
-
-**Infrastructure Issues**
-- HTTP URLs for PHI transmission
-- Disabled SSL/TLS verification
-- CORS wildcard origins
-- Sessions without expiration
-- Missing authentication checks
-
-</details>
-
----
-
-### 2. Auto-Fix (`--fix`)
-
-Automatically remediate common vulnerabilities:
-
-```bash
-node dist/cli.js scan ./my-app --fix
-```
-
-| Issue | Auto-Fix Applied |
-|-------|------------------|
-| SQL injection | Convert to parameterized query `query('SELECT * FROM users WHERE id = ?', [id])` |
-| Hardcoded password | Replace with `process.env.PASSWORD` |
-| Hardcoded API key | Replace with `process.env.API_KEY` |
-| HTTP URL | Upgrade to HTTPS |
-| innerHTML | Replace with `textContent` |
-| PHI in console.log | Comment out with review marker |
-
-**Example output:**
-```
-✔ Scan complete. Found 29 issues.
-✔ Applied 8 automatic fixes.
-
-Changes by file:
-  src/api/users.ts
-    Line 45: SQL injection → parameterized query
-    Line 89: Hardcoded password → process.env.DB_PASSWORD
-  src/utils/logger.ts
-    Line 12: PHI in console.log → commented out
-```
-
----
-
-### 3. Stack Detection
-
-vlayer automatically detects your tech stack and provides **personalized code examples**:
-
-```
-Stack detected:
-  Framework: Next.js
-  Database: Supabase
-  Auth: Supabase Auth
-```
-
-**Supported technologies:**
-
-| Type | Detected |
-|------|----------|
-| Frameworks | Next.js, React, Vue, Nuxt, Angular, Express, Fastify, NestJS |
-| Databases | Supabase, Firebase, PostgreSQL, MySQL, MongoDB, Prisma, Drizzle |
-| Auth | NextAuth, Supabase Auth, Firebase Auth, Auth0, Clerk, Passport |
-
-**Stack-specific recommendations include:**
-
-- **Next.js + Supabase**: Server Components for PHI, Row Level Security (RLS), middleware protection
-- **Express + PostgreSQL**: express-session with Redis, parameterized queries
-- **React + Firebase**: Firestore Security Rules, Admin SDK for PHI
-
----
-
-### 4. Remediation Guides
-
-Each finding includes a detailed remediation guide with:
-
-- **HIPAA Impact**: Why this matters for compliance
-- **Multiple fix options**: Different approaches with trade-offs
-- **Code examples**: Copy-paste ready solutions
-- **Documentation links**: Official resources
-
-The guides are **personalized to your stack** - if you're using Supabase, you'll see Supabase-specific code examples, not generic SQL.
-
----
-
-### 5. Audit Trail & PDF Reports
-
-Generate compliance documentation with cryptographic verification:
-
-```bash
-# Run scan with fixes (creates audit trail)
-node dist/cli.js scan ./my-app --fix
-
-# Generate PDF report
-node dist/cli.js audit ./my-app --generate-report --org "Healthcare Inc" --auditor "Jane Smith"
-```
-
-**Audit trail includes:**
-
-| For Auto-Fixed Issues | For Manual Review Items |
-|-----------------------|-------------------------|
-| Code before & after | Status: "Pending human review" |
-| SHA256 file hashes | Assigned responsible party |
-| Timestamp of change | Suggested deadline by severity |
-| HIPAA reference resolved | Full finding details |
-
-**PDF Report sections:**
-1. Cover Page - Project info, scan statistics
-2. Executive Summary - Remediation rate, risk breakdown
-3. Fix Evidence - Cryptographic proof of each change
-4. Manual Reviews - Pending items with deadlines
-5. Verification Page - Report hash, signature fields
-
----
-
-### 6. AI-Powered Scanning (Beta)
-
-**Reduce false positives and catch complex violations with Claude AI.**
-
-vlayer now includes optional AI-powered analysis using Anthropic's Claude API:
-
-#### Features
-
-- **🤖 LLM-Powered Rules**: 6 specialized AI rules for detecting complex HIPAA violations
-- **🎯 AI Triage**: Automatically classify findings to reduce false positives by 50%+
-- **🔒 PHI Scrubbing**: All code is sanitized before sending to the LLM (HIPAA-safe)
-- **💰 Cost Control**: Budget limits, caching, and rate limiting built-in
-- **📊 Confidence Scores**: AI provides reasoning and confidence for each finding
-
-#### Quick Start
-
-```bash
-# Set your API key
+# Set API key
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Run AI-powered scan (default: 50¢ budget)
-node dist/cli.js ai-scan ./my-app
+# Run AI-powered scan
+vlayer ai-scan ./src
 
 # Adjust budget
-node dist/cli.js ai-scan ./my-app --budget 100
-
-# Run LLM rules only (skip triage)
-node dist/cli.js ai-scan ./my-app --rules-only
-
-# Enable AI triage in regular scan
-node dist/cli.js scan ./my-app  # AI triage runs automatically if API key is set
-
-# Disable AI features
-node dist/cli.js scan ./my-app --no-ai
+vlayer ai-scan ./src --budget 100
 ```
 
-#### AI Rules
+**AI Features:**
+- 6 specialized LLM rules for complex HIPAA violations
+- Automatic triage to reduce false positives by 50%+
+- PHI scrubbing (HIPAA-safe, no PHI sent to API)
+- Cost control with budget limits and caching
 
-The AI scanner includes 6 specialized rules:
-
-| Rule ID | Name | Detects |
-|---------|------|---------|
-| **HIPAA-PHI-003** | Minimum Necessary Access | APIs returning more PHI than needed (SELECT * violations) |
-| **HIPAA-SEC-001** | PHI Encryption | Unencrypted PHI in transit or at rest |
-| **HIPAA-ACCESS-001** | Role-Based Access Control | Missing auth checks, hardcoded roles, IDOR vulnerabilities |
-| **HIPAA-AUDIT-001** | Audit Logging | PHI operations without proper audit trails |
-| **HIPAA-RETENTION-001** | Data Retention | Improper deletion, missing retention policies |
-| **HIPAA-AUTH-001** | Session Management | Weak session configs, missing timeouts |
-
-#### Configuration
-
-Add AI settings to `.vlayerrc.json`:
-
-```json
-{
-  "ai": {
-    "enabled": true,
-    "enableTriage": true,
-    "enableLLMRules": true,
-    "filterFalsePositives": true,
-    "budgetCents": 50
-  }
-}
-```
-
-#### Cost & Performance
-
-- **Typical scan**: 5-20 API calls, $0.10-$0.50
-- **Caching**: Results cached for 24 hours by file hash
-- **Rate limiting**: Max 20 calls/minute, 50 calls/scan
-- **PHI protection**: All sensitive data scrubbed before API call
-
-**Example output:**
-```
-🤖 Starting AI-powered HIPAA scan...
-🔒 Scrubbed 3 PHI patterns from src/api/patients.ts
-📋 Running 6 LLM-powered rules...
-✅ AI scan complete: 12 findings, 48¢
-
-AI Scan Summary:
-  Files scanned: 8
-  AI findings: 12
-  AI calls made: 18
-  Cost: 48¢
-  Critical: 2
-  High: 5
-```
+**Typical cost:** $0.10-$0.50 per scan
 
 ---
 
-## Report Examples
-
-### HTML Report
-
-The HTML report includes:
-- Summary cards with severity counts
-- Stack detection section with tailored recommendations
-- Each finding with code context and line highlighting
-- Expandable remediation guides with code examples
-- Auto-fixable badge on issues that can be fixed automatically
-
-### JSON Report
-
-Machine-readable format for CI/CD integration:
-
-```json
-{
-  "summary": {
-    "total": 29,
-    "critical": 8,
-    "high": 12,
-    "medium": 6,
-    "low": 3
-  },
-  "stack": {
-    "framework": "nextjs",
-    "database": "supabase",
-    "auth": "supabase-auth"
-  },
-  "findings": [...]
-}
-```
-
----
-
-## Configuration
+## 📝 Configuration
 
 Create `.vlayerrc.json` in your project root:
 
@@ -594,68 +330,38 @@ Create `.vlayerrc.json` in your project root:
   "ignorePaths": ["sample-data", "fixtures"],
   "safeHttpDomains": ["my-internal-cdn.com"],
   "contextLines": 3,
-  "categories": ["phi-exposure", "encryption", "access-control"]
+  "categories": ["phi-exposure", "encryption", "access-control"],
+  "minConfidence": "medium",
+  "ai": {
+    "enabled": true,
+    "enableTriage": true,
+    "budgetCents": 50
+  }
 }
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `exclude` | Glob patterns to skip | `[]` |
-| `ignorePaths` | Path substrings to ignore | `[]` |
-| `safeHttpDomains` | HTTP domains to allow (CDNs) | Built-in list |
-| `contextLines` | Lines of context in reports | `2` |
-| `categories` | Categories to scan | All |
-
 ---
 
-## CLI Reference
+## 🏗️ Auto-Fix
+
+Automatically remediate common vulnerabilities:
 
 ```bash
-# Basic scan
-vlayer scan <path>
-
-# Scan options
-vlayer scan <path> -f html -o report.html    # HTML report
-vlayer scan <path> -f markdown -o report.md  # Markdown report
-vlayer scan <path> -c phi-exposure encryption # Specific categories
-vlayer scan <path> --fix                      # Auto-fix issues
-
-# Watch mode
-vlayer watch <path>                           # Watch for changes
-vlayer watch <path> -c phi-exposure          # Watch specific categories
-vlayer watch <path> --config .vlayerrc.json  # Watch with custom config
-vlayer watch <path> --min-confidence high    # Watch with confidence filter
-
-# Audit commands
-vlayer audit <path> --summary                 # View audit summary
-vlayer audit <path> --generate-report         # Generate PDF
-vlayer audit <path> --generate-report --text  # Generate text instead
-vlayer audit <path> --generate-report --org "Company" --auditor "Name"
-
-# Baseline commands
-vlayer baseline <path>                        # Generate baseline
-vlayer baseline <path> -o custom.json         # Custom output path
-vlayer scan <path> --baseline .vlayer-baseline.json  # Scan with baseline
-
-# Compliance score
-vlayer score <path>                           # Calculate compliance score
-vlayer score <path> -f json                   # JSON output
-vlayer score <path> --baseline baseline.json  # Score with baseline
-
-# Auditor reports
-vlayer report <path>                          # Generate auditor report
-vlayer report <path> -o report.html           # Custom output path
-vlayer report <path> --org "Company Name"     # Set organization
-vlayer report <path> --include-baseline       # Include baseline comparison
+vlayer scan ./my-app --fix
 ```
 
-**Exit codes:**
-- `0` - No critical issues
-- `1` - Critical issues found (useful for CI/CD)
+| Issue | Auto-Fix Applied |
+|-------|------------------|
+| SQL injection | Convert to parameterized query |
+| Hardcoded password | Replace with `process.env.PASSWORD` |
+| Hardcoded API key | Replace with `process.env.API_KEY` |
+| HTTP URL | Upgrade to HTTPS |
+| innerHTML | Replace with `textContent` |
+| PHI in console.log | Comment out with review marker |
 
 ---
 
-## HIPAA References
+## 📚 HIPAA References
 
 Each finding maps to specific HIPAA regulations:
 
@@ -671,89 +377,7 @@ Each finding maps to specific HIPAA regulations:
 
 ---
 
-## Roadmap
-
-### Recently Completed ✅
-- [x] **Phase 4E: Authentication & User Management**
-  - [x] Supabase Auth integration
-  - [x] Email/password authentication flow
-  - [x] Login and signup pages with dark theme
-  - [x] Protected routes via Next.js middleware
-  - [x] User session management
-  - [x] User profile display in sidebar
-  - [x] Logout functionality
-  - [x] Environment variables configured in Vercel
-- [x] **Phase 4D: Custom Domain Configuration**
-  - [x] Configured custom domains on vlayer.app
-  - [x] Dashboard: app.vlayer.app
-  - [x] Playground: play.vlayer.app
-  - [x] Documentation: docs.vlayer.app
-  - [x] Landing page: vlayer.app
-  - [x] Automatic DNS configuration via Vercel
-  - [x] SSL/TLS certificates provisioned for all domains
-  - [x] Updated all cross-project links
-- [x] **Phase 4C: Dashboard Consolidation**
-  - [x] Moved landing page to separate repo ([vlayer-website](https://github.com/Francosimon53/vlayer-website))
-  - [x] Dashboard now at root route (/) instead of /dashboard
-  - [x] Simplified route structure (/, /projects, /projects/[id])
-  - [x] Removed route groups for cleaner app organization
-  - [x] Dashboard-focused application architecture
-- [x] **Phase 4A: Web Dashboard (Enterprise Redesign)**
-  - [x] Next.js dashboard deployed to Vercel
-  - [x] Enterprise-grade dark navy theme with emerald accents
-  - [x] Fixed sidebar navigation with VLayer branding
-  - [x] Circular progress gauges with animations
-  - [x] Multi-project management with REST API
-  - [x] Status badges (Compliant/At Risk/Critical)
-  - [x] Historical score tracking with visual charts
-  - [x] Demo data with 4 realistic projects
-  - [x] Glassmorphism effects and professional shadows
-  - [x] Responsive design optimized for all devices
-- [x] **Phase 3B: Dashboard & Compliance Score**
-  - [x] HIPAA Compliance Score (0-100) with severity weighting
-  - [x] Enhanced HTML reports with visual gauge
-  - [x] Auditor-ready reports with SHA256 hash
-  - [x] Executive summary and filterable findings table
-  - [x] Print-friendly CSS for PDF export
-- [x] **Phase 3A: IDE & Developer Experience**
-  - [x] VS Code Extension v2.0 with real-time scanning
-  - [x] Watch mode for continuous monitoring
-  - [x] Inline diagnostics with hover tooltips
-  - [x] Quick-fix actions and status bar integration
-- [x] **Phase 2B: Enhanced Custom Rules**
-  - [x] Semantic awareness for custom rules
-  - [x] Pattern-aware context detection
-  - [x] Confidence level controls
-- [x] **Phase 2A: Semantic Context Analysis**
-  - [x] AST-based semantic analysis
-  - [x] Context-aware confidence levels
-  - [x] Test file detection
-- [x] **Phase 1B: Reusable GitHub Action**
-  - [x] GitHub Action for CI/CD integration
-  - [x] Enhanced npm package
-  - [x] Baseline and suppression systems
-
-### Coming Soon
-- [ ] Slack/Teams notifications for new findings
-- [ ] CLI integration with dashboard auto-upload
-- [ ] Database backend for dashboard (currently file-based)
-
-### Planned
-- [ ] HITRUST CSF mapping
-- [ ] SOC 2 compliance checks
-- [ ] AWS/GCP/Azure infrastructure scanning
-- [ ] Team dashboard with trend tracking
-- [ ] Jira/Linear integration for issue tracking
-
-### Future
-- [ ] AI-powered fix suggestions
-- [ ] Dependency vulnerability scanning
-- [ ] Runtime PHI detection agent
-- [ ] Compliance certification workflows
-
----
-
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
@@ -763,20 +387,32 @@ npm install
 npm run dev      # Watch mode
 npm run test     # Run tests
 npm run lint     # Lint code
+npm run typecheck # Type check
 ```
 
 ---
 
-## License
+## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+## 📧 Contact
+
+- **General inquiries**: [hello@vlayer.app](mailto:hello@vlayer.app)
+- **Sales & Enterprise**: [sales@vlayer.app](mailto:sales@vlayer.app)
+- **Enterprise solutions**: [enterprise@vlayer.app](mailto:enterprise@vlayer.app)
+- **Support**: [GitHub Issues](https://github.com/Francosimon53/verification-layer/issues)
+
+---
+
 <p align="center">
-  Built for healthcare developers who take compliance seriously.
-  <br>
-  <a href="https://github.com/Francosimon53/verification-layer/issues">Report Bug</a>
-  ·
+  <strong>Built for healthcare developers who take compliance seriously.</strong>
+  <br><br>
+  <a href="https://vlayer.app">Website</a> •
+  <a href="https://docs.vlayer.app">Documentation</a> •
+  <a href="https://app.vlayer.app">Dashboard</a> •
+  <a href="https://github.com/Francosimon53/verification-layer/issues">Report Bug</a> •
   <a href="https://github.com/Francosimon53/verification-layer/issues">Request Feature</a>
 </p>
