@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, PLANS } from '@/lib/stripe';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,8 +19,14 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
+    // Get authenticated user (using anon key with cookies)
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Error getting user:', userError);
+      return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,43 +43,84 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Price ID not configured' }, { status: 500 });
     }
 
-    console.log('Creating checkout session for user:', user.id, 'with price:', priceId);
+    console.log('Creating checkout session for user:', user.id, 'email:', user.email);
+    console.log('Price ID:', priceId, 'Billing period:', billingPeriod);
 
-    // Check if user already has a Stripe customer ID
-    const { data: profile, error: profileError } = await supabase
+    // Use admin client to bypass RLS for profile operations
+    const adminSupabase = createAdminClient();
+
+    // Check if user profile exists (using maybeSingle to handle no results)
+    const { data: profile, error: profileError } = await adminSupabase
       .from('profiles')
-      .select('stripe_customer_id')
+      .select('id, stripe_customer_id')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
-      // If profiles table doesn't exist or user doesn't have a profile, create customer anyway
+      return NextResponse.json({
+        error: 'Database error. Please try again.'
+      }, { status: 500 });
     }
 
     let customerId = profile?.stripe_customer_id;
 
-    if (!customerId) {
-      console.log('Creating new Stripe customer for user:', user.email);
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { supabase_user_id: user.id },
-      });
-      customerId = customer.id;
-      console.log('Created Stripe customer:', customerId);
+    // If no profile exists, create it
+    if (!profile) {
+      console.log('Profile does not exist for user:', user.id, '- creating new profile');
 
-      // Try to update profile, but don't fail if table doesn't exist
-      try {
-        await supabase
-          .from('profiles')
-          .update({ stripe_customer_id: customerId })
-          .eq('id', user.id);
-      } catch (updateError) {
-        console.warn('Could not update profile with Stripe customer ID:', updateError);
+      const { data: newProfile, error: createError } = await adminSupabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          plan: 'free',
+          created_at: new Date().toISOString(),
+        })
+        .select('id, stripe_customer_id')
+        .single();
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        // Continue anyway - we'll just not save the Stripe customer ID
+      } else {
+        console.log('Created new profile for user:', user.id);
       }
     }
 
-    console.log('Creating checkout session with customer:', customerId);
+    // Create or retrieve Stripe customer
+    if (!customerId) {
+      console.log('Creating new Stripe customer for user:', user.email);
+
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          supabase_user_id: user.id,
+          source: 'vlayer_dashboard',
+        },
+      });
+
+      customerId = customer.id;
+      console.log('Created Stripe customer:', customerId);
+
+      // Save Stripe customer ID to profile
+      const { error: updateError } = await adminSupabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating profile with Stripe customer ID:', updateError);
+        // Continue anyway - customer is created in Stripe
+      } else {
+        console.log('Updated profile with Stripe customer ID');
+      }
+    } else {
+      console.log('Using existing Stripe customer:', customerId);
+    }
+
+    // Create Stripe checkout session
+    console.log('Creating checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -81,14 +128,20 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: PLANS.pro.trialDays,
-        metadata: { supabase_user_id: user.id },
+        metadata: {
+          supabase_user_id: user.id,
+          plan: 'pro',
+          billing_period: billingPeriod,
+        },
       },
       success_url: `${req.nextUrl.origin}/?upgrade=success`,
       cancel_url: `${req.nextUrl.origin}/pricing?upgrade=cancelled`,
       allow_promotion_codes: true,
     });
 
-    console.log('Checkout session created:', session.id);
+    console.log('Checkout session created successfully:', session.id);
+    console.log('Checkout URL:', session.url);
+
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error('Stripe checkout error:', error);
@@ -97,7 +150,9 @@ export async function POST(req: NextRequest) {
       type: error.type,
       code: error.code,
       statusCode: error.statusCode,
+      raw: error.raw,
     });
+
     return NextResponse.json({
       error: error.message || 'Failed to create checkout session. Please try again.'
     }, { status: 500 });
