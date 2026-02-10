@@ -30,7 +30,7 @@ jobs:
         run: node dist/cli.js scan . --baseline .vlayer-baseline.json --min-confidence high -f json -o hipaa-results.json
 
       - name: Post PR comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
