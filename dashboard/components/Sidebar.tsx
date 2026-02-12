@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
+import { PlanBadge } from './PlanBadge';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -71,6 +72,9 @@ export function Sidebar() {
       {/* User Footer */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
         <div className="bg-slate-800/50 rounded-lg p-3">
+          <div className="mb-2">
+            <PlanBadge />
+          </div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

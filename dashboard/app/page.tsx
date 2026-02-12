@@ -3,6 +3,7 @@ import { getProjects } from '@/lib/storage';
 import { getDemoProjects } from '@/lib/demo-data';
 import { CircularProgress } from '@/components/CircularProgress';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SuccessToast } from '@/components/SuccessToast';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0F172A]">
+      <SuccessToast />
       {/* Header */}
       <header className="bg-[#1E293B] border-b border-slate-800">
         <div className="px-8 py-6">
