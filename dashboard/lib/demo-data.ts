@@ -1,24 +1,27 @@
-import type { Project } from '@/types';
-import { loadData, saveData } from '@/lib/storage';
+import type { Project, ScanReport } from '@/types';
+import { createClient } from '@/lib/supabase/server';
+import { createProjectAdmin, deleteProjectsAdmin } from '@/lib/storage';
 
 /**
- * Sample data for showcasing the dashboard.
+ * Sample project definitions.
  * Not loaded by default — users can opt in via "Load Sample Data".
  */
-const SAMPLE_PROJECTS: Project[] = [
+const SAMPLE_PROJECTS: Array<{
+  name: string;
+  path: string;
+  description: string;
+  lastScanAt: string;
+  scans: ScanReport[];
+}> = [
   {
-    id: 'demo-1',
     name: 'HealthCare Portal',
     path: '/projects/healthcare-portal',
     description: 'Patient management system with EHR integration',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-02-06T14:30:00Z',
     lastScanAt: '2024-02-06T14:30:00Z',
-    isSample: true,
     scans: [
       {
         id: 'scan-1',
-        projectId: 'demo-1',
+        projectId: '',
         timestamp: '2024-02-06T14:30:00Z',
         targetPath: '/projects/healthcare-portal',
         scannedFiles: 342,
@@ -36,7 +39,7 @@ const SAMPLE_PROJECTS: Project[] = [
       },
       {
         id: 'scan-2',
-        projectId: 'demo-1',
+        projectId: '',
         timestamp: '2024-02-05T09:15:00Z',
         targetPath: '/projects/healthcare-portal',
         scannedFiles: 340,
@@ -54,7 +57,7 @@ const SAMPLE_PROJECTS: Project[] = [
       },
       {
         id: 'scan-3',
-        projectId: 'demo-1',
+        projectId: '',
         timestamp: '2024-02-04T16:45:00Z',
         targetPath: '/projects/healthcare-portal',
         scannedFiles: 338,
@@ -73,18 +76,14 @@ const SAMPLE_PROJECTS: Project[] = [
     ],
   },
   {
-    id: 'demo-2',
     name: 'Telemedicine API',
     path: '/projects/telemedicine-api',
     description: 'RESTful API for virtual consultations and prescriptions',
-    createdAt: '2024-01-20T08:30:00Z',
-    updatedAt: '2024-02-06T11:20:00Z',
     lastScanAt: '2024-02-06T11:20:00Z',
-    isSample: true,
     scans: [
       {
         id: 'scan-4',
-        projectId: 'demo-2',
+        projectId: '',
         timestamp: '2024-02-06T11:20:00Z',
         targetPath: '/projects/telemedicine-api',
         scannedFiles: 156,
@@ -102,7 +101,7 @@ const SAMPLE_PROJECTS: Project[] = [
       },
       {
         id: 'scan-5',
-        projectId: 'demo-2',
+        projectId: '',
         timestamp: '2024-02-05T10:30:00Z',
         targetPath: '/projects/telemedicine-api',
         scannedFiles: 154,
@@ -121,18 +120,14 @@ const SAMPLE_PROJECTS: Project[] = [
     ],
   },
   {
-    id: 'demo-3',
     name: 'Insurance Claims System',
     path: '/projects/claims-system',
     description: 'Claims processing and adjudication platform',
-    createdAt: '2024-02-01T14:00:00Z',
-    updatedAt: '2024-02-06T15:45:00Z',
     lastScanAt: '2024-02-06T15:45:00Z',
-    isSample: true,
     scans: [
       {
         id: 'scan-6',
-        projectId: 'demo-3',
+        projectId: '',
         timestamp: '2024-02-06T15:45:00Z',
         targetPath: '/projects/claims-system',
         scannedFiles: 523,
@@ -155,18 +150,14 @@ const SAMPLE_PROJECTS: Project[] = [
     ],
   },
   {
-    id: 'demo-4',
     name: 'Mobile Health App',
     path: '/projects/mobile-health',
     description: 'iOS/Android app for patient health tracking',
-    createdAt: '2024-01-25T09:00:00Z',
-    updatedAt: '2024-02-06T13:10:00Z',
     lastScanAt: '2024-02-06T13:10:00Z',
-    isSample: true,
     scans: [
       {
         id: 'scan-7',
-        projectId: 'demo-4',
+        projectId: '',
         timestamp: '2024-02-06T13:10:00Z',
         targetPath: '/projects/mobile-health',
         scannedFiles: 287,
@@ -186,28 +177,45 @@ const SAMPLE_PROJECTS: Project[] = [
   },
 ];
 
-/** Load sample projects into storage. Returns the number added. */
+/** Load sample projects into the current user's account. */
 export async function loadSampleData(): Promise<number> {
-  const data = await loadData();
-  // Don't add duplicates
-  const existingIds = new Set(data.projects.map((p) => p.id));
-  const toAdd = SAMPLE_PROJECTS.filter((p) => !existingIds.has(p.id));
-  data.projects.push(...toAdd);
-  await saveData(data);
-  return toAdd.length;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  let count = 0;
+  for (const sp of SAMPLE_PROJECTS) {
+    await createProjectAdmin(user.id, {
+      name: sp.name,
+      path: sp.path,
+      description: sp.description,
+      isSample: true,
+      scans: sp.scans,
+      lastScanAt: sp.lastScanAt,
+    });
+    count++;
+  }
+  return count;
 }
 
-/** Remove all sample projects from storage. Returns the number removed. */
+/** Remove all sample projects for the current user. */
 export async function clearSampleData(): Promise<number> {
-  const data = await loadData();
-  const before = data.projects.length;
-  data.projects = data.projects.filter((p) => !p.isSample);
-  await saveData(data);
-  return before - data.projects.length;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  return deleteProjectsAdmin(user.id, { isSample: true });
 }
 
-/** Check if any sample projects are currently loaded. */
+/** Check if any sample projects are loaded for the current user. */
 export async function hasSampleData(): Promise<boolean> {
-  const data = await loadData();
-  return data.projects.some((p) => p.isSample);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('is_sample', true)
+    .limit(1);
+
+  if (error) return false;
+  return (data?.length ?? 0) > 0;
 }

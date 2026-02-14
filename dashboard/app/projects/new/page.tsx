@@ -29,11 +29,12 @@ export default function NewProjectPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create project');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to create project');
       }
 
-      const { project } = await response.json();
-      router.push(`/projects/${project.id}`);
+      router.push('/projects');
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');
       setLoading(false);
@@ -45,11 +46,11 @@ export default function NewProjectPage() {
       {/* Header */}
       <header className="bg-[#1E293B] border-b border-slate-800">
         <div className="px-8 py-6">
-          <Link href="/" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium mb-3 inline-flex items-center gap-2">
+          <Link href="/projects" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium mb-3 inline-flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Dashboard
+            Back to Projects
           </Link>
           <h1 className="text-2xl font-bold text-white mt-2">Create New Project</h1>
           <p className="text-slate-400 mt-1">Add a new project to monitor HIPAA compliance</p>
@@ -92,7 +93,7 @@ export default function NewProjectPage() {
 
             <div>
               <label htmlFor="path" className="block text-sm font-medium text-slate-300 mb-2">
-                Project Path *
+                Project Path or Repository URL *
               </label>
               <input
                 type="text"
@@ -100,9 +101,9 @@ export default function NewProjectPage() {
                 name="path"
                 required
                 className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono text-sm transition-colors"
-                placeholder="/path/to/project"
+                placeholder="https://github.com/org/repo or /path/to/project"
               />
-              <p className="text-xs text-slate-500 mt-1.5">Absolute path to the project directory to scan</p>
+              <p className="text-xs text-slate-500 mt-1.5">GitHub URL or local path to the project directory</p>
             </div>
 
             <div>
@@ -138,7 +139,7 @@ export default function NewProjectPage() {
                 )}
               </button>
               <Link
-                href="/"
+                href="/projects"
                 className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg text-center transition-colors"
               >
                 Cancel

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getProjects, createProject } from '@/lib/storage';
-import type { Project } from '@/types';
 
 export async function GET() {
   try {
@@ -18,10 +17,13 @@ export async function POST(request: Request) {
       name: body.name,
       path: body.path,
       description: body.description,
-      scans: [],
     });
     return NextResponse.json({ project }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.error('Failed to create project:', error);
     return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
   }
 }
