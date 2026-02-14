@@ -259,32 +259,40 @@ export async function getFindings(projectId: string, scanId?: string): Promise<F
 // --- Dashboard aggregations ---
 
 export async function getRecentScans(limit = 5): Promise<(Scan & { projectName: string })[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('scans')
-    .select('*, projects!inner(name)')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
-    ...rowToScan(row),
-    projectName: row.projects?.name ?? 'Unknown',
-  }));
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('scans')
+      .select('*, projects(name)')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      ...rowToScan(row),
+      projectName: row.projects?.name ?? 'Unknown',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function getCriticalFindings(limit = 5): Promise<(Finding & { projectName: string })[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('findings')
-    .select('*, projects!inner(name)')
-    .in('severity', ['critical', 'high'])
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
-    ...rowToFinding(row),
-    projectName: row.projects?.name ?? 'Unknown',
-  }));
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('findings')
+      .select('*, projects(name)')
+      .in('severity', ['critical', 'high'])
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      ...rowToFinding(row),
+      projectName: row.projects?.name ?? 'Unknown',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // --- Admin helpers for scan route (bypasses RLS) ---

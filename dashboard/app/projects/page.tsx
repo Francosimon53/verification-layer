@@ -145,7 +145,6 @@ export default async function ProjectsPage() {
                           href={project.repoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
                           className="text-slate-400 hover:text-emerald-400 transition-colors"
                           title="Open repository"
                         >
