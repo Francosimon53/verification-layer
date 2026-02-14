@@ -181,7 +181,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           severity: f.severity || 'info',
           title: f.title || 'Untitled finding',
           description: f.description,
-          filePath: f.file,
+          filePath: f.file?.replace(repoPath, '').replace(/^\//, '') || f.file,
           lineNumber: f.line,
           recommendation: f.recommendation,
           hipaaReference: f.hipaaReference,

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getProjects } from '@/lib/storage';
+import { getProjects, getRecentScans, getCriticalFindings } from '@/lib/storage';
 import { hasSampleData } from '@/lib/demo-data';
 import { CircularProgress } from '@/components/CircularProgress';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -8,9 +8,24 @@ import { LoadSampleDataButton, ClearSampleDataButton } from '@/components/Sample
 
 export const dynamic = 'force-dynamic';
 
+function cleanFilePath(p: string | null): string | null {
+  return p?.replace(/\/tmp\/vlayer-scan-[^/]+\/[^/]+\//, '') ?? null;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 90) return 'text-emerald-400';
+  if (score >= 70) return 'text-amber-400';
+  if (score > 0) return 'text-red-400';
+  return 'text-slate-400';
+}
+
 export default async function HomePage() {
-  const projects = await getProjects();
-  const showClearButton = await hasSampleData();
+  const [projects, recentScans, criticalFindings, showClearButton] = await Promise.all([
+    getProjects(),
+    getRecentScans(5),
+    getCriticalFindings(5),
+    hasSampleData(),
+  ]);
 
   // Calculate summary stats
   const scannedProjects = projects.filter((p) => p.lastScanAt);
@@ -22,10 +37,10 @@ export default async function HomePage() {
         )
       : 0;
 
-  // Get status distribution
-  const compliantCount = projects.filter(p => p.status === 'compliant').length;
-  const atRiskCount = projects.filter(p => p.status === 'at_risk').length;
-  const criticalCount = projects.filter(p => p.status === 'critical').length;
+  const totalCriticalIssues = projects.reduce(
+    (sum, p) => sum + (p.findingsSummary.critical ?? 0) + (p.findingsSummary.high ?? 0),
+    0
+  );
 
   return (
     <div className="min-h-screen bg-[#0F172A]">
@@ -64,7 +79,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-white">{avgScore}</span>
+                  <span className={`text-4xl font-bold ${scoreColor(avgScore)}`}>{avgScore}</span>
                   <span className="text-slate-400">/100</span>
                 </div>
                 <div className="mt-2">
@@ -89,7 +104,7 @@ export default async function HomePage() {
                 <div className="mt-2 text-sm text-slate-400">{scannedProjects.length} scanned</div>
               </div>
 
-              {/* Scanned Projects */}
+              {/* Total Findings */}
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-slate-400 text-sm font-medium">Total Findings</div>
@@ -105,32 +120,127 @@ export default async function HomePage() {
                 <div className="mt-2 text-sm text-slate-400">Across all projects</div>
               </div>
 
-              {/* Status Distribution */}
+              {/* Critical Issues */}
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-400 text-sm font-medium">Status</div>
-                  <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="text-slate-400 text-sm font-medium">Critical Issues</div>
+                  <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-emerald-400">Compliant</span>
-                    <span className="font-semibold text-white">{compliantCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-amber-400">At Risk</span>
-                    <span className="font-semibold text-white">{atRiskCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-red-400">Critical</span>
-                    <span className="font-semibold text-white">{criticalCount}</span>
-                  </div>
+                <div className={`text-4xl font-bold ${totalCriticalIssues > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {totalCriticalIssues}
                 </div>
+                <div className="mt-2 text-sm text-slate-400">Critical + High severity</div>
               </div>
             </div>
+
+            {/* Compliance Scores + Recent Scans + Critical Findings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Compliance Scores Bar Chart */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Compliance Scores</h3>
+                {scannedProjects.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-8 text-center">No scanned projects yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {scannedProjects.slice(0, 8).map((project) => {
+                      const score = project.complianceScore;
+                      const barColor =
+                        score >= 90 ? 'bg-emerald-500' : score >= 70 ? 'bg-amber-500' : 'bg-red-500';
+                      return (
+                        <div key={project.id}>
+                          <div className="flex items-center justify-between mb-1">
+                            <Link href={`/projects/${project.id}`} className="text-sm text-slate-300 hover:text-emerald-400 transition-colors truncate max-w-[60%]">
+                              {project.name}
+                            </Link>
+                            <span className={`text-sm font-semibold ${scoreColor(score)}`}>{score}</span>
+                          </div>
+                          <div className="w-full bg-slate-700/50 rounded-full h-2">
+                            <div
+                              className={`${barColor} h-2 rounded-full transition-all duration-500`}
+                              style={{ width: `${score}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Scans */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Recent Scans</h3>
+                {recentScans.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-8 text-center">No scans yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentScans.map((scan) => {
+                      const score = scan.score ?? 0;
+                      return (
+                        <div key={scan.id} className="flex items-center justify-between bg-slate-800/30 border border-slate-700 rounded-lg p-3 hover:bg-slate-800/50 transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className={`text-xl font-bold ${scoreColor(score)} shrink-0`}>{score}</span>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-white truncate">{scan.projectName}</div>
+                              <div className="text-xs text-slate-400">
+                                {new Date(scan.createdAt).toLocaleDateString()} &middot; {scan.totalFindings} findings
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-slate-500 shrink-0">{scan.filesScanned} files</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Critical Findings */}
+            {criticalFindings.length > 0 && (
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl overflow-hidden mb-8">
+                <div className="px-6 py-4 border-b border-slate-700">
+                  <h3 className="text-lg font-semibold text-white">Top Critical Findings</h3>
+                  <p className="text-sm text-slate-400 mt-1">Most urgent issues across all projects</p>
+                </div>
+                <div className="p-6 space-y-3">
+                  {criticalFindings.map((finding) => (
+                    <div
+                      key={finding.id}
+                      className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-emerald-500/30 transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${
+                                finding.severity === 'critical' ? 'bg-red-500/20 border border-red-500/30' : 'bg-orange-500/20 border border-orange-500/30'
+                              }`}
+                            >
+                              {finding.severity.toUpperCase()}
+                            </span>
+                            <span className="text-xs text-slate-400">{finding.projectName}</span>
+                          </div>
+                          <h4 className="font-medium text-white text-sm">{finding.title}</h4>
+                          {finding.filePath && (
+                            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              {cleanFilePath(finding.filePath)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
