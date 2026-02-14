@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { execSync } from 'child_process';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, createWriteStream, readdirSync } from 'fs';
+import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
 import path from 'path';
 import os from 'os';
+import { x as tarExtract } from 'tar';
 import {
   getProject,
   setProjectStatus,
@@ -12,6 +15,48 @@ import {
 } from '@/lib/storage';
 
 export const maxDuration = 60;
+
+/** Parse owner/repo from a GitHub URL */
+function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+  const match = url.match(/github\.com\/([^/]+)\/([^/.\s]+)/);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2] };
+}
+
+/** Download and extract a GitHub repo tarball to destDir. Tries main, then master. */
+async function downloadRepo(owner: string, repo: string, destDir: string): Promise<string> {
+  const branches = ['main', 'master'];
+
+  for (const branch of branches) {
+    const url = `https://api.github.com/repos/${owner}/${repo}/tarball/${branch}`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'vlayer-dashboard' },
+      redirect: 'follow',
+    });
+
+    if (res.status === 404) continue;
+    if (!res.ok) continue;
+
+    // Stream the tarball to a temp file, then extract
+    const tarPath = path.join(destDir, 'repo.tar.gz');
+    const body = res.body;
+    if (!body) throw new Error('Empty response body');
+
+    const writeStream = createWriteStream(tarPath);
+    await pipeline(Readable.fromWeb(body as any), writeStream);
+
+    // Extract tarball — GitHub tarballs have a top-level directory like owner-repo-sha/
+    await tarExtract({ file: tarPath, cwd: destDir });
+
+    // Find the extracted directory (first dir entry)
+    const entries = readdirSync(destDir).filter(e => e !== 'repo.tar.gz');
+    if (entries.length === 0) throw new Error('Tarball extraction produced no files');
+
+    return path.join(destDir, entries[0]);
+  }
+
+  throw new Error(`Could not download repository: ${owner}/${repo} (tried main and master branches)`);
+}
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,24 +72,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No repository URL configured' }, { status: 400 });
     }
 
+    const ghRepo = parseGitHubUrl(project.repoUrl);
+    if (!ghRepo) {
+      return NextResponse.json({ error: 'Invalid GitHub URL' }, { status: 400 });
+    }
+
     // 2. Set status to scanning
     await setProjectStatus(id, 'scanning');
 
-    // 3. Clone repo to temp dir
+    // 3. Download repo tarball to temp dir
     tmpDir = mkdtempSync(path.join(os.tmpdir(), 'vlayer-scan-'));
-    const clonePath = path.join(tmpDir, 'repo');
-
-    execSync(`git clone --depth 1 ${project.repoUrl} ${clonePath}`, {
-      timeout: 30000,
-      stdio: 'pipe',
-    });
+    const repoPath = await downloadRepo(ghRepo.owner, ghRepo.repo, tmpDir);
 
     // 4. Run vlayer scan
     const vlayerBin = path.join(process.cwd(), 'node_modules', '.bin', 'vlayer');
 
     let scanJson: any;
     try {
-      const scanOutput = execSync(`${vlayerBin} scan ${clonePath} --format json`, {
+      const scanOutput = execSync(`${vlayerBin} scan ${repoPath} --format json`, {
         timeout: 30000,
         stdio: 'pipe',
         encoding: 'utf-8',
@@ -62,7 +107,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 5. Run vlayer score
     let scoreJson: any;
     try {
-      const scoreOutput = execSync(`${vlayerBin} score ${clonePath} --format json`, {
+      const scoreOutput = execSync(`${vlayerBin} score ${repoPath} --format json`, {
         timeout: 15000,
         stdio: 'pipe',
         encoding: 'utf-8',
