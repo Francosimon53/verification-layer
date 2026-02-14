@@ -1,17 +1,15 @@
-import type { ComplianceScore } from '@/types';
+import type { FindingsSummary } from '@/types';
 
 interface FindingsBreakdownProps {
-  score: ComplianceScore;
+  summary: FindingsSummary;
 }
 
-export function FindingsBreakdown({ score }: FindingsBreakdownProps) {
-  const { breakdown } = score;
-
+export function FindingsBreakdown({ summary }: FindingsBreakdownProps) {
   const items = [
-    { label: 'Critical', value: breakdown.critical, color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
-    { label: 'High', value: breakdown.high, color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
-    { label: 'Medium', value: breakdown.medium, color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
-    { label: 'Low', value: breakdown.low, color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+    { label: 'Critical', value: summary.critical ?? 0, color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
+    { label: 'High', value: summary.high ?? 0, color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
+    { label: 'Medium', value: summary.medium ?? 0, color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
+    { label: 'Low', value: summary.low ?? 0, color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
   ];
 
   return (
@@ -25,19 +23,6 @@ export function FindingsBreakdown({ score }: FindingsBreakdownProps) {
           </div>
         ))}
       </div>
-
-      {breakdown.acknowledged > 0 && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex items-center gap-3 text-sm text-blue-300">
-          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>{breakdown.acknowledged} finding(s) acknowledged (25% penalty reduction)</span>
-        </div>
-      )}
     </div>
   );
 }

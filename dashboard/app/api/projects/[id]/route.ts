@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProject, updateProject, deleteProject } from '@/lib/storage';
+import { getProject, deleteProject } from '@/lib/storage';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,20 +11,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ project });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to load project' }, { status: 500 });
-  }
-}
-
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const project = await updateProject(id, body);
-    if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-    return NextResponse.json({ project });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
   }
 }
 

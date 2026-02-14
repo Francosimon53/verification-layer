@@ -13,23 +13,19 @@ export default async function HomePage() {
   const showClearButton = await hasSampleData();
 
   // Calculate summary stats
-  const totalScans = projects.reduce((sum, p) => sum + p.scans.length, 0);
-  const projectsWithScans = projects.filter((p) => p.scans.length > 0);
+  const scannedProjects = projects.filter((p) => p.lastScanAt);
   const avgScore =
-    projectsWithScans.length > 0
+    scannedProjects.length > 0
       ? Math.round(
-          projectsWithScans.reduce((sum, p) => sum + (p.scans[0]?.complianceScore.score || 0), 0) /
-            projectsWithScans.length
+          scannedProjects.reduce((sum, p) => sum + p.complianceScore, 0) /
+            scannedProjects.length
         )
       : 0;
 
   // Get status distribution
-  const compliantCount = projectsWithScans.filter(p => (p.scans[0]?.complianceScore.score || 0) >= 80).length;
-  const atRiskCount = projectsWithScans.filter(p => {
-    const score = p.scans[0]?.complianceScore.score || 0;
-    return score >= 60 && score < 80;
-  }).length;
-  const criticalCount = projectsWithScans.filter(p => (p.scans[0]?.complianceScore.score || 0) < 60).length;
+  const compliantCount = projects.filter(p => p.status === 'compliant').length;
+  const atRiskCount = projects.filter(p => p.status === 'at_risk').length;
+  const criticalCount = projects.filter(p => p.status === 'critical').length;
 
   return (
     <div className="min-h-screen bg-[#0F172A]">
@@ -73,7 +69,7 @@ export default async function HomePage() {
                 </div>
                 <div className="mt-2">
                   <StatusBadge
-                    status={avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'at-risk' : 'critical'}
+                    status={avgScore >= 90 ? 'compliant' : avgScore >= 70 ? 'at_risk' : avgScore > 0 ? 'critical' : 'pending'}
                     size="sm"
                   />
                 </div>
@@ -90,21 +86,23 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className="text-4xl font-bold text-white">{projects.length}</div>
-                <div className="mt-2 text-sm text-slate-400">{projectsWithScans.length} with scans</div>
+                <div className="mt-2 text-sm text-slate-400">{scannedProjects.length} scanned</div>
               </div>
 
-              {/* Total Scans */}
+              {/* Scanned Projects */}
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-400 text-sm font-medium">Total Scans</div>
+                  <div className="text-slate-400 text-sm font-medium">Total Findings</div>
                   <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                 </div>
-                <div className="text-4xl font-bold text-white">{totalScans}</div>
-                <div className="mt-2 text-sm text-slate-400">Last 30 days</div>
+                <div className="text-4xl font-bold text-white">
+                  {projects.reduce((sum, p) => sum + (p.findingsSummary.total ?? 0), 0)}
+                </div>
+                <div className="mt-2 text-sm text-slate-400">Across all projects</div>
               </div>
 
               {/* Status Distribution */}
@@ -179,94 +177,84 @@ export default async function HomePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {projects.map((project) => {
-                    const lastScan = project.scans[0];
-                    const score = lastScan?.complianceScore.score || 0;
-                    const status = score >= 80 ? 'compliant' : score >= 60 ? 'at-risk' : 'critical';
-
-                    return (
-                      <tr key={project.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Link href={`/projects/${project.id}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
-                                {project.name}
-                              </Link>
-                              {project.isSample && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-slate-700 text-slate-400 rounded border border-slate-600">
-                                  Sample
-                                </span>
-                              )}
-                            </div>
-                            {project.description && (
-                              <div className="text-sm text-slate-400 mt-1">{project.description}</div>
+                  {projects.map((project) => (
+                    <tr key={project.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/projects/${project.id}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
+                              {project.name}
+                            </Link>
+                            {project.isSample && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-slate-700 text-slate-400 rounded border border-slate-600">
+                                Sample
+                              </span>
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {lastScan ? (
-                            <StatusBadge status={status} />
-                          ) : (
-                            <span className="text-sm text-slate-500">No scans</span>
+                          {project.description && (
+                            <div className="text-sm text-slate-400 mt-1">{project.description}</div>
                           )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {lastScan ? (
-                            <div className="flex items-center gap-3">
-                              <CircularProgress score={score} size={50} strokeWidth={6} showLabel={false} />
-                              <div>
-                                <div className="text-lg font-bold text-white">{score}</div>
-                                <div className="text-xs text-slate-400">Grade {lastScan.complianceScore.grade}</div>
-                              </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={project.status} />
+                      </td>
+                      <td className="px-6 py-4">
+                        {project.complianceScore > 0 ? (
+                          <div className="flex items-center gap-3">
+                            <CircularProgress score={project.complianceScore} size={50} strokeWidth={6} showLabel={false} />
+                            <div>
+                              <div className="text-lg font-bold text-white">{project.complianceScore}</div>
+                              <div className="text-xs text-slate-400">Grade {project.grade}</div>
                             </div>
-                          ) : (
-                            <span className="text-slate-500">&mdash;</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {lastScan ? (
-                            <div className="flex items-center gap-3">
-                              {lastScan.summary.critical > 0 && (
-                                <span className="px-2 py-1 bg-red-500/10 text-red-400 text-xs font-semibold rounded border border-red-500/20">
-                                  {lastScan.summary.critical} Critical
-                                </span>
-                              )}
-                              {lastScan.summary.high > 0 && (
-                                <span className="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs font-semibold rounded border border-orange-500/20">
-                                  {lastScan.summary.high} High
-                                </span>
-                              )}
-                              {lastScan.summary.critical === 0 && lastScan.summary.high === 0 && (
-                                <span className="text-sm text-emerald-400">No critical issues</span>
-                              )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">&mdash;</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {project.findingsSummary.total ? (
+                          <div className="flex items-center gap-3">
+                            {(project.findingsSummary.critical ?? 0) > 0 && (
+                              <span className="px-2 py-1 bg-red-500/10 text-red-400 text-xs font-semibold rounded border border-red-500/20">
+                                {project.findingsSummary.critical} Critical
+                              </span>
+                            )}
+                            {(project.findingsSummary.high ?? 0) > 0 && (
+                              <span className="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs font-semibold rounded border border-orange-500/20">
+                                {project.findingsSummary.high} High
+                              </span>
+                            )}
+                            {(project.findingsSummary.critical ?? 0) === 0 && (project.findingsSummary.high ?? 0) === 0 && (
+                              <span className="text-sm text-emerald-400">No critical issues</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">&mdash;</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {project.lastScanAt ? (
+                          <div className="text-sm text-slate-300">
+                            {new Date(project.lastScanAt).toLocaleDateString()}
+                            <div className="text-xs text-slate-500">
+                              {new Date(project.lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                          ) : (
-                            <span className="text-slate-500">&mdash;</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {project.lastScanAt ? (
-                            <div className="text-sm text-slate-300">
-                              {new Date(project.lastScanAt).toLocaleDateString()}
-                              <div className="text-xs text-slate-500">
-                                {new Date(project.lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-500">Never</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors"
-                          >
-                            View Details &rarr;
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">Never</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          href={`/projects/${project.id}`}
+                          className="text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors"
+                        >
+                          View Details &rarr;
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

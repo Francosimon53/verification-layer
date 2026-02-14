@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const project = await createProject({
       name: body.name,
-      path: body.path,
+      repoUrl: body.repo_url || body.repoUrl,
       description: body.description,
     });
     return NextResponse.json({ project }, { status: 201 });

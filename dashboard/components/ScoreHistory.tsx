@@ -1,9 +1,9 @@
 'use client';
 
-import type { ScanReport } from '@/types';
+import type { Scan } from '@/types';
 
 interface ScoreHistoryProps {
-  scans: ScanReport[];
+  scans: Scan[];
 }
 
 export function ScoreHistory({ scans }: ScoreHistoryProps) {
@@ -19,7 +19,6 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
   // Get last 10 scans
   const recentScans = scans.slice(0, 10).reverse();
 
-  // Calculate max score for scaling
   const maxScore = 100;
   const minScore = 0;
 
@@ -27,11 +26,11 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-white">Compliance Score History</h3>
 
-      {/* Simple line chart */}
+      {/* Simple bar chart */}
       <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-6">
         <div className="h-64 flex items-end justify-between gap-2">
-          {recentScans.map((scan, index) => {
-            const score = scan.complianceScore.score;
+          {recentScans.map((scan) => {
+            const score = scan.score ?? 0;
             const height = ((score - minScore) / (maxScore - minScore)) * 100;
             let color = 'bg-red-500';
             let glowColor = 'shadow-red-500/50';
@@ -59,7 +58,7 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
                 <div className="text-xs text-slate-400 text-center">
                   <div className="font-semibold text-white">{score}</div>
                   <div className="text-slate-500">
-                    {new Date(scan.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {new Date(scan.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
               </div>
@@ -72,39 +71,42 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
       <div className="space-y-2">
         <h4 className="text-sm font-medium text-slate-300">Recent Scans</h4>
         <div className="space-y-2">
-          {scans.slice(0, 5).map((scan) => (
-            <div key={scan.id} className="bg-slate-800/30 border border-slate-700 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div
-                  className={`text-3xl font-bold ${
-                    scan.complianceScore.score >= 90
-                      ? 'text-emerald-500'
-                      : scan.complianceScore.score >= 80
-                        ? 'text-green-500'
-                        : scan.complianceScore.score >= 70
-                          ? 'text-amber-500'
-                          : scan.complianceScore.score >= 60
-                            ? 'text-orange-500'
-                            : 'text-red-500'
-                  }`}
-                >
-                  {scan.complianceScore.score}
+          {scans.slice(0, 5).map((scan) => {
+            const score = scan.score ?? 0;
+            return (
+              <div key={scan.id} className="bg-slate-800/30 border border-slate-700 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`text-3xl font-bold ${
+                      score >= 90
+                        ? 'text-emerald-500'
+                        : score >= 80
+                          ? 'text-green-500'
+                          : score >= 70
+                            ? 'text-amber-500'
+                            : score >= 60
+                              ? 'text-orange-500'
+                              : 'text-red-500'
+                    }`}
+                  >
+                    {score}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-white">
+                      Grade {scan.grade ?? 'N/A'}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {new Date(scan.createdAt).toLocaleString()} · {scan.totalFindings} findings
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    Grade {scan.complianceScore.grade} - <span className="capitalize">{scan.complianceScore.status}</span>
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {new Date(scan.timestamp).toLocaleString()} · {scan.summary.total} findings
-                  </div>
+                <div className="text-right">
+                  <div className="text-sm text-slate-300">{scan.filesScanned} files</div>
+                  <div className="text-xs text-slate-500">{scan.scanDurationMs}ms</div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-slate-300">{scan.scannedFiles} files</div>
-                <div className="text-xs text-slate-500">{scan.scanDuration}ms</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
