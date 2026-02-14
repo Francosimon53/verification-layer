@@ -68,6 +68,7 @@ export interface Project {
   updatedAt: string;
   lastScanAt?: string;
   scans: ScanReport[];
+  isSample?: boolean;
 }
 
 export interface DashboardData {

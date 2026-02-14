@@ -1,18 +1,16 @@
 import Link from 'next/link';
 import { getProjects } from '@/lib/storage';
-import { getDemoProjects } from '@/lib/demo-data';
+import { hasSampleData } from '@/lib/demo-data';
 import { CircularProgress } from '@/components/CircularProgress';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SuccessToast } from '@/components/SuccessToast';
+import { LoadSampleDataButton, ClearSampleDataButton } from '@/components/SampleDataButtons';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const realProjects = await getProjects();
-  const demoProjects = getDemoProjects();
-
-  // Combine real and demo projects
-  const projects = [...realProjects, ...demoProjects];
+  const projects = await getProjects();
+  const showClearButton = await hasSampleData();
 
   // Calculate summary stats
   const totalScans = projects.reduce((sum, p) => sum + p.scans.length, 0);
@@ -55,90 +53,97 @@ export default async function HomePage() {
       </header>
 
       <div className="px-8 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Average Score Card */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-slate-400 text-sm font-medium">Average Score</div>
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+        {projects.length > 0 && (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {/* Average Score Card */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-400 text-sm font-medium">Average Score</div>
+                  <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-white">{avgScore}</span>
+                  <span className="text-slate-400">/100</span>
+                </div>
+                <div className="mt-2">
+                  <StatusBadge
+                    status={avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'at-risk' : 'critical'}
+                    size="sm"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-white">{avgScore}</span>
-              <span className="text-slate-400">/100</span>
-            </div>
-            <div className="mt-2">
-              <StatusBadge
-                status={avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'at-risk' : 'critical'}
-                size="sm"
-              />
-            </div>
-          </div>
 
-          {/* Total Projects */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-slate-400 text-sm font-medium">Total Projects</div>
-              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
+              {/* Total Projects */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-400 text-sm font-medium">Total Projects</div>
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="text-4xl font-bold text-white">{projects.length}</div>
+                <div className="mt-2 text-sm text-slate-400">{projectsWithScans.length} with scans</div>
               </div>
-            </div>
-            <div className="text-4xl font-bold text-white">{projects.length}</div>
-            <div className="mt-2 text-sm text-slate-400">{projectsWithScans.length} with scans</div>
-          </div>
 
-          {/* Total Scans */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-slate-400 text-sm font-medium">Total Scans</div>
-              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+              {/* Total Scans */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-400 text-sm font-medium">Total Scans</div>
+                  <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="text-4xl font-bold text-white">{totalScans}</div>
+                <div className="mt-2 text-sm text-slate-400">Last 30 days</div>
               </div>
-            </div>
-            <div className="text-4xl font-bold text-white">{totalScans}</div>
-            <div className="mt-2 text-sm text-slate-400">Last 30 days</div>
-          </div>
 
-          {/* Status Distribution */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-slate-400 text-sm font-medium">Status</div>
-              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+              {/* Status Distribution */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-400 text-sm font-medium">Status</div>
+                  <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-emerald-400">Compliant</span>
+                    <span className="font-semibold text-white">{compliantCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-amber-400">At Risk</span>
+                    <span className="font-semibold text-white">{atRiskCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-red-400">Critical</span>
+                    <span className="font-semibold text-white">{criticalCount}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-emerald-400">Compliant</span>
-                <span className="font-semibold text-white">{compliantCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-amber-400">At Risk</span>
-                <span className="font-semibold text-white">{atRiskCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-red-400">Critical</span>
-                <span className="font-semibold text-white">{criticalCount}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Projects Table */}
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-700">
-            <h2 className="text-lg font-semibold text-white">Projects</h2>
-            <p className="text-sm text-slate-400 mt-1">Monitor compliance status across all projects</p>
+          <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Projects</h2>
+              <p className="text-sm text-slate-400 mt-1">Monitor compliance status across all projects</p>
+            </div>
+            {showClearButton && <ClearSampleDataButton />}
           </div>
 
           {projects.length === 0 ? (
@@ -150,12 +155,15 @@ export default async function HomePage() {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
               <p className="text-slate-400 mb-6">Get started by creating your first project.</p>
-              <Link
-                href="/projects/new"
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-emerald-500/20"
-              >
-                Create Project
-              </Link>
+              <div className="flex items-center justify-center gap-4">
+                <Link
+                  href="/projects/new"
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  Create Project
+                </Link>
+                <LoadSampleDataButton />
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -180,9 +188,16 @@ export default async function HomePage() {
                       <tr key={project.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="px-6 py-4">
                           <div>
-                            <Link href={`/projects/${project.id}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
-                              {project.name}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link href={`/projects/${project.id}`} className="font-medium text-white hover:text-emerald-400 transition-colors">
+                                {project.name}
+                              </Link>
+                              {project.isSample && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-slate-700 text-slate-400 rounded border border-slate-600">
+                                  Sample
+                                </span>
+                              )}
+                            </div>
                             {project.description && (
                               <div className="text-sm text-slate-400 mt-1">{project.description}</div>
                             )}
@@ -205,7 +220,7 @@ export default async function HomePage() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-slate-500">—</span>
+                            <span className="text-slate-500">&mdash;</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -222,11 +237,11 @@ export default async function HomePage() {
                                 </span>
                               )}
                               {lastScan.summary.critical === 0 && lastScan.summary.high === 0 && (
-                                <span className="text-sm text-emerald-400">✓ No critical issues</span>
+                                <span className="text-sm text-emerald-400">No critical issues</span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-slate-500">—</span>
+                            <span className="text-slate-500">&mdash;</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -246,7 +261,7 @@ export default async function HomePage() {
                             href={`/projects/${project.id}`}
                             className="text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors"
                           >
-                            View Details →
+                            View Details &rarr;
                           </Link>
                         </td>
                       </tr>

@@ -1,9 +1,11 @@
 import type { Project } from '@/types';
+import { loadData, saveData } from '@/lib/storage';
 
 /**
- * Demo data for showcasing the dashboard
+ * Sample data for showcasing the dashboard.
+ * Not loaded by default — users can opt in via "Load Sample Data".
  */
-export const DEMO_PROJECTS: Project[] = [
+const SAMPLE_PROJECTS: Project[] = [
   {
     id: 'demo-1',
     name: 'HealthCare Portal',
@@ -12,6 +14,7 @@ export const DEMO_PROJECTS: Project[] = [
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-02-06T14:30:00Z',
     lastScanAt: '2024-02-06T14:30:00Z',
+    isSample: true,
     scans: [
       {
         id: 'scan-1',
@@ -77,6 +80,7 @@ export const DEMO_PROJECTS: Project[] = [
     createdAt: '2024-01-20T08:30:00Z',
     updatedAt: '2024-02-06T11:20:00Z',
     lastScanAt: '2024-02-06T11:20:00Z',
+    isSample: true,
     scans: [
       {
         id: 'scan-4',
@@ -124,6 +128,7 @@ export const DEMO_PROJECTS: Project[] = [
     createdAt: '2024-02-01T14:00:00Z',
     updatedAt: '2024-02-06T15:45:00Z',
     lastScanAt: '2024-02-06T15:45:00Z',
+    isSample: true,
     scans: [
       {
         id: 'scan-6',
@@ -157,6 +162,7 @@ export const DEMO_PROJECTS: Project[] = [
     createdAt: '2024-01-25T09:00:00Z',
     updatedAt: '2024-02-06T13:10:00Z',
     lastScanAt: '2024-02-06T13:10:00Z',
+    isSample: true,
     scans: [
       {
         id: 'scan-7',
@@ -180,10 +186,28 @@ export const DEMO_PROJECTS: Project[] = [
   },
 ];
 
-export function getDemoProjects(): Project[] {
-  return DEMO_PROJECTS;
+/** Load sample projects into storage. Returns the number added. */
+export async function loadSampleData(): Promise<number> {
+  const data = await loadData();
+  // Don't add duplicates
+  const existingIds = new Set(data.projects.map((p) => p.id));
+  const toAdd = SAMPLE_PROJECTS.filter((p) => !existingIds.has(p.id));
+  data.projects.push(...toAdd);
+  await saveData(data);
+  return toAdd.length;
 }
 
-export function hasDemoData(): boolean {
-  return true; // Always show demo data for now
+/** Remove all sample projects from storage. Returns the number removed. */
+export async function clearSampleData(): Promise<number> {
+  const data = await loadData();
+  const before = data.projects.length;
+  data.projects = data.projects.filter((p) => !p.isSample);
+  await saveData(data);
+  return before - data.projects.length;
+}
+
+/** Check if any sample projects are currently loaded. */
+export async function hasSampleData(): Promise<boolean> {
+  const data = await loadData();
+  return data.projects.some((p) => p.isSample);
 }
