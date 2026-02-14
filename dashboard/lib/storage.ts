@@ -256,6 +256,125 @@ export async function getFindings(projectId: string, scanId?: string): Promise<F
   return (data ?? []).map(rowToFinding);
 }
 
+// --- Admin helpers for scan route (bypasses RLS) ---
+
+export async function getProjectAdmin(id: string): Promise<Project | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return rowToProject(data);
+}
+
+export async function setProjectStatusAdmin(projectId: string, status: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
+  if (error) throw error;
+}
+
+export async function updateProjectAfterScanAdmin(
+  projectId: string,
+  update: {
+    complianceScore: number;
+    grade: string;
+    status: string;
+    findingsSummary: FindingsSummary;
+    stackInfo: StackInfo;
+    lastScanAt: string;
+  }
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('projects')
+    .update({
+      compliance_score: update.complianceScore,
+      grade: update.grade,
+      status: update.status,
+      findings_summary: update.findingsSummary,
+      stack_info: update.stackInfo,
+      last_scan_at: update.lastScanAt,
+    })
+    .eq('id', projectId);
+  if (error) throw error;
+}
+
+export async function createScanAdmin(input: {
+  projectId: string;
+  score: number;
+  grade: string;
+  totalFindings: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  filesScanned: number;
+  scanDurationMs: number;
+  reportJson: unknown;
+}): Promise<Scan> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('scans')
+    .insert({
+      project_id: input.projectId,
+      score: input.score,
+      grade: input.grade,
+      total_findings: input.totalFindings,
+      critical_count: input.criticalCount,
+      high_count: input.highCount,
+      medium_count: input.mediumCount,
+      low_count: input.lowCount,
+      files_scanned: input.filesScanned,
+      scan_duration_ms: input.scanDurationMs,
+      report_json: input.reportJson,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToScan(data);
+}
+
+export async function createFindingsAdmin(
+  findings: Array<{
+    projectId: string;
+    scanId: string;
+    findingId: string;
+    category: string;
+    severity: string;
+    title: string;
+    description?: string;
+    filePath?: string;
+    lineNumber?: number;
+    recommendation?: string;
+    hipaaReference?: string;
+    confidence?: string;
+    context?: unknown;
+  }>
+): Promise<void> {
+  if (findings.length === 0) return;
+  const supabase = createAdminClient();
+  const rows = findings.map((f) => ({
+    project_id: f.projectId,
+    scan_id: f.scanId,
+    finding_id: f.findingId,
+    category: f.category,
+    severity: f.severity,
+    title: f.title,
+    description: f.description || null,
+    file_path: f.filePath || null,
+    line_number: f.lineNumber || null,
+    recommendation: f.recommendation || null,
+    hipaa_reference: f.hipaaReference || null,
+    confidence: f.confidence || null,
+    context: f.context || null,
+  }));
+  const { error } = await supabase.from('findings').insert(rows);
+  if (error) throw error;
+}
+
 // --- Admin (for sample data) ---
 
 export async function createProjectAdmin(

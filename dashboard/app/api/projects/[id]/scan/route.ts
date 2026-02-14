@@ -6,11 +6,11 @@ import path from 'path';
 import os from 'os';
 import { x as tarExtract } from 'tar';
 import {
-  getProject,
-  setProjectStatus,
-  updateProjectAfterScan,
-  createScan,
-  createFindings,
+  getProjectAdmin,
+  setProjectStatusAdmin,
+  updateProjectAfterScanAdmin,
+  createScanAdmin,
+  createFindingsAdmin,
 } from '@/lib/storage';
 
 export const maxDuration = 60;
@@ -102,7 +102,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 1. Get project
     currentStep = 'get-project';
     console.log(`[scan] Step 1: Getting project ${id}...`);
-    const project = await getProject(id);
+    const project = await getProjectAdmin(id);
     if (!project) {
       return NextResponse.json({ error: 'Project not found', step: currentStep }, { status: 404 });
     }
@@ -119,7 +119,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 2. Set status to scanning
     currentStep = 'set-status';
     console.log('[scan] Step 2: Setting status to scanning...');
-    await setProjectStatus(id, 'scanning');
+    await setProjectStatusAdmin(id, 'scanning');
 
     // 3. Download repo
     currentStep = 'download';
@@ -153,7 +153,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 7. Save scan record
     currentStep = 'save-scan';
     console.log('[scan] Step 6: Saving scan record to Supabase...');
-    const dbScan = await createScan({
+    const dbScan = await createScanAdmin({
       projectId: id,
       score,
       grade,
@@ -172,7 +172,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     currentStep = 'save-findings';
     console.log(`[scan] Step 7: Saving ${findings.length} findings...`);
     if (findings.length > 0) {
-      await createFindings(
+      await createFindingsAdmin(
         findings.map((f: any) => ({
           projectId: id,
           scanId: dbScan.id,
@@ -195,7 +195,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 9. Update project
     currentStep = 'update-project';
     console.log('[scan] Step 8: Updating project...');
-    await updateProjectAfterScan(id, {
+    await updateProjectAfterScanAdmin(id, {
       complianceScore: score,
       grade,
       status,
@@ -219,7 +219,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (error: any) {
     console.error(`[scan] FAILED at step "${currentStep}":`, error);
     // Reset status on failure
-    try { await setProjectStatus(id, 'pending'); } catch {}
+    try { await setProjectStatusAdmin(id, 'pending'); } catch {}
     return NextResponse.json(
       {
         error: error.message || 'Scan failed',
