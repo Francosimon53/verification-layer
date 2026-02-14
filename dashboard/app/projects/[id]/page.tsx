@@ -6,6 +6,7 @@ import { FindingsBreakdown } from '@/components/FindingsBreakdown';
 import { ScoreHistory } from '@/components/ScoreHistory';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RescanButton } from '@/components/RescanButton';
+import { DeleteProjectButton } from '@/components/DeleteProjectButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,9 +66,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 )}
               </div>
             </div>
-            {project.repoUrl && (
-              <RescanButton projectId={project.id} />
-            )}
+            <div className="flex items-center gap-2">
+              {project.repoUrl && (
+                <RescanButton projectId={project.id} />
+              )}
+              <DeleteProjectButton projectId={project.id} projectName={project.name} />
+            </div>
           </div>
         </div>
       </header>
