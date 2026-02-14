@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { execSync } from 'child_process';
 import { mkdtempSync, rmSync, createWriteStream, readdirSync } from 'fs';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import path from 'path';
 import os from 'os';
 import { x as tarExtract } from 'tar';
+import { scan as vlayerScan, calculateComplianceScore } from 'verification-layer';
 import {
   getProject,
   setProjectStatus,
@@ -84,72 +84,41 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     tmpDir = mkdtempSync(path.join(os.tmpdir(), 'vlayer-scan-'));
     const repoPath = await downloadRepo(ghRepo.owner, ghRepo.repo, tmpDir);
 
-    // 4. Run vlayer scan
-    const vlayerBin = path.join(process.cwd(), 'node_modules', '.bin', 'vlayer');
+    // 4. Run vlayer scan (programmatic API — no CLI binary needed)
+    const scanResult = await vlayerScan({ path: repoPath });
 
-    let scanJson: any;
-    try {
-      const scanOutput = execSync(`${vlayerBin} scan ${repoPath} --format json`, {
-        timeout: 30000,
-        stdio: 'pipe',
-        encoding: 'utf-8',
-      });
-      scanJson = JSON.parse(scanOutput);
-    } catch (e: any) {
-      // vlayer may write to stderr but still produce valid JSON on stdout
-      if (e.stdout) {
-        scanJson = JSON.parse(e.stdout);
-      } else {
-        throw new Error('vlayer scan failed: ' + (e.message || 'unknown error'));
-      }
-    }
-
-    // 5. Run vlayer score
-    let scoreJson: any;
-    try {
-      const scoreOutput = execSync(`${vlayerBin} score ${repoPath} --format json`, {
-        timeout: 15000,
-        stdio: 'pipe',
-        encoding: 'utf-8',
-      });
-      scoreJson = JSON.parse(scoreOutput);
-    } catch (e: any) {
-      if (e.stdout) {
-        scoreJson = JSON.parse(e.stdout);
-      } else {
-        scoreJson = { score: 0, grade: 'F', status: 'CRITICAL' };
-      }
-    }
+    // 5. Calculate compliance score
+    const complianceScore = calculateComplianceScore(scanResult);
 
     // 6. Parse results
-    const score = scoreJson.score ?? 0;
-    const grade = scoreJson.grade ?? 'F';
+    const score = complianceScore.score;
+    const grade = complianceScore.grade;
     const status = score >= 90 ? 'compliant' : score >= 70 ? 'at_risk' : 'critical';
-    const summary = scanJson.summary ?? {};
-    const findings = scanJson.findings ?? [];
-    const timestamp = scanJson.timestamp ?? new Date().toISOString();
+    const breakdown = complianceScore.breakdown;
+    const findings = scanResult.findings ?? [];
+    const timestamp = new Date().toISOString();
 
     // 7. Save scan record
-    const scan = await createScan({
+    const dbScan = await createScan({
       projectId: id,
       score,
       grade,
-      totalFindings: summary.total ?? findings.length,
-      criticalCount: summary.critical ?? 0,
-      highCount: summary.high ?? 0,
-      mediumCount: summary.medium ?? 0,
-      lowCount: summary.low ?? 0,
-      filesScanned: scanJson.scannedFiles ?? 0,
-      scanDurationMs: scanJson.scanDuration ?? 0,
-      reportJson: scanJson,
+      totalFindings: breakdown.total,
+      criticalCount: breakdown.critical,
+      highCount: breakdown.high,
+      mediumCount: breakdown.medium,
+      lowCount: breakdown.low,
+      filesScanned: scanResult.scannedFiles ?? 0,
+      scanDurationMs: scanResult.scanDuration ?? 0,
+      reportJson: { ...scanResult, complianceScore },
     });
 
     // 8. Save findings
     if (findings.length > 0) {
       await createFindings(
-        findings.map((f: any) => ({
+        findings.map((f) => ({
           projectId: id,
-          scanId: scan.id,
+          scanId: dbScan.id,
           findingId: f.id || crypto.randomUUID(),
           category: f.category || 'unknown',
           severity: f.severity || 'info',
@@ -171,19 +140,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       grade,
       status,
       findingsSummary: {
-        total: summary.total ?? findings.length,
-        critical: summary.critical ?? 0,
-        high: summary.high ?? 0,
-        medium: summary.medium ?? 0,
-        low: summary.low ?? 0,
-        info: summary.info ?? 0,
+        total: breakdown.total,
+        critical: breakdown.critical,
+        high: breakdown.high,
+        medium: breakdown.medium,
+        low: breakdown.low,
+        info: 0,
       },
-      stackInfo: scanJson.stack ?? {},
+      stackInfo: scanResult.stack ?? {},
       lastScanAt: timestamp,
     });
 
     return NextResponse.json({
-      scan: { id: scan.id, score, grade, status },
+      scan: { id: dbScan.id, score, grade, status },
       findingsCount: findings.length,
     });
   } catch (error: any) {
