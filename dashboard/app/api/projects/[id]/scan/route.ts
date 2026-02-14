@@ -14,7 +14,7 @@ import {
 } from '@/lib/storage';
 import { createAdminClient } from '@/lib/supabase/server';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /** Parse owner/repo from a GitHub URL */
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
