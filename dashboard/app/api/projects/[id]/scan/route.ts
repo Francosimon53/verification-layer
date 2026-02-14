@@ -12,7 +12,6 @@ import {
   createScanAdmin,
   createFindingsAdmin,
 } from '@/lib/storage';
-import { createAdminClient } from '@/lib/supabase/server';
 
 export const maxDuration = 300;
 
@@ -103,28 +102,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // 1. Get project
     currentStep = 'get-project';
     console.log(`[scan] Step 1: Getting project ${id}...`);
-    console.log(`[scan] SUPABASE_URL=${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
-    console.log(`[scan] SERVICE_KEY exists=${!!process.env.SUPABASE_SERVICE_ROLE_KEY}, len=${process.env.SUPABASE_SERVICE_ROLE_KEY?.length}`);
-
-    // Direct query for debugging
-    const adminSb = createAdminClient();
-    const directResult = await adminSb.from('projects').select('id,name').eq('id', id).maybeSingle();
-    console.log(`[scan] Direct query result: data=${JSON.stringify(directResult.data)}, error=${JSON.stringify(directResult.error)}`);
-
     const project = await getProjectAdmin(id);
-    console.log(`[scan] getProjectAdmin returned: ${project ? project.name : 'null'}`);
     if (!project) {
-      return NextResponse.json({
-        error: 'Project not found',
-        step: currentStep,
-        debug: {
-          directData: directResult.data,
-          directError: directResult.error,
-          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          serviceKeyExists: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-          serviceKeyLen: process.env.SUPABASE_SERVICE_ROLE_KEY?.length,
-        },
-      }, { status: 404 });
+      return NextResponse.json({ error: 'Project not found', step: currentStep }, { status: 404 });
     }
     if (!project.repoUrl) {
       return NextResponse.json({ error: 'No repository URL configured', step: currentStep }, { status: 400 });
