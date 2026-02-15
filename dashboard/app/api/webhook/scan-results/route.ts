@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Validate API key
     const authHeader = req.headers.get('authorization') ?? '';
-    const apiKey = authHeader.replace(/^Bearer\s+/i, '');
+    const apiKey = authHeader.replace(/^Bearer\s+/i, '').trim();
 
     const { valid, installationId } = await validateApiKey(apiKey);
     if (!valid || !installationId) {

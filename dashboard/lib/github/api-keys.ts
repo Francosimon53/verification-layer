@@ -39,11 +39,12 @@ export async function generateApiKey(installationId: number): Promise<string> {
 export async function validateApiKey(
   apiKey: string
 ): Promise<{ valid: boolean; installationId: number | null }> {
-  if (!apiKey || !apiKey.startsWith('vlayer_live_')) {
+  const trimmedKey = apiKey?.trim() ?? '';
+  if (!trimmedKey || !trimmedKey.startsWith('vlayer_live_')) {
     return { valid: false, installationId: null };
   }
 
-  const keyHash = createHash('sha256').update(apiKey).digest('hex');
+  const keyHash = createHash('sha256').update(trimmedKey).digest('hex');
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
