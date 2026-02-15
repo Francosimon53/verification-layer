@@ -21,7 +21,7 @@
     "react-dom": "19.2.3",
     "stripe": "^20.3.1",
     "tar": "^7.5.7",
-    "verification-layer": "^0.22.0"
+    "verification-layer": "^0.22.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
