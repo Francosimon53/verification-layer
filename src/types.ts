@@ -61,6 +61,25 @@ export interface Finding {
   isBaseline?: boolean;
 }
 
+export interface Occurrence {
+  file: string;
+  line?: number;
+}
+
+export interface GroupedFinding {
+  id: string;
+  category: ComplianceCategory;
+  severity: Severity;
+  title: string;
+  description: string;
+  recommendation: string;
+  hipaaReference?: string;
+  confidence?: Confidence;
+  occurrenceCount: number;
+  fileCount: number;
+  occurrences: Occurrence[];
+}
+
 export interface StackInfo {
   framework: string;
   database: string;
@@ -95,6 +114,8 @@ export interface ComplianceScore {
 
 export interface ScanResult {
   findings: Finding[];
+  groupedFindings: GroupedFinding[];
+  rawFindingsCount: number;
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;
@@ -123,6 +144,7 @@ export interface Report {
   targetPath: string;
   summary: {
     total: number;
+    uniqueFindings: number;
     acknowledged: number;
     suppressed: number;
     baseline: number;
@@ -141,6 +163,8 @@ export interface Report {
     };
   };
   findings: Finding[];
+  groupedFindings: GroupedFinding[];
+  rawFindingsCount: number;
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;

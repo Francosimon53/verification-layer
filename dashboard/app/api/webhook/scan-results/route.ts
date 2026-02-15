@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
     const grade = scanResults.grade ?? 'N/A';
     const findings = scanResults.findings ?? [];
     const summary = scanResults.summary ?? {};
-    const totalFindings = scanResults.totalFindings ?? findings.length;
+    const rawFindingsCount = scanResults.rawFindingsCount ?? scanResults.totalFindings ?? findings.length;
+    const totalFindings = rawFindingsCount;
 
     // 4. Save to Supabase
     const supabase = createAdminClient();

@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -285,9 +285,14 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     });
   }
 
+  // Group findings by rule ID + severity
+  const groupedFindings = groupFindings(processedFindings);
+
   // Calculate compliance score
   const result = {
     findings: processedFindings,
+    groupedFindings,
+    rawFindingsCount: processedFindings.length,
     scannedFiles: normalFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
@@ -299,4 +304,44 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     ...result,
     complianceScore,
   };
+}
+
+/**
+ * Group findings by rule ID + severity into deduplicated entries with occurrence lists.
+ */
+export function groupFindings(findings: Finding[]): GroupedFinding[] {
+  const groups = new Map<string, GroupedFinding>();
+  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+
+  for (const f of findings) {
+    const key = `${f.id}|${f.severity}`;
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: f.id,
+        category: f.category,
+        severity: f.severity,
+        title: f.title,
+        description: f.description,
+        recommendation: f.recommendation,
+        hipaaReference: f.hipaaReference,
+        confidence: f.confidence,
+        occurrenceCount: 0,
+        fileCount: 0,
+        occurrences: [],
+      });
+    }
+
+    const group = groups.get(key)!;
+    group.occurrenceCount++;
+    group.occurrences.push({ file: f.file, line: f.line });
+  }
+
+  for (const group of groups.values()) {
+    group.fileCount = new Set(group.occurrences.map(o => o.file)).size;
+  }
+
+  return [...groups.values()].sort(
+    (a, b) => (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4)
+  );
 }

@@ -10,10 +10,22 @@ interface ScanFinding {
   category?: string;
 }
 
+interface GroupedScanFinding {
+  id: string;
+  severity: string;
+  title: string;
+  occurrenceCount: number;
+  fileCount: number;
+  hipaaReference?: string;
+  occurrences?: { file: string; line?: number }[];
+}
+
 interface ScanResults {
   score?: number;
   grade?: string;
   findings?: ScanFinding[];
+  groupedFindings?: GroupedScanFinding[];
+  rawFindingsCount?: number;
   totalFindings?: number;
   summary?: {
     critical?: number;
@@ -21,6 +33,7 @@ interface ScanResults {
     medium?: number;
     low?: number;
     total?: number;
+    uniqueFindings?: number;
   };
 }
 
@@ -51,20 +64,24 @@ const SEVERITY_ICONS: Record<string, string> = {
 
 /**
  * Format scan results into a GitHub PR comment in Markdown.
+ * Uses grouped findings when available for a concise, actionable report.
  */
 export function formatPRComment(scanResults: ScanResults, mode: string): string {
   const score = scanResults.score ?? 0;
   const grade = scanResults.grade ?? 'N/A';
-  const findings = scanResults.findings ?? [];
+  const grouped = scanResults.groupedFindings ?? [];
+  const rawFindings = scanResults.findings ?? [];
   const summary = scanResults.summary ?? {};
-  const total = scanResults.totalFindings ?? findings.length;
+  const rawTotal = scanResults.rawFindingsCount ?? scanResults.totalFindings ?? rawFindings.length;
+  const uniqueCount = grouped.length || summary.uniqueFindings || rawTotal;
 
   let md = `## \u{1F6E1}\u{FE0F} VLayer HIPAA Compliance Scan\n\n`;
 
   // Score section
   md += `| Metric | Value |\n|--------|-------|\n`;
   md += `| **Compliance Score** | **${score}/100** (Grade ${grade}) |\n`;
-  md += `| **Total Findings** | ${total} |\n`;
+  md += `| **Unique Findings** | ${uniqueCount} |\n`;
+  md += `| **Total Occurrences** | ${rawTotal} |\n`;
   if (summary.critical) md += `| \u{1F534} Critical | ${summary.critical} |\n`;
   if (summary.high) md += `| \u{1F7E0} High | ${summary.high} |\n`;
   if (summary.medium) md += `| \u{1F7E1} Medium | ${summary.medium} |\n`;
@@ -78,13 +95,30 @@ export function formatPRComment(scanResults: ScanResults, mode: string): string 
     md += `> \u{1F6A8} **Enforce Mode** — This PR has critical findings that must be resolved before merging.\n\n`;
   }
 
-  // Findings table (top 15)
-  if (findings.length > 0) {
+  // Grouped findings table (preferred)
+  if (grouped.length > 0) {
+    md += `### Findings\n\n`;
+    md += `| Severity | Issue | Occurrences | Files | HIPAA \u00A7 |\n`;
+    md += `|----------|-------|-------------|-------|--------|\n`;
+
+    const shown = grouped.slice(0, 25);
+    for (const g of shown) {
+      const icon = SEVERITY_ICONS[g.severity] ?? '\u{26AA}';
+      const ref = g.hipaaReference ?? '';
+      md += `| ${icon} ${g.severity} | ${g.title} | ${g.occurrenceCount} | ${g.fileCount} | ${ref} |\n`;
+    }
+
+    if (grouped.length > 25) {
+      md += `\n*...and ${grouped.length - 25} more unique findings. [View full report on VLayer](https://app.vlayer.app)*\n`;
+    }
+    md += `\n`;
+  } else if (rawFindings.length > 0) {
+    // Fallback to raw findings if no grouped data
     md += `### Findings\n\n`;
     md += `| Severity | File | Line | Issue | HIPAA \u00A7 |\n`;
     md += `|----------|------|------|-------|--------|\n`;
 
-    const shown = findings.slice(0, 15);
+    const shown = rawFindings.slice(0, 15);
     for (const f of shown) {
       const icon = SEVERITY_ICONS[f.severity] ?? '\u{26AA}';
       const file = cleanRunnerPath(f.filePath ?? f.file ?? '');
@@ -93,8 +127,8 @@ export function formatPRComment(scanResults: ScanResults, mode: string): string 
       md += `| ${icon} ${f.severity} | \`${file}\` | ${line} | ${f.title} | ${ref} |\n`;
     }
 
-    if (findings.length > 15) {
-      md += `\n*...and ${findings.length - 15} more findings. [View full report on VLayer](https://app.vlayer.app)*\n`;
+    if (rawFindings.length > 15) {
+      md += `\n*...and ${rawFindings.length - 15} more findings. [View full report on VLayer](https://app.vlayer.app)*\n`;
     }
     md += `\n`;
   }

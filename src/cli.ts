@@ -78,7 +78,7 @@ program
         minConfidence: options.minConfidence as 'high' | 'medium' | 'low' | undefined,
       });
 
-      spinner.succeed(`Scan complete. Found ${result.findings.length} issues.`);
+      spinner.succeed(`Scan complete. Found ${result.groupedFindings.length} unique issues (${result.rawFindingsCount} total occurrences).`);
 
       // Run npm audit if --audit flag is provided
       let vulnerabilities: import('./types.js').DependencyVulnerability[] | undefined;
@@ -157,7 +157,7 @@ program
       console.log('\n' + chalk.bold('Summary:'));
       console.log(`  Files scanned: ${result.scannedFiles}`);
       console.log(`  Duration: ${result.scanDuration}ms`);
-      console.log(`  Total findings: ${result.findings.length}`);
+      console.log(`  ${result.rawFindingsCount} total occurrences across ${result.groupedFindings.length} unique findings`);
 
       if (acknowledged > 0) {
         console.log(chalk.blue(`  Acknowledged: ${acknowledged}`));
@@ -291,8 +291,12 @@ program
 
       // Generate report
       const { generateReport } = await import('./reporters/index.js');
+      const { groupFindings } = await import('./scan.js');
+      const aiGrouped = groupFindings(result.aiFindings);
       const scanResult = {
         findings: result.aiFindings,
+        groupedFindings: aiGrouped,
+        rawFindingsCount: result.aiFindings.length,
         scannedFiles: result.stats.filesScanned,
         scanDuration: 0,
       };
@@ -374,8 +378,12 @@ program
 
       // Generate report
       const { generateReport } = await import('./reporters/index.js');
+      const { groupFindings: groupSkillFindings } = await import('./scan.js');
+      const skillGrouped = groupSkillFindings(findings);
       const result = {
         findings,
+        groupedFindings: skillGrouped,
+        rawFindingsCount: findings.length,
         scannedFiles: skillFiles.length,
         scanDuration: 0,
       };

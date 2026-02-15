@@ -1,7 +1,7 @@
 import { writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison, GroupedFinding } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
@@ -755,7 +755,8 @@ function buildReport(
   );
 
   const summary: Report['summary'] = {
-    total: result.findings.length,
+    total: result.rawFindingsCount ?? result.findings.length,
+    uniqueFindings: result.groupedFindings?.length ?? 0,
     acknowledged: acknowledged.length,
     suppressed: suppressed.length,
     baseline: baseline.length,
@@ -783,6 +784,8 @@ function buildReport(
     targetPath,
     summary,
     findings: result.findings,
+    groupedFindings: result.groupedFindings ?? [],
+    rawFindingsCount: result.rawFindingsCount ?? result.findings.length,
     scannedFiles: result.scannedFiles,
     scanDuration: result.scanDuration,
     stack: result.stack,
@@ -791,7 +794,20 @@ function buildReport(
 }
 
 function generateJson(report: Report): string {
-  return JSON.stringify(report, null, 2);
+  // Output grouped findings as primary view, keep raw for backwards compat
+  const output = {
+    timestamp: report.timestamp,
+    targetPath: report.targetPath,
+    summary: report.summary,
+    groupedFindings: report.groupedFindings,
+    rawFindingsCount: report.rawFindingsCount,
+    findings: report.findings,
+    scannedFiles: report.scannedFiles,
+    scanDuration: report.scanDuration,
+    stack: report.stack,
+    vulnerabilities: report.vulnerabilities,
+  };
+  return JSON.stringify(output, null, 2);
 }
 
 function renderContextMarkdown(context?: ContextLine[]): string {

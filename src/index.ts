@@ -1,4 +1,4 @@
-export { scan } from './scan.js';
+export { scan, groupFindings } from './scan.js';
 export { generateReport } from './reporters/index.js';
 export { loadCustomRules, validateRulesFile, scanWithCustomRules } from './rules/index.js';
 export { loadBaseline, saveBaseline, applyBaseline, generateFindingHash } from './baseline.js';
@@ -21,6 +21,8 @@ export type {
   CompiledCustomRule,
   CustomRuleFix,
   ComplianceScore,
+  GroupedFinding,
+  Occurrence,
 } from './types.js';
 export type { LoadRulesResult, RuleLoadError, CustomRuleDefinition, RulesFile } from './rules/index.js';
 export type { Baseline, BaselineEntry } from './baseline.js';

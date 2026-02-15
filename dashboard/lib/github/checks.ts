@@ -13,6 +13,8 @@ interface ScanResults {
   score?: number;
   grade?: string;
   findings?: ScanFinding[];
+  groupedFindings?: { id: string; severity: string; title: string; occurrenceCount: number; fileCount: number; hipaaReference?: string }[];
+  rawFindingsCount?: number;
   totalFindings?: number;
   summary?: {
     critical?: number;
@@ -20,6 +22,7 @@ interface ScanResults {
     medium?: number;
     low?: number;
     total?: number;
+    uniqueFindings?: number;
   };
 }
 
@@ -56,12 +59,13 @@ export async function createCheckRun(
   const grade = scanResults.grade ?? 'N/A';
   const findings = scanResults.findings ?? [];
   const summary = scanResults.summary ?? {};
-  const total = scanResults.totalFindings ?? findings.length;
+  const rawTotal = scanResults.rawFindingsCount ?? scanResults.totalFindings ?? findings.length;
+  const uniqueCount = scanResults.groupedFindings?.length ?? scanResults.summary?.uniqueFindings ?? rawTotal;
 
   // Build summary text
   const summaryText = [
     `**Compliance Score:** ${score}/100 (Grade ${grade})`,
-    `**Total Findings:** ${total}`,
+    `**${rawTotal} total occurrences across ${uniqueCount} unique findings**`,
     summary.critical ? `- \u{1F534} Critical: ${summary.critical}` : null,
     summary.high ? `- \u{1F7E0} High: ${summary.high}` : null,
     summary.medium ? `- \u{1F7E1} Medium: ${summary.medium}` : null,
@@ -85,7 +89,7 @@ export async function createCheckRun(
 
   const titleText =
     conclusion === 'success'
-      ? `\u{2705} Score: ${score}/100 \u{00B7} ${total} findings`
+      ? `\u{2705} Score: ${score}/100 \u{00B7} ${uniqueCount} unique findings`
       : `\u{274C} Score: ${score}/100 \u{00B7} ${summary.critical ?? 0} critical findings`;
 
   const res = await fetch(
