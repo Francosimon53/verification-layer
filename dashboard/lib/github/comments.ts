@@ -17,6 +17,7 @@ interface GroupedScanFinding {
   occurrenceCount: number;
   fileCount: number;
   hipaaReference?: string;
+  examples?: { file: string; line?: number }[];
   occurrences?: { file: string; line?: number }[];
 }
 
@@ -64,7 +65,7 @@ const SEVERITY_ICONS: Record<string, string> = {
 
 /**
  * Format scan results into a GitHub PR comment in Markdown.
- * Uses grouped findings when available for a concise, actionable report.
+ * Uses grouped findings for a concise, executive-level report.
  */
 export function formatPRComment(scanResults: ScanResults, mode: string): string {
   const score = scanResults.score ?? 0;
@@ -74,46 +75,54 @@ export function formatPRComment(scanResults: ScanResults, mode: string): string 
   const summary = scanResults.summary ?? {};
   const rawTotal = scanResults.rawFindingsCount ?? scanResults.totalFindings ?? rawFindings.length;
   const uniqueCount = grouped.length || summary.uniqueFindings || rawTotal;
+  const totalFiles = new Set([
+    ...rawFindings.map(f => f.filePath ?? f.file ?? ''),
+    ...grouped.flatMap(g => (g.examples ?? g.occurrences ?? []).map(o => o.file)),
+  ].filter(Boolean)).size;
 
+  // Headline — the first thing the CTO sees
   let md = `## \u{1F6E1}\u{FE0F} VLayer HIPAA Compliance Scan\n\n`;
+  md += `**Found ${uniqueCount} types** of HIPAA violations across **${rawTotal.toLocaleString()} locations** in **${totalFiles} files**\n\n`;
 
-  // Score section
+  // Score badge
   md += `| Metric | Value |\n|--------|-------|\n`;
   md += `| **Compliance Score** | **${score}/100** (Grade ${grade}) |\n`;
-  md += `| **Unique Findings** | ${uniqueCount} |\n`;
-  md += `| **Total Occurrences** | ${rawTotal} |\n`;
   if (summary.critical) md += `| \u{1F534} Critical | ${summary.critical} |\n`;
   if (summary.high) md += `| \u{1F7E0} High | ${summary.high} |\n`;
   if (summary.medium) md += `| \u{1F7E1} Medium | ${summary.medium} |\n`;
   if (summary.low) md += `| \u{1F535} Low | ${summary.low} |\n`;
   md += `\n`;
 
-  // Shadow mode notice
+  // Mode notice
   if (mode === 'shadow') {
-    md += `> \u{1F4AC} **Shadow Mode** — This scan is informational only and will not block merging.\n\n`;
+    md += `> \u{1F4AC} **Shadow Mode** \u{2014} This scan is informational only and will not block merging.\n\n`;
   } else if (mode === 'enforce' && (summary.critical ?? 0) > 0) {
-    md += `> \u{1F6A8} **Enforce Mode** — This PR has critical findings that must be resolved before merging.\n\n`;
+    md += `> \u{1F6A8} **Enforce Mode** \u{2014} This PR has critical findings that must be resolved before merging.\n\n`;
   }
 
-  // Grouped findings table (preferred)
+  // Grouped findings table
   if (grouped.length > 0) {
     md += `### Findings\n\n`;
-    md += `| Severity | Issue | Occurrences | Files | HIPAA \u00A7 |\n`;
-    md += `|----------|-------|-------------|-------|--------|\n`;
+    md += `| Severity | Violation Type | Count | Locations | HIPAA \u00A7 |\n`;
+    md += `|----------|----------------|-------|-----------|--------|\n`;
 
-    const shown = grouped.slice(0, 25);
+    const shown = grouped.slice(0, 50);
     for (const g of shown) {
       const icon = SEVERITY_ICONS[g.severity] ?? '\u{26AA}';
       const ref = g.hipaaReference ?? '';
-      md += `| ${icon} ${g.severity} | ${g.title} | ${g.occurrenceCount} | ${g.fileCount} | ${ref} |\n`;
+      const fileLabel = g.fileCount === 1 ? '1 file' : `${g.fileCount} files`;
+      md += `| ${icon} ${g.severity.toUpperCase()} | ${g.title} | ${g.occurrenceCount} | ${fileLabel} | ${ref} |\n`;
     }
 
-    if (grouped.length > 25) {
-      md += `\n*...and ${grouped.length - 25} more unique findings. [View full report on VLayer](https://app.vlayer.app)*\n`;
+    if (grouped.length > 50) {
+      md += `\n*\u{2026}and ${grouped.length - 50} more violation types.*\n`;
     }
     md += `\n`;
+
+    // Drill-down link
+    md += `\u{1F50D} [View full drill-down of all ${rawTotal.toLocaleString()} locations in VLayer Dashboard](https://app.vlayer.app)\n\n`;
   } else if (rawFindings.length > 0) {
-    // Fallback to raw findings if no grouped data
+    // Fallback for older scanner versions without grouped data
     md += `### Findings\n\n`;
     md += `| Severity | File | Line | Issue | HIPAA \u00A7 |\n`;
     md += `|----------|------|------|-------|--------|\n`;
@@ -124,11 +133,11 @@ export function formatPRComment(scanResults: ScanResults, mode: string): string 
       const file = cleanRunnerPath(f.filePath ?? f.file ?? '');
       const line = f.lineNumber ?? f.line ?? '';
       const ref = f.hipaaReference ?? f.hipaa_reference ?? '';
-      md += `| ${icon} ${f.severity} | \`${file}\` | ${line} | ${f.title} | ${ref} |\n`;
+      md += `| ${icon} ${f.severity.toUpperCase()} | \`${file}\` | ${line} | ${f.title} | ${ref} |\n`;
     }
 
     if (rawFindings.length > 15) {
-      md += `\n*...and ${rawFindings.length - 15} more findings. [View full report on VLayer](https://app.vlayer.app)*\n`;
+      md += `\n*\u{2026}and ${rawFindings.length - 15} more findings. [View full report](https://app.vlayer.app)*\n`;
     }
     md += `\n`;
   }

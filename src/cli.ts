@@ -38,6 +38,7 @@ program
   .option('--fix', 'Automatically fix detected issues where possible')
   .option('--no-ai', 'Disable AI-powered triage and analysis')
   .option('--audit', 'Run npm audit and include dependency vulnerabilities in report')
+  .option('--verbose', 'Show all individual findings instead of grouped summary')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
     const absolutePath = resolve(path);
@@ -145,38 +146,47 @@ program
       }
 
       // Print summary
+      const totalFiles = new Set(result.findings.map(f => f.file)).size;
+      const grouped = result.groupedFindings;
+
+      console.log('\n' + chalk.bold(`Found ${chalk.white(String(grouped.length))} types of HIPAA violations across ${chalk.white(String(result.rawFindingsCount))} locations in ${chalk.white(String(totalFiles))} files`));
+      console.log(`  Files scanned: ${result.scannedFiles}  |  Duration: ${result.scanDuration}ms\n`);
+
+      if (options.verbose) {
+        // --verbose: show every individual finding
+        for (const f of result.findings) {
+          const sevColor = f.severity === 'critical' ? chalk.red : f.severity === 'high' ? chalk.yellow : chalk.gray;
+          console.log(`  ${sevColor(f.severity.toUpperCase().padEnd(8))} ${f.file}:${f.line ?? 0}  ${f.title}`);
+        }
+      } else {
+        // Default: grouped table
+        const sevColors: Record<string, (s: string) => string> = {
+          critical: chalk.red, high: chalk.yellow, medium: chalk.hex('#ca8a04'), low: chalk.blue, info: chalk.gray,
+        };
+        console.log(chalk.gray('  Severity   Violation Type                                    Count   Files   HIPAA §'));
+        console.log(chalk.gray('  ' + '─'.repeat(95)));
+        for (const g of grouped) {
+          const sev = (sevColors[g.severity] ?? chalk.gray)(g.severity.toUpperCase().padEnd(9));
+          const title = g.title.length > 50 ? g.title.slice(0, 47) + '...' : g.title.padEnd(50);
+          const count = String(g.occurrenceCount).padStart(5);
+          const files = String(g.fileCount).padStart(5);
+          const ref = (g.hipaaReference ?? '').slice(0, 15);
+          console.log(`  ${sev} ${title} ${count}   ${files}   ${ref}`);
+        }
+        console.log(chalk.gray('  ' + '─'.repeat(95)));
+        if (grouped.length > 0) {
+          console.log(chalk.gray(`\n  Use --verbose to see all ${result.rawFindingsCount} individual locations`));
+        }
+      }
+
       const acknowledged = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired).length;
       const suppressed = result.findings.filter(f => f.suppressed).length;
-      const baseline = result.findings.filter(f => f.isBaseline).length;
-      const newFindings = result.findings.filter(f =>
-        !f.acknowledged && !f.suppressed && !f.isBaseline
-      );
-      const critical = newFindings.filter(f => f.severity === 'critical').length;
-      const high = newFindings.filter(f => f.severity === 'high').length;
-
-      console.log('\n' + chalk.bold('Summary:'));
-      console.log(`  Files scanned: ${result.scannedFiles}`);
-      console.log(`  Duration: ${result.scanDuration}ms`);
-      console.log(`  ${result.rawFindingsCount} total occurrences across ${result.groupedFindings.length} unique findings`);
 
       if (acknowledged > 0) {
         console.log(chalk.blue(`  Acknowledged: ${acknowledged}`));
       }
       if (suppressed > 0) {
         console.log(chalk.cyan(`  Suppressed: ${suppressed}`));
-      }
-      if (baseline > 0) {
-        console.log(chalk.gray(`  Baseline: ${baseline}`));
-      }
-      if (newFindings.length > 0) {
-        console.log(chalk.yellow(`  New/Requiring action: ${newFindings.length}`));
-      }
-
-      if (critical > 0) {
-        console.log(chalk.red(`  Critical (new): ${critical}`));
-      }
-      if (high > 0) {
-        console.log(chalk.yellow(`  High (new): ${high}`));
       }
 
       // Display vulnerability summary if audit was run
@@ -205,7 +215,8 @@ program
       }
 
       // Exit with error code if new critical issues found (only if not fixing)
-      if (critical > 0 && !options.fix) {
+      const criticalCount = result.groupedFindings.filter(g => g.severity === 'critical').length;
+      if (criticalCount > 0 && !options.fix) {
         process.exit(1);
       }
     } catch (error) {

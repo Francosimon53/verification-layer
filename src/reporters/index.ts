@@ -794,14 +794,36 @@ function buildReport(
 }
 
 function generateJson(report: Report, complianceScore?: import('../types.js').ComplianceScore): string {
+  // Build compact grouped view (examples only, no full occurrences list)
+  const groupedCompact = (report.groupedFindings ?? []).map(g => ({
+    ruleId: g.id,
+    title: g.title,
+    severity: g.severity,
+    category: g.category,
+    hipaaSection: g.hipaaReference ?? '',
+    totalOccurrences: g.occurrenceCount,
+    affectedFilesCount: g.fileCount,
+    examples: g.examples ?? g.occurrences?.slice(0, 5) ?? [],
+    recommendation: g.recommendation,
+  }));
+
+  const totalFiles = new Set(report.findings.map(f => f.file)).size;
+
   const output = {
     score: complianceScore?.score ?? 0,
     grade: complianceScore?.grade ?? 'N/A',
+    headline: `Found ${groupedCompact.length} types of HIPAA violations across ${report.rawFindingsCount} locations in ${totalFiles} files`,
     timestamp: report.timestamp,
     targetPath: report.targetPath,
-    summary: report.summary,
+    stats: report.summary,
+    // Grouped view for human reading — one entry per rule
+    summary: groupedCompact,
+    // Backwards compat aliases
     groupedFindings: report.groupedFindings,
     rawFindingsCount: report.rawFindingsCount,
+    // Full flat list for developer drill-down
+    details: report.findings,
+    // Keep "findings" alias for backwards compat with webhook/dashboard
     findings: report.findings,
     scannedFiles: report.scannedFiles,
     scanDuration: report.scanDuration,

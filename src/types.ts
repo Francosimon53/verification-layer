@@ -77,7 +77,8 @@ export interface GroupedFinding {
   confidence?: Confidence;
   occurrenceCount: number;
   fileCount: number;
-  occurrences: Occurrence[];
+  examples: Occurrence[];       // Top 3-5 occurrences for immediate context
+  occurrences: Occurrence[];    // Full list (used internally / in details)
 }
 
 export interface StackInfo {

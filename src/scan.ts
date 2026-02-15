@@ -328,6 +328,7 @@ export function groupFindings(findings: Finding[]): GroupedFinding[] {
         confidence: f.confidence,
         occurrenceCount: 0,
         fileCount: 0,
+        examples: [],
         occurrences: [],
       });
     }
@@ -339,6 +340,14 @@ export function groupFindings(findings: Finding[]): GroupedFinding[] {
 
   for (const group of groups.values()) {
     group.fileCount = new Set(group.occurrences.map(o => o.file)).size;
+    // Pick up to 5 examples from distinct files for immediate context
+    const seenFiles = new Set<string>();
+    for (const occ of group.occurrences) {
+      if (seenFiles.has(occ.file)) continue;
+      seenFiles.add(occ.file);
+      group.examples.push(occ);
+      if (group.examples.length >= 5) break;
+    }
   }
 
   return [...groups.values()].sort(
