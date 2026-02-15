@@ -307,18 +307,24 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 }
 
 /**
- * Group findings by rule ID + severity into deduplicated entries with occurrence lists.
+ * Group findings by severity + normalized title into deduplicated entries with occurrence lists.
+ * This collapses all occurrences of the same violation type into one row.
  */
 export function groupFindings(findings: Finding[]): GroupedFinding[] {
   const groups = new Map<string, GroupedFinding>();
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
   for (const f of findings) {
-    const key = `${f.id}|${f.severity}`;
+    // Normalize title: lowercase, trim, collapse whitespace
+    const normalizedTitle = f.title.toLowerCase().trim().replace(/\s+/g, ' ');
+    const key = `${f.severity}::${normalizedTitle}`;
 
     if (!groups.has(key)) {
+      // Strip line number suffix only from dynamic IDs (lowercase prefix like "phi-ssn-hardcoded-42")
+      // Keep static rule IDs intact (uppercase prefix like "ERROR-002", "HIPAA-PENTEST-001")
+      const cleanId = /^[a-z]/.test(f.id) ? f.id.replace(/-\d+$/, '') : f.id;
       groups.set(key, {
-        id: f.id,
+        id: cleanId,
         category: f.category,
         severity: f.severity,
         title: f.title,
