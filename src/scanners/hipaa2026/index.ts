@@ -146,15 +146,20 @@ async function mapPHIFlow(
 }
 
 /**
- * Check for vulnerability scanning configuration
+ * Check for vulnerability scanning configuration (project-level check)
  */
 async function checkVulnerabilityScanning(projectRoot: string): Promise<boolean> {
   const configFiles = [
     '.github/dependabot.yml',
+    '.github/dependabot.yaml',
     '.github/workflows/security.yml',
+    '.github/workflows/security.yaml',
     '.snyk',
+    '.semgrep.yml',
+    '.semgrep.yaml',
     'snyk.json',
     '.trivyignore',
+    'trivy.yaml',
   ];
 
   for (const configFile of configFiles) {
@@ -164,6 +169,28 @@ async function checkVulnerabilityScanning(projectRoot: string): Promise<boolean>
     } catch {
       // File doesn't exist
     }
+  }
+
+  // Check all workflow files for security-related scanning
+  try {
+    const workflowDir = path.join(projectRoot, '.github', 'workflows');
+    const entries = await fs.readdir(workflowDir);
+    for (const entry of entries) {
+      if (/security|codeql|snyk|trivy|semgrep|dependabot|vulnerability|sast|dast/i.test(entry)) {
+        return true;
+      }
+      // Also check workflow content for scanning steps
+      try {
+        const content = await fs.readFile(path.join(workflowDir, entry), 'utf-8');
+        if (/(?:snyk|trivy|semgrep|codeql|npm audit|security.scan|vulnerability)/i.test(content)) {
+          return true;
+        }
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  } catch {
+    // No .github/workflows directory
   }
 
   // Check package.json for security scripts
@@ -290,25 +317,8 @@ export const hipaa2026Scanner: Scanner = {
             continue;
           }
 
-          // Special handling for vulnerability scanning
+          // Skip project-level checks in per-file loop (handled after)
           if (pattern.id === 'HIPAA-PENTEST-001') {
-            const hasVulnScanning = await checkVulnerabilityScanning(
-              path.dirname(file)
-            );
-            if (!hasVulnScanning) {
-              findings.push({
-                id: pattern.id,
-                category: pattern.category as any,
-                severity: pattern.severity,
-                title: pattern.name,
-                description: pattern.description,
-                file: file,
-                line: 1,
-                recommendation: pattern.autoFix || '',
-                hipaaReference: pattern.hipaaReference,
-                confidence: pattern.confidence,
-              });
-            }
             continue;
           }
 
@@ -350,6 +360,26 @@ export const hipaa2026Scanner: Scanner = {
         }
       } catch (error) {
         // Skip files that can't be read
+      }
+    }
+
+    // Project-level check: vulnerability scanning (once, not per-file)
+    const pentestPattern = ALL_HIPAA_2026_PATTERNS.find(p => p.id === 'HIPAA-PENTEST-001');
+    if (pentestPattern) {
+      const hasVulnScanning = await checkVulnerabilityScanning(options.path);
+      if (!hasVulnScanning) {
+        findings.push({
+          id: pentestPattern.id,
+          category: pentestPattern.category as any,
+          severity: pentestPattern.severity,
+          title: pentestPattern.name,
+          description: pentestPattern.description,
+          file: 'project-level',
+          line: 1,
+          recommendation: pentestPattern.autoFix || '',
+          hipaaReference: pentestPattern.hipaaReference,
+          confidence: pentestPattern.confidence,
+        });
       }
     }
 

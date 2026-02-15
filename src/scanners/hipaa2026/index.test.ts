@@ -356,23 +356,18 @@ app.post('/api/patient', async (req, res) => {
   });
 
   describe('HIPAA-PENTEST-001: Vulnerability Scanning', () => {
-    it('should detect missing vulnerability scanning config', async () => {
-      const file = await createTestFile(
-        'package.json',
-        JSON.stringify({
-          name: 'test-app',
-          version: '1.0.0',
-          scripts: {
-            test: 'jest',
-          },
-        })
-      );
+    it('should detect missing vulnerability scanning config exactly once', async () => {
+      // Create multiple code files to verify it only reports once
+      await createTestFile('app.ts', 'const x = 1;');
+      await createTestFile('server.ts', 'const y = 2;');
+      await createTestFile('index.ts', 'const z = 3;');
 
-      const findings = await hipaa2026Scanner.scan([file], scanOptions);
+      const findings = await hipaa2026Scanner.scan(testFiles, { path: tempDir });
       const pentestFindings = findings.filter((f) => f.id === 'HIPAA-PENTEST-001');
 
-      expect(pentestFindings.length).toBeGreaterThan(0);
+      expect(pentestFindings.length).toBe(1);
       expect(pentestFindings[0].severity).toBe('high');
+      expect(pentestFindings[0].file).toBe('project-level');
     });
 
     it('should not flag when dependabot exists', async () => {
@@ -384,15 +379,41 @@ app.post('/api/patient', async (req, res) => {
         'utf-8'
       );
 
-      const file = await createTestFile(
-        'package.json',
-        JSON.stringify({
-          name: 'test-app',
-          version: '1.0.0',
-        })
+      await createTestFile('app.ts', 'const x = 1;');
+
+      const findings = await hipaa2026Scanner.scan(testFiles, { path: tempDir });
+      const pentestFindings = findings.filter((f) => f.id === 'HIPAA-PENTEST-001');
+
+      expect(pentestFindings.length).toBe(0);
+    });
+
+    it('should not flag when semgrep config exists', async () => {
+      await fs.writeFile(
+        path.join(tempDir, '.semgrep.yml'),
+        'rules: []',
+        'utf-8'
       );
 
-      const findings = await hipaa2026Scanner.scan([file], scanOptions);
+      await createTestFile('app.ts', 'const x = 1;');
+
+      const findings = await hipaa2026Scanner.scan(testFiles, { path: tempDir });
+      const pentestFindings = findings.filter((f) => f.id === 'HIPAA-PENTEST-001');
+
+      expect(pentestFindings.length).toBe(0);
+    });
+
+    it('should not flag when workflow contains security scanning', async () => {
+      const workflowDir = path.join(tempDir, '.github', 'workflows');
+      await fs.mkdir(workflowDir, { recursive: true });
+      await fs.writeFile(
+        path.join(workflowDir, 'ci.yml'),
+        'name: CI\njobs:\n  scan:\n    steps:\n      - run: npm audit',
+        'utf-8'
+      );
+
+      await createTestFile('app.ts', 'const x = 1;');
+
+      const findings = await hipaa2026Scanner.scan(testFiles, { path: tempDir });
       const pentestFindings = findings.filter((f) => f.id === 'HIPAA-PENTEST-001');
 
       expect(pentestFindings.length).toBe(0);
