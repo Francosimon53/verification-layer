@@ -24,6 +24,23 @@ interface ScanResults {
   };
 }
 
+/**
+ * Strip GitHub Actions runner prefixes from file paths.
+ * e.g. /home/runner/work/my-repo/my-repo/src/foo.ts → src/foo.ts
+ */
+function cleanRunnerPath(p: string): string {
+  return p
+    // /home/runner/work/{repo}/{repo}/... → relative path
+    .replace(/^\/home\/runner\/work\/[^/]+\/[^/]+\//, '')
+    // /tmp/vlayer-scan-*/*/ prefix (from dashboard scans)
+    .replace(/^\/tmp\/vlayer-scan-[^/]+\/[^/]+\//, '')
+    // Any remaining absolute /home/runner/work/... up to a known project dir
+    .replace(/^\/home\/runner\/work\/.*?\/(src|lib|app|components|pages|public|test|tests|spec|__tests__|config|scripts|packages)\//,
+      '$1/')
+    // Strip leading ./ or /
+    .replace(/^\.\//, '');
+}
+
 const SEVERITY_ICONS: Record<string, string> = {
   critical: '\u{1F534}',
   high: '\u{1F7E0}',
@@ -70,7 +87,7 @@ export function formatPRComment(scanResults: ScanResults, mode: string): string 
     const shown = findings.slice(0, 15);
     for (const f of shown) {
       const icon = SEVERITY_ICONS[f.severity] ?? '\u{26AA}';
-      const file = f.filePath ?? f.file ?? '';
+      const file = cleanRunnerPath(f.filePath ?? f.file ?? '');
       const line = f.lineNumber ?? f.line ?? '';
       const ref = f.hipaaReference ?? f.hipaa_reference ?? '';
       md += `| ${icon} ${f.severity} | \`${file}\` | ${line} | ${f.title} | ${ref} |\n`;

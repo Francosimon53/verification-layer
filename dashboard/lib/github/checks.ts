@@ -25,6 +25,15 @@ interface ScanResults {
 
 type CheckConclusion = 'success' | 'failure' | 'neutral';
 
+function cleanRunnerPath(p: string): string {
+  return p
+    .replace(/^\/home\/runner\/work\/[^/]+\/[^/]+\//, '')
+    .replace(/^\/tmp\/vlayer-scan-[^/]+\/[^/]+\//, '')
+    .replace(/^\/home\/runner\/work\/.*?\/(src|lib|app|components|pages|public|test|tests|spec|__tests__|config|scripts|packages)\//,
+      '$1/')
+    .replace(/^\.\//, '');
+}
+
 const ANNOTATION_LEVELS: Record<string, 'failure' | 'warning' | 'notice'> = {
   critical: 'failure',
   high: 'warning',
@@ -66,7 +75,7 @@ export async function createCheckRun(
     .filter((f) => (f.filePath ?? f.file) && (f.lineNumber ?? f.line))
     .slice(0, 50)
     .map((f) => ({
-      path: (f.filePath ?? f.file)!,
+      path: cleanRunnerPath((f.filePath ?? f.file)!),
       start_line: f.lineNumber ?? f.line ?? 1,
       end_line: f.lineNumber ?? f.line ?? 1,
       annotation_level: ANNOTATION_LEVELS[f.severity] ?? 'notice',
