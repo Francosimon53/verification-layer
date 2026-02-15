@@ -793,9 +793,10 @@ function buildReport(
   };
 }
 
-function generateJson(report: Report): string {
-  // Output grouped findings as primary view, keep raw for backwards compat
+function generateJson(report: Report, complianceScore?: import('../types.js').ComplianceScore): string {
   const output = {
+    score: complianceScore?.score ?? 0,
+    grade: complianceScore?.grade ?? 'N/A',
     timestamp: report.timestamp,
     targetPath: report.targetPath,
     summary: report.summary,
@@ -805,6 +806,7 @@ function generateJson(report: Report): string {
     scannedFiles: report.scannedFiles,
     scanDuration: report.scanDuration,
     stack: report.stack,
+    complianceScore,
     vulnerabilities: report.vulnerabilities,
   };
   return JSON.stringify(output, null, 2);
@@ -3279,7 +3281,7 @@ export async function generateReport(
       break;
     case 'json':
     default:
-      content = generateJson(report);
+      content = generateJson(report, result.complianceScore);
       extension = 'json';
   }
 

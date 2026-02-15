@@ -47,13 +47,31 @@ jobs:
             exit 0
           fi
 
+          # Build compact payload: grouped findings + top 50 raw for annotations
+          jq '{
+            score: (.score // 0),
+            grade: (.grade // "N/A"),
+            summary: .summary,
+            groupedFindings: [(.groupedFindings // [])[] | .occurrences = (.occurrences[:10])],
+            rawFindingsCount: (.rawFindingsCount // (.findings | length)),
+            totalFindings: (.rawFindingsCount // (.findings | length)),
+            findings: (.findings[:50]),
+            filesScanned: .scannedFiles,
+            scanDurationMs: .scanDuration,
+            stack: .stack,
+            complianceScore: .complianceScore
+          }' vlayer-results.json > vlayer-upload.json
+
+          PAYLOAD_SIZE=\$(wc -c < vlayer-upload.json | tr -d ' ')
+          echo "Upload payload size: \${PAYLOAD_SIZE} bytes"
+
           curl -s -X POST "https://app.vlayer.app/api/webhook/scan-results" \\
             -H "Authorization: Bearer \${{ secrets.VLAYER_API_KEY }}" \\
             -H "Content-Type: application/json" \\
             -H "X-GitHub-Repository: \${{ github.repository }}" \\
             -H "X-GitHub-PR: \${{ github.event.pull_request.number }}" \\
             -H "X-GitHub-SHA: \${{ github.event.pull_request.head.sha }}" \\
-            -d @vlayer-results.json
+            -d @vlayer-upload.json
 `;
 
 const VLAYER_CONFIG = `# VLayer HIPAA Compliance Configuration
