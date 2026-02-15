@@ -388,7 +388,7 @@ export const hipaa2026Scanner: Scanner = {
       findings.push({
         id: 'HIPAA-ASSET-001',
         category: 'data-retention',
-        severity: 'high',
+        severity: 'info',
         title: 'ePHI Technology Asset Inventory Generated',
         description: `Found ${assetInventory.length} assets processing ePHI`,
         file: 'ASSET-INVENTORY',
@@ -405,7 +405,7 @@ export const hipaa2026Scanner: Scanner = {
       findings.push({
         id: 'HIPAA-FLOW-001',
         category: 'data-retention',
-        severity: 'high',
+        severity: 'info',
         title: 'ePHI Flow Map Generated',
         description: `Identified ${phiFlowMap.length} PHI data flow points`,
         file: 'PHI-FLOW-MAP',

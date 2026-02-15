@@ -32,6 +32,19 @@ const MISSING_ENCRYPTION_PATTERNS: Array<{
   { regex: /backup.*storage(?!.*encrypt)|storage.*backup(?!.*encrypt)/i, issue: 'Backup storage without encryption specified', severity: 'medium' as const },
 ];
 
+/** Detect test, fixture, example, doc, migration, and seed files */
+function isReducedConfidenceFile(filePath: string): boolean {
+  return /\.(test|spec)\.[^.]+$|__tests__|__mocks__|\/fixtures\/|\/examples\/|\/docs\/|\/migrations?\/|\/seeds?\//i.test(filePath);
+}
+
+/** Detect comment lines and non-functional references (docs, RFCs, specs) */
+function isCommentOrNonFunctional(line: string): boolean {
+  const trimmed = line.trimStart();
+  if (/^(\/\/|#|\*|\/\*)/.test(trimmed)) return true;
+  if (/\b(see|docs|reference|spec|rfc|example|documentation)\b/i.test(trimmed)) return true;
+  return false;
+}
+
 export const encryptionScanner: Scanner = {
   name: 'Encryption Scanner',
   category: 'encryption',
@@ -68,10 +81,19 @@ export const encryptionScanner: Scanner = {
             }
           }
 
+          const isTestOrDocFile = isReducedConfidenceFile(filePath);
+
           for (const pattern of MISSING_ENCRYPTION_PATTERNS) {
             if (pattern.regex.test(line)) {
               // Check if this is a safe HTTP URL (CDN, namespace, etc.)
               if (pattern.checkSafe && isSafeHttpUrl(line, config)) {
+                continue;
+              }
+              // Skip test/doc files and comment lines for safe-checkable patterns
+              if (pattern.checkSafe && isTestOrDocFile) {
+                continue;
+              }
+              if (pattern.checkSafe && isCommentOrNonFunctional(line)) {
                 continue;
               }
 
