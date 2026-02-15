@@ -89,34 +89,34 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   // Filter out ignored paths from config
   const filteredFiles = files.filter(f => !isPathIgnored(f, config));
 
-  // Run scanners for selected categories
-  const findings: Finding[] = [];
+  // Pre-filter large files (>1MB) to prevent OOM on large repos
+  const BATCH_SIZE = 50;
+  const MAX_FILE_SIZE = 1_000_000; // 1MB
 
-  for (const category of categories) {
-    const scanner = scanners[category];
-    if (scanner) {
-      const categoryFindings = await scanner.scan(filteredFiles, optionsWithConfig);
-      findings.push(...categoryFindings);
-    }
-
-    // Run additional scanners for this category
-    const additional = additionalScanners[category];
-    if (additional) {
-      for (const extraScanner of additional) {
-        const extraFindings = await extraScanner.scan(filteredFiles, optionsWithConfig);
-        findings.push(...extraFindings);
+  const fileStats = await Promise.all(
+    filteredFiles.map(async (f) => {
+      try {
+        const stat = await fs.stat(f);
+        return { file: f, size: stat.size };
+      } catch {
+        return { file: f, size: 0 };
       }
-    }
+    })
+  );
+
+  const normalFiles = fileStats.filter(f => f.size <= MAX_FILE_SIZE).map(f => f.file);
+  const skippedCount = fileStats.length - normalFiles.length;
+  if (skippedCount > 0) {
+    console.error(`[vlayer] Skipping ${skippedCount} file(s) larger than 1MB`);
   }
 
-  // Load and apply custom rules
+  // Load custom rules once before batch loop
   const { rules: customRules, errors: ruleErrors } = await loadCustomRules(
     options.path,
     config.customRulesPath
   );
 
   if (ruleErrors.length > 0) {
-    // Log errors but continue scanning
     for (const error of ruleErrors) {
       console.warn(`[vlayer] Warning: ${error.error} (${error.file})`);
       if (error.details) {
@@ -125,10 +125,61 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     }
   }
 
-  if (customRules.length > 0) {
-    const customFindings = await scanWithCustomRules(filteredFiles, optionsWithConfig, customRules);
-    findings.push(...customFindings);
+  // Process files in batches to limit memory usage
+  const findings: Finding[] = [];
+  const totalBatches = Math.ceil(normalFiles.length / BATCH_SIZE) || 1;
+
+  for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+    const batchStart = batchIdx * BATCH_SIZE;
+    const batchFiles = normalFiles.slice(batchStart, batchStart + BATCH_SIZE);
+
+    if (totalBatches > 1) {
+      console.error(`[vlayer] Processing batch ${batchIdx + 1}/${totalBatches} (${batchFiles.length} files)...`);
+    }
+
+    for (const category of categories) {
+      const scanner = scanners[category];
+      if (scanner) {
+        const categoryFindings = await scanner.scan(batchFiles, optionsWithConfig);
+        findings.push(...categoryFindings);
+      }
+
+      const additional = additionalScanners[category];
+      if (additional) {
+        for (const extraScanner of additional) {
+          const extraFindings = await extraScanner.scan(batchFiles, optionsWithConfig);
+          findings.push(...extraFindings);
+        }
+      }
+    }
+
+    if (customRules.length > 0) {
+      const customFindings = await scanWithCustomRules(batchFiles, optionsWithConfig, customRules);
+      findings.push(...customFindings);
+    }
+
+    // Hint GC between batches
+    if (globalThis.gc) {
+      globalThis.gc();
+    }
   }
+
+  // Deduplicate project-level / aggregate findings that appear once per batch
+  const aggregateFiles = new Set(['project-level', 'ASSET-INVENTORY', 'PHI-FLOW-MAP']);
+  const seenAggregateIds = new Set<string>();
+  const deduplicatedFindings: Finding[] = [];
+
+  for (const f of findings) {
+    if (aggregateFiles.has(f.file)) {
+      if (seenAggregateIds.has(f.id)) continue;
+      seenAggregateIds.add(f.id);
+    }
+    deduplicatedFindings.push(f);
+  }
+
+  // Replace findings with deduplicated version
+  findings.length = 0;
+  findings.push(...deduplicatedFindings);
 
   // Sort findings by severity
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -179,15 +230,18 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   // Apply AI triage if enabled and available
   if (config.ai?.enableTriage !== false && isAIAvailable()) {
     try {
-      // Load file contents for triage
+      // Load file contents for triage (skip special/virtual files)
       const fileContents = new Map<string, string>();
-      const uniqueFiles = [...new Set(processedFindings.map(f => f.file))];
+      const uniqueFiles = [...new Set(processedFindings.map(f => f.file))]
+        .filter(f => !aggregateFiles.has(f));
 
       for (const file of uniqueFiles) {
         try {
+          const stat = await fs.stat(file);
+          if (stat.size > MAX_FILE_SIZE) continue; // Skip large files
           const content = await fs.readFile(file, 'utf-8');
           fileContents.set(file, content);
-        } catch (error) {
+        } catch {
           // Skip files that can't be read
         }
       }
@@ -234,7 +288,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   // Calculate compliance score
   const result = {
     findings: processedFindings,
-    scannedFiles: filteredFiles.length,
+    scannedFiles: normalFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
   };
