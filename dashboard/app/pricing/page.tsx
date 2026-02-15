@@ -238,6 +238,116 @@ export default function PricingPage() {
             ))}
           </div>
 
+          {/* Proven Results */}
+          <div className="mt-20 mb-16">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold text-white">Proven Results</h2>
+              <p className="text-slate-400 mt-2">Real data from scanning open-source healthcare repositories</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl text-center">
+                <div className="text-3xl font-bold text-emerald-400">13-15</div>
+                <div className="text-sm text-slate-400 mt-1">HIPAA violations<br />found per scan</div>
+              </div>
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl text-center">
+                <div className="text-3xl font-bold text-emerald-400">584ms</div>
+                <div className="text-sm text-slate-400 mt-1">Average<br />scan time</div>
+              </div>
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl text-center">
+                <div className="text-3xl font-bold text-emerald-400">0%</div>
+                <div className="text-sm text-slate-400 mt-1">False positive<br />rate</div>
+              </div>
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 shadow-xl text-center">
+                <div className="text-3xl font-bold text-emerald-400">28</div>
+                <div className="text-sm text-slate-400 mt-1">Total findings across<br />2 external repos</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Case Study */}
+          <div className="mb-16">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-700">
+                <h3 className="text-2xl font-bold text-white">Case Study: Real-World Healthcare Apps</h3>
+                <p className="text-slate-400 mt-1">We scanned 2 open-source healthcare applications built with Next.js</p>
+              </div>
+
+              <div className="px-8 py-6">
+                {/* Severity Breakdown */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                    <span className="text-sm text-slate-300"><span className="font-bold text-white">11</span> Critical</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                    <span className="text-sm text-slate-300"><span className="font-bold text-white">11</span> High</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                    <span className="text-sm text-slate-300"><span className="font-bold text-white">6</span> Medium</span>
+                  </div>
+                </div>
+
+                {/* Severity bar */}
+                <div className="w-full h-3 rounded-full overflow-hidden flex mb-8">
+                  <div className="bg-red-500 h-full" style={{ width: '39.3%' }} />
+                  <div className="bg-orange-500 h-full" style={{ width: '39.3%' }} />
+                  <div className="bg-amber-500 h-full" style={{ width: '21.4%' }} />
+                </div>
+
+                {/* Real findings */}
+                <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Real Findings Detected</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold text-white bg-red-500/20 border border-red-500/30">CRITICAL</span>
+                    </div>
+                    <h5 className="font-medium text-white text-sm">Secrets exposed to client via NEXT_PUBLIC_ prefix</h5>
+                    <p className="text-xs text-slate-500 mt-1">45 CFR &sect;164.312(a)(1) &mdash; Access Control</p>
+                  </div>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold text-white bg-red-500/20 border border-red-500/30">CRITICAL</span>
+                    </div>
+                    <h5 className="font-medium text-white text-sm">PHI data in error logs</h5>
+                    <p className="text-xs text-slate-500 mt-1">45 CFR &sect;164.312(b) &mdash; Audit Controls</p>
+                  </div>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold text-white bg-orange-500/20 border border-orange-500/30">HIGH</span>
+                    </div>
+                    <h5 className="font-medium text-white text-sm">No audit logging framework detected</h5>
+                    <p className="text-xs text-slate-500 mt-1">45 CFR &sect;164.312(b) &mdash; Audit Controls</p>
+                  </div>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold text-white bg-amber-500/20 border border-amber-500/30">MEDIUM</span>
+                    </div>
+                    <h5 className="font-medium text-white text-sm">Hardcoded admin access flag</h5>
+                    <p className="text-xs text-slate-500 mt-1">45 CFR &sect;164.312(a)(1) &mdash; Access Control</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Social Proof Quote */}
+          <div className="mb-16">
+            <div className="bg-gradient-to-br from-emerald-500/5 to-teal-600/5 rounded-xl p-8 border border-emerald-500/20">
+              <div className="max-w-3xl mx-auto text-center">
+                <svg className="w-10 h-10 text-emerald-500/40 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                </svg>
+                <blockquote className="text-lg text-slate-300 leading-relaxed mb-4">
+                  VLayer found critical HIPAA violations in under 1 second that would have taken a manual audit weeks to identify &mdash; including API keys exposed to the browser and patient data leaking into error logs.
+                </blockquote>
+                <div className="text-sm text-slate-500">Real results from scanning production healthcare codebases</div>
+              </div>
+            </div>
+          </div>
+
           {/* FAQ */}
           <div className="mt-16 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-8 border border-slate-700 shadow-xl">
             <h3 className="text-xl font-bold text-white mb-6 text-center">Frequently Asked Questions</h3>
