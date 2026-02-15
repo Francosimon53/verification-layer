@@ -147,7 +147,7 @@ export default function SettingsPage() {
 
               {sub?.cancelAtPeriodEnd && sub.currentPeriodEnd && (
                 <p className="text-amber-400 text-sm mb-2">
-                  Cancels on {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                  Cancels on {new Date(sub.currentPeriodEnd).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               )}
 

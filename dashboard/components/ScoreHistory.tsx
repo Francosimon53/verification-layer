@@ -58,7 +58,7 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
                 <div className="text-xs text-slate-400 text-center">
                   <div className="font-semibold text-white">{score}</div>
                   <div className="text-slate-500">
-                    {new Date(scan.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {new Date(scan.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
               </div>
@@ -96,7 +96,7 @@ export function ScoreHistory({ scans }: ScoreHistoryProps) {
                       Grade {scan.grade ?? 'N/A'}
                     </div>
                     <div className="text-xs text-slate-400">
-                      {new Date(scan.createdAt).toLocaleString()} · {scan.totalFindings} findings
+                      {new Date(scan.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · {scan.totalFindings} findings
                     </div>
                   </div>
                 </div>

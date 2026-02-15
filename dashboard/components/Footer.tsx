@@ -51,7 +51,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-slate-600" suppressHydrationWarning>
             &copy; {new Date().getFullYear()} VLayer Inc. All rights reserved.
           </p>
           <p className="text-xs text-slate-600">
