@@ -45,8 +45,8 @@ importers:
         specifier: ^7.5.7
         version: 7.5.7
       verification-layer:
-        specifier: ^0.22.2
-        version: 0.22.2(@types/node@20.19.33)(typescript@5.9.3)
+        specifier: ^0.23.0
+        version: 0.23.0(@types/node@20.19.33)(typescript@5.9.3)
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -2524,8 +2524,8 @@ packages:
   utrie@1.0.2:
     resolution: {integrity: sha512-1MLa5ouZiOmQzUbjbu9VmjLzn1QLXBhwpUa7kdLUQK+KQ5KA9I1vk5U4YHe/X2Ch7PYnJfWuWT+VbuxbGwljhw==}
 
-  verification-layer@0.22.2:
-    resolution: {integrity: sha512-CxXeU7YhwY6fxlQn2uqHYJYNxhqGG4YMcPAYui2R1AU+cVcVvmRaLFwhIx6cUogjHUW3bb+lYgZCySL/yIq29Q==}
+  verification-layer@0.23.0:
+    resolution: {integrity: sha512-bY0nWthCBcOwGxvrr+6qR+GM9pHWLbcbkehzQ79vaTfMP/OF0gjjm14wEBxK2uQYIrrJDWVzXlnSVvDDJBnx2w==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -5328,7 +5328,7 @@ snapshots:
       base64-arraybuffer: 1.0.2
     optional: true
 
-  verification-layer@0.22.2(@types/node@20.19.33)(typescript@5.9.3):
+  verification-layer@0.23.0(@types/node@20.19.33)(typescript@5.9.3):
     dependencies:
       '@anthropic-ai/sdk': 0.73.0(zod@4.3.6)
       '@types/inquirer': 9.0.9
