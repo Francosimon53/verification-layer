@@ -10,7 +10,7 @@ export const PLANS = {
     price: 0,
     priceId: null,
     features: [
-      'CLI scanner with 163+ detection rules',
+      'CLI scanner with 140+ detection rules',
       '5 HIPAA compliance categories',
       'JSON & Markdown reports',
       'Community support (GitHub)',

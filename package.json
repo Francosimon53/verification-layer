@@ -1,7 +1,7 @@
 {
   "name": "verification-layer",
-  "version": "0.24.2",
-  "description": "CLI tool for HIPAA compliance scanning and reporting",
+  "version": "0.24.3",
+  "description": "Open-source HIPAA compliance scanner for healthcare code. 140+ rules, 5 HIPAA categories. CLI + CI/CD + VS Code.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -49,7 +49,9 @@
     "hipaa-compliance",
     "baseline",
     "suppression",
-    "github-action"
+    "github-action",
+    "devsecops",
+    "healthtech"
   ],
   "author": "Simon Franco",
   "license": "MIT",
