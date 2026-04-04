@@ -10,7 +10,9 @@
 
 ---
 
-## 🚀 Quick Start
+**[Start Here in 2 Minutes](docs/start-here.md)** — Get your first scan running with zero setup.
+
+## Quick Start
 
 ```bash
 # Install globally
