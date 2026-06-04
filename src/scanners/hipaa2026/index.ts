@@ -9,7 +9,6 @@ import * as path from 'path';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import {
   ALL_HIPAA_2026_PATTERNS,
-  type HIPAA2026Pattern,
 } from './patterns.js';
 
 interface AssetInventoryItem {
@@ -358,7 +357,7 @@ export const hipaa2026Scanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }

@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { existsSync } from 'fs';
 import type { Finding } from '../types.js';
 
@@ -123,7 +123,7 @@ export async function getMostRecentScan(projectPath: string): Promise<ScanHistor
     const mostRecentFile = scanFiles[0];
     const content = await readFile(join(historyDir, mostRecentFile), 'utf-8');
     return JSON.parse(content) as ScanHistoryEntry;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -156,7 +156,7 @@ export async function getAllScans(projectPath: string): Promise<ScanHistoryEntry
     }
 
     return scans;
-  } catch (error) {
+  } catch {
     return [];
   }
 }

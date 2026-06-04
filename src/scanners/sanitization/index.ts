@@ -11,7 +11,7 @@ export const sanitizationScanner: Scanner = {
   name: 'Input Sanitization Security Scanner',
   category: 'access-control',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to code files
@@ -52,8 +52,6 @@ export const sanitizationScanner: Scanner = {
             // For SANITIZE-001, check context for validation
             // For SANITIZE-002, check if config object has required fields
             const isSafe = pattern.negativePatterns?.some((regex) => {
-              const patternStr = regex.source;
-
               // For file upload patterns, check the entire config block
               if (pattern.id === 'SANITIZE-002') {
                 // Check if the line has the required validation fields
@@ -110,7 +108,7 @@ export const sanitizationScanner: Scanner = {
             findings.push(finding);
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }

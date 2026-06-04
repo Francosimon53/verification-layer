@@ -41,7 +41,6 @@ export async function runAIScan(
   options: AIScanOptions = {}
 ): Promise<AIScanResult> {
   const {
-    enableTriage = true,
     enableLLMRules = true,
     budgetCents = AI_CONFIG.budget.defaultMaxCentsPerScan,
     targetFiles = [],

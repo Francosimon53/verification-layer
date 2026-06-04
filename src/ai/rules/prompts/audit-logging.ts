@@ -54,7 +54,7 @@ Respond in JSON:
       "line": number,
       "severity": "high" | "medium",
       "message": "Brief description of the violation",
-      "suggestion": "How to fix (be specific - e.g., 'Add auditLog.record({ userId, action: \"PHI_READ\", resourceId: patientId })')",
+      "suggestion": "How to fix (be specific - e.g., 'Add auditLog.record({ userId, action: "PHI_READ", resourceId: patientId })')",
       "hipaaReference": "§164.308(a)(1)(ii)(D) - Audit Controls",
       "confidence": 0.0-1.0
     }

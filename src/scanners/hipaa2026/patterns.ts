@@ -4,7 +4,6 @@
  * Expected enforcement: May 2026
  */
 
-import type { Finding } from '../../types.js';
 
 export interface HIPAA2026Pattern {
   id: string;

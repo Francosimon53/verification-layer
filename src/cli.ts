@@ -1249,7 +1249,7 @@ marketplaceCommand
   .command('update')
   .description('Update installed rules to latest versions')
   .option('--dry-run', 'Show what would be updated without installing')
-  .action(async (options) => {
+  .action(async (_options) => {
     const spinner = ora('Checking for updates...').start();
 
     try {

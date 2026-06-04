@@ -1,7 +1,7 @@
 import { writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison, GroupedFinding } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
 
@@ -198,25 +198,6 @@ async function generateAssetInventory(targetPath: string): Promise<AssetInventor
     detectedAt: new Date().toISOString(),
     totalAssets: assets.length,
   };
-}
-
-function generateAssetInventoryCsv(inventory: AssetInventory): string {
-  const header = 'ID,Name,Version,Type,Category,Provider,Responsible Person,Location\n';
-
-  const rows = inventory.assets.map(asset => {
-    return [
-      asset.id,
-      `"${asset.name}"`,
-      `"${asset.version}"`,
-      asset.type,
-      asset.category,
-      `"${asset.provider}"`,
-      `"${asset.responsiblePerson}"`,
-      `"${asset.location}"`,
-    ].join(',');
-  }).join('\n');
-
-  return header + rows;
 }
 
 async function analyzeDataFlow(targetPath: string, findings: Finding[]): Promise<DataFlowMap> {
@@ -734,7 +715,7 @@ async function getScoreTrending(targetPath: string, currentScore: number): Promi
     }
 
     return { direction, previousScore, change };
-  } catch (error) {
+  } catch {
     // No history available
     return null;
   }
@@ -2004,14 +1985,11 @@ function renderExecutiveSummaryHtml(report: Report): string {
 
 function renderBackupRecoveryGuideHtml(stack: StackInfo): string {
   let guideContent = '';
-  let dbType = 'unknown';
-  let dbDisplay = stack?.databaseDisplay || 'Unknown';
 
   // Detect database type from stack
   const database = stack?.database || 'unknown';
 
   if (database.includes('supabase')) {
-    dbType = 'supabase';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2062,10 +2040,10 @@ function renderBackupRecoveryGuideHtml(stack: StackInfo): string {
               <strong>Additional Manual Backup (Optional)</strong>
               <div class="backup-code-block">
                 <pre><code># Using pg_dump for additional backup
-pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup_\$(date +%Y%m%d).sql
+pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup_$(date +%Y%m%d).sql
 
 # Upload to secure offsite storage
-aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
+aws s3 cp backup_$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
               </div>
             </div>
           </div>
@@ -2073,7 +2051,6 @@ aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
       </div>
     `;
   } else if (database.includes('prisma') || database.includes('postgres')) {
-    dbType = 'postgresql';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2091,23 +2068,23 @@ aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
 # PostgreSQL Backup Script for HIPAA Compliance
 
 BACKUP_DIR="/path/to/backups"
-TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="\${BACKUP_DIR}/backup_\${TIMESTAMP}.sql"
 
 # Create backup directory if not exists
-mkdir -p \$BACKUP_DIR
+mkdir -p $BACKUP_DIR
 
 # Perform backup
-pg_dump \$DATABASE_URL > \$BACKUP_FILE
+pg_dump $DATABASE_URL > $BACKUP_FILE
 
 # Compress backup
-gzip \$BACKUP_FILE
+gzip $BACKUP_FILE
 
 # Upload to offsite storage (S3 example)
 aws s3 cp \${BACKUP_FILE}.gz s3://your-backup-bucket/postgresql/
 
 # Keep only last 30 days of local backups
-find \$BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
 
 echo "Backup completed: \${BACKUP_FILE}.gz"</code></pre>
               </div>
@@ -2137,10 +2114,10 @@ aws s3 cp s3://your-backup-bucket/postgresql/backup_YYYYMMDD.sql.gz .
 gunzip backup_YYYYMMDD.sql.gz
 
 # Restore to test database
-psql \$TEST_DATABASE_URL < backup_YYYYMMDD.sql
+psql $TEST_DATABASE_URL < backup_YYYYMMDD.sql
 
 # Verify data integrity
-psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
+psql $TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
               </div>
             </div>
           </div>
@@ -2161,7 +2138,6 @@ psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
       </div>
     `;
   } else if (database.includes('mongo')) {
-    dbType = 'mongodb';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2193,12 +2169,12 @@ psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
                 <pre><code>#!/bin/bash
 # MongoDB Backup Script
 
-TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/path/to/backups"
 BACKUP_NAME="mongodb_backup_\${TIMESTAMP}"
 
 # Perform backup
-mongodump --uri="\$MONGODB_URI" --out=\${BACKUP_DIR}/\${BACKUP_NAME}
+mongodump --uri="$MONGODB_URI" --out=\${BACKUP_DIR}/\${BACKUP_NAME}
 
 # Compress
 tar -czf \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz -C \${BACKUP_DIR} \${BACKUP_NAME}
@@ -2208,7 +2184,7 @@ rm -rf \${BACKUP_DIR}/\${BACKUP_NAME}
 aws s3 cp \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz s3://your-backup-bucket/mongodb/
 
 # Cleanup old local backups (keep 7 days)
-find \$BACKUP_DIR -name "mongodb_backup_*.tar.gz" -mtime +7 -delete</code></pre>
+find $BACKUP_DIR -name "mongodb_backup_*.tar.gz" -mtime +7 -delete</code></pre>
               </div>
             </div>
           </div>
@@ -2223,10 +2199,10 @@ aws s3 cp s3://your-backup-bucket/mongodb/mongodb_backup_YYYYMMDD.tar.gz .
 tar -xzf mongodb_backup_YYYYMMDD.tar.gz
 
 # Restore to test database
-mongorestore --uri="\$TEST_MONGODB_URI" mongodb_backup_YYYYMMDD/
+mongorestore --uri="$TEST_MONGODB_URI" mongodb_backup_YYYYMMDD/
 
 # Verify collections
-mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
+mongo $TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
               </div>
             </div>
           </div>
@@ -2234,7 +2210,6 @@ mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
       </div>
     `;
   } else {
-    dbType = 'none';
     guideContent = `
       <div class="backup-guide-card backup-guide-warning">
         <div class="backup-guide-header">
@@ -2379,9 +2354,8 @@ mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
   `;
 }
 
-function renderIncidentResponsePlanHtml(criticalFindings: number, highFindings: number): string {
+function renderIncidentResponsePlanHtml(criticalFindings: number, _highFindings: number): string {
   const hasActiveIncident = criticalFindings > 0;
-  const riskLevel = criticalFindings > 0 ? 'HIGH' : highFindings > 0 ? 'MEDIUM' : 'LOW';
 
   return `
     <div class="incident-response-section">
@@ -2813,7 +2787,6 @@ function renderScanComparisonHtml(comparison: ScanComparison | null | undefined)
   const criticalChange = formatChange(severityChanges.critical, true);
   const highChange = formatChange(severityChanges.high, true);
   const mediumChange = formatChange(severityChanges.medium, true);
-  const lowChange = formatChange(severityChanges.low, true);
 
   // Format previous scan date
   const prevDate = new Date(previousScan.timestamp);

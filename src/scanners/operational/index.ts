@@ -11,7 +11,7 @@ export const operationalScanner: Scanner = {
   name: 'Operational Security Scanner',
   category: 'data-retention',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Handle BACKUP-001 separately (requires project-wide scan)
@@ -109,7 +109,7 @@ export const operationalScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
         continue;
       }
@@ -170,7 +170,7 @@ async function scanForBackupConfiguration(files: string[]): Promise<Finding | nu
       if (hasDatabaseUsage && hasBackupConfig) {
         break;
       }
-    } catch (error) {
+    } catch {
       // Skip files that can't be read
       continue;
     }

@@ -14,7 +14,7 @@ export const credentialsScanner: Scanner = {
   name: 'Credential Security Scanner',
   category: 'encryption',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to code and config files
@@ -101,7 +101,7 @@ export const credentialsScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }

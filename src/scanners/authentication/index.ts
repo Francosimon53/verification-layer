@@ -11,17 +11,12 @@ export const authenticationScanner: Scanner = {
   name: 'Multi-Factor Authentication Scanner',
   category: 'access-control', // Map to existing category for now
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to code and config files
     const relevantFiles = files.filter((f) =>
       /\.(js|ts|jsx|tsx|json|yaml|yml|env)$/i.test(f)
-    );
-
-    // Common auth config file patterns
-    const authConfigFiles = relevantFiles.filter((f) =>
-      /(?:auth|clerk|supabase|next-auth).*\.(?:ts|js|json|config)/i.test(f)
     );
 
     for (const file of relevantFiles) {
@@ -72,7 +67,7 @@ export const authenticationScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }
