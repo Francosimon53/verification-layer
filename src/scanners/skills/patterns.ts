@@ -39,7 +39,7 @@ export const PHI_EXPOSURE_PATTERNS: SkillPattern[] = [
   {
     id: 'skill-phi-dob',
     name: 'Date of birth in prompt',
-    pattern: /(?:dob|date.{0,5}birth|birthdate)[:=]\s*['"]?\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}['"]?/i,
+    pattern: /(?:dob|date.{0,5}birth|birthdate)[:=]\s*['"]?\d{1,2}[/-]\d{1,2}[/-]\d{2,4}['"]?/i,
     severity: 'high',
     description: 'Date of birth found in skill definition',
     recommendation: 'Use template variable {{date_of_birth}} instead of actual dates',
@@ -73,7 +73,7 @@ export const CREDENTIAL_LEAK_PATTERNS: SkillPattern[] = [
   {
     id: 'skill-api-key-exposed',
     name: 'API key in skill configuration',
-    pattern: /(?:api.{0,5}key|apikey|access.{0,5}key)[:=]\s*['"]?[A-Za-z0-9_\-]{20,}['"]?/i,
+    pattern: /(?:api.{0,5}key|apikey|access.{0,5}key)[:=]\s*['"]?[A-Za-z0-9_-]{20,}['"]?/i,
     severity: 'critical',
     description: 'Hardcoded API key found in skill',
     recommendation: 'Use environment variables: ${ANTHROPIC_API_KEY} or prompt user for keys',
@@ -100,7 +100,7 @@ export const CREDENTIAL_LEAK_PATTERNS: SkillPattern[] = [
   {
     id: 'skill-bearer-token',
     name: 'Bearer token hardcoded',
-    pattern: /bearer\s+[A-Za-z0-9_\-\.]{20,}/i,
+    pattern: /bearer\s+[A-Za-z0-9_\-.]{20,}/i,
     severity: 'critical',
     description: 'Bearer authentication token found in skill',
     recommendation: 'Tokens should be fetched securely at runtime, not hardcoded',

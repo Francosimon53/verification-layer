@@ -16,7 +16,9 @@ const REGISTRY_BASE_URL =
   process.env.VLAYER_REGISTRY_URL ||
   'https://raw.githubusercontent.com/vlayer-registry/rules/main';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BUILTIN_RULES_URL = `${REGISTRY_BASE_URL}/registry.json`;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PACKAGES_URL = `${REGISTRY_BASE_URL}/packages.json`;
 
 export class MarketplaceRegistry {
@@ -35,7 +37,7 @@ export class MarketplaceRegistry {
   ): Promise<SearchResult> {
     const rules = await this.getAllRules();
 
-    let filtered = rules.filter((rule) => {
+    const filtered = rules.filter((rule) => {
       // Text search
       const matchesQuery =
         !query ||

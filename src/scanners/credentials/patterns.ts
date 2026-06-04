@@ -86,7 +86,7 @@ export const HARDCODED_CREDENTIALS: CredentialPattern = {
     /(?:connection[-_]?string|connectionstring|database[-_]?url)\s*[:=]\s*['"`][^'"`]{10,}['"`]/i,
 
     // Bearer tokens
-    /['"`]Bearer\s+[A-Za-z0-9_\-\.]{16,}['"`]/i,
+    /['"`]Bearer\s+[A-Za-z0-9_\-.]{16,}['"`]/i,
 
     // AWS/Service keys
     /(?:aws|service|client)[-_]?(?:key|secret)\s*[:=]\s*['"`][A-Za-z0-9+/]{20,}['"`]/i,

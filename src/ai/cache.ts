@@ -27,7 +27,7 @@ export class AICache {
   async ensureCacheDir(): Promise<void> {
     try {
       await fs.mkdir(this.cacheDir, { recursive: true });
-    } catch (error) {
+    } catch {
       // Directory might already exist
     }
   }
@@ -65,7 +65,7 @@ export class AICache {
       }
 
       return entry.result;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

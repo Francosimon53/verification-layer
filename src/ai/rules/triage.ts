@@ -6,7 +6,7 @@ import { getAIClient } from '../client.js';
 import { AI_CONFIG } from '../config.js';
 import { sanitizeCodeForLLM } from '../sanitizer.js';
 import type { Finding } from '../../types.js';
-import type { TriageClassification, TriageResponse, TriagedFinding } from './types.js';
+import type { TriageResponse, TriagedFinding } from './types.js';
 
 const TRIAGE_SYSTEM_PROMPT = `You are a HIPAA compliance expert analyzing potential security findings.
 Your job is to classify findings as:
@@ -32,7 +32,7 @@ export async function triageFinding(
   const client = getAIClient();
 
   // Sanitize code before sending
-  const { sanitizedCode, warnings } = sanitizeCodeForLLM(fileContent, filePath);
+  const { sanitizedCode } = sanitizeCodeForLLM(fileContent, filePath);
 
   // Get context around the finding (±10 lines)
   const lines = sanitizedCode.split('\n');

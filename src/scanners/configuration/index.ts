@@ -11,7 +11,7 @@ export const configurationScanner: Scanner = {
   name: 'Configuration Security Scanner',
   category: 'audit-logging',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to code files
@@ -94,7 +94,7 @@ export const configurationScanner: Scanner = {
             findings.push(finding);
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }
