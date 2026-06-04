@@ -3,7 +3,7 @@
  */
 
 export const AI_CONFIG = {
-  model: 'claude-sonnet-4-20250514' as const,
+  model: 'claude-sonnet-4-6' as const,
   maxTokens: 2048,
   temperature: 0.1, // Deterministic for security
   maxFileSizeBytes: 50_000, // Don't send files > 50KB
