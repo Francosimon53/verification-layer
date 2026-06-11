@@ -1,12 +1,14 @@
 import { createHash } from 'crypto';
-import type { ScanResult } from '../types.js';
+import type { ScanResult, ResolvedBranding } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
+import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
 
 interface AuditorReportOptions {
   organizationName?: string;
   reportPeriod?: string;
   auditorName?: string;
   includeBaseline?: boolean;
+  branding?: ResolvedBranding;
 }
 
 /**
@@ -22,7 +24,16 @@ export function generateAuditorReport(
     reportPeriod = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
     auditorName = 'VLayer Automated Scan',
     includeBaseline = false,
+    branding,
   } = options;
+
+  // White-label branding. When a brand is supplied the cover shows the brand
+  // logo + "Prepared by {brand}", and a footer line repeats on every printed
+  // page. With no branding the report renders exactly as before (default VLayer).
+  const brandLogo = logoDataUri(branding);
+  const hasBrand = Boolean(branding?.name || brandLogo);
+  const preparedBy = brandPreparedBy(branding);
+  const footerLine = brandFooterText(branding);
 
   const timestamp = new Date().toISOString();
   const score = result.complianceScore!;
@@ -69,6 +80,20 @@ export function generateAuditorReport(
       justify-content: center;
       font-size: 2rem;
       font-weight: bold;
+    }
+
+    .brand-logo {
+      max-height: 80px;
+      max-width: 240px;
+      margin: 0 auto 1rem;
+      display: block;
+      object-fit: contain;
+    }
+
+    .report-header .prepared-by {
+      opacity: 0.95;
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
     }
 
     .report-header h1 {
@@ -197,6 +222,23 @@ export function generateAuditorReport(
       color: #6b7280;
     }
 
+    /* Per-page footer: only visible when printing / exporting to PDF. */
+    .brand-page-footer { display: none; }
+    @media print {
+      .brand-page-footer {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #6b7280;
+        padding: 0.4rem 0;
+      }
+      @page { margin-bottom: 2.2cm; }
+    }
+
     .report-hash {
       font-family: 'SF Mono', Monaco, 'Courier New', monospace;
       font-size: 0.75rem;
@@ -244,9 +286,12 @@ export function generateAuditorReport(
 <body>
   <div class="container">
     <div class="report-header">
-      <div class="logo-placeholder">VL</div>
+      ${brandLogo
+        ? `<img src="${brandLogo}" alt="${escapeHtml(preparedBy)} logo" class="brand-logo">`
+        : '<div class="logo-placeholder">VL</div>'}
       <h1>HIPAA Compliance Audit Report</h1>
-      <div class="subtitle">${organizationName} - ${reportPeriod}</div>
+      <div class="subtitle">${escapeHtml(organizationName)} - ${escapeHtml(reportPeriod)}</div>
+      ${hasBrand ? `<div class="prepared-by">Prepared by ${escapeHtml(preparedBy)}</div>` : ''}
     </div>
 
     <div class="report-meta">
@@ -372,11 +417,14 @@ export function generateAuditorReport(
     </div>
 
     <div class="report-footer">
-      <p><strong>VLayer HIPAA Compliance Scanner</strong></p>
+      ${hasBrand
+        ? `<p><strong>${escapeHtml(footerLine)}</strong></p>`
+        : '<p><strong>VLayer HIPAA Compliance Scanner</strong></p>'}
       <p>Automated compliance scanning for healthcare applications</p>
       <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: ${new Date(timestamp).toLocaleString()}</p>
     </div>
   </div>
+  ${hasBrand ? `<div class="brand-page-footer">${escapeHtml(footerLine)}</div>` : ''}
 
   <script>
     function filterFindings(severity) {

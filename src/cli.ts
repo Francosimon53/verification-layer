@@ -13,8 +13,34 @@ import { generateAuditReport, generateTextAuditReport } from './reporters/audit-
 import { loadCustomRules, validateRulesFile } from './rules/index.js';
 import { formatScore, getScoreColor } from './compliance-score.js';
 import { generateAuditorReport } from './reporters/auditor-report.js';
+import { generateScanPdf } from './reporters/scan-pdf-report.js';
+import { loadConfig } from './config.js';
+import { resolveBranding } from './reporters/branding.js';
 import { writeFile } from 'fs/promises';
-import type { ComplianceCategory, ReportOptions, AuditReportOptions } from './types.js';
+import type { ComplianceCategory, ReportOptions, AuditReportOptions, ResolvedBranding } from './types.js';
+
+/**
+ * Build branding from CLI flags (precedence) + config, and print any warnings
+ * (missing/invalid logo) without aborting. Returns undefined when nothing was
+ * supplied, so reports keep their default VLayer presentation.
+ */
+async function buildBranding(
+  targetPath: string,
+  configFile: string | undefined,
+  flags: { brandName?: string; brandLogo?: string }
+): Promise<ResolvedBranding | undefined> {
+  const config = await loadConfig(resolve(targetPath), configFile);
+  const branding = resolveBranding(
+    { name: flags.brandName, logo: flags.brandLogo },
+    config.branding,
+    resolve(targetPath)
+  );
+  for (const warning of branding.warnings) {
+    console.warn(chalk.yellow(`⚠ ${warning}`));
+  }
+  if (!branding.name && !branding.logoPath) return undefined;
+  return branding;
+}
 
 const program = new Command();
 
@@ -30,7 +56,7 @@ program
   .option('-c, --categories <categories...>', 'Compliance categories to check')
   .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated or space-separated)')
   .option('-o, --output <path>', 'Output file path for the report')
-  .option('-f, --format <format>', 'Report format: json, html, markdown', 'json')
+  .option('-f, --format <format>', 'Report format: json, html, markdown, pdf', 'json')
   .option('--config <path>', 'Path to configuration file')
   .option('--rules <path>', 'Path to custom rules YAML file')
   .option('--baseline <path>', 'Path to baseline file for comparison')
@@ -39,6 +65,8 @@ program
   .option('--no-ai', 'Disable AI-powered triage and analysis')
   .option('--audit', 'Run npm audit and include dependency vulnerabilities in report')
   .option('--verbose', 'Show all individual findings instead of grouped summary')
+  .option('--brand-name <name>', 'White-label: name shown as report author (html/pdf reports)')
+  .option('--brand-logo <path>', 'White-label: logo image (png/jpg/svg) for cover and header')
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
     const absolutePath = resolve(path);
@@ -126,11 +154,17 @@ program
         ? compareScan(result.complianceScore.score, result.findings, previousScan)
         : null;
 
+      // Branding only affects the rendered html/pdf reports.
+      const branding = options.format === 'html' || options.format === 'pdf'
+        ? await buildBranding(path, options.config, options)
+        : undefined;
+
       const reportOptions: ReportOptions = {
         format: options.format,
         outputPath: options.output,
         vulnerabilities,
         scanComparison: comparison,
+        branding,
       };
 
       await generateReport(result, path, reportOptions);
@@ -791,7 +825,8 @@ program
   .command('report')
   .description('Generate auditor-ready compliance report with SHA256 hash')
   .argument('<path>', 'Path to the repository')
-  .option('-o, --output <path>', 'Output file path for the report', 'vlayer-audit-report.html')
+  .option('-o, --output <path>', 'Output file path (default: vlayer-audit-report.<html|pdf>)')
+  .option('-f, --format <format>', 'Report format: html, pdf', 'html')
   .option('--org <name>', 'Organization name for the report')
   .option('--period <period>', 'Report period (e.g., "January 2024")')
   .option('--auditor <name>', 'Auditor name')
@@ -800,7 +835,14 @@ program
   .option('--config <path>', 'Path to configuration file')
   .option('--baseline <path>', 'Path to baseline file')
   .option('--include-baseline', 'Include baseline comparison in report')
+  .option('--brand-name <name>', 'White-label: name shown as report author')
+  .option('--brand-logo <path>', 'White-label: logo image (png/jpg/svg) for cover and header')
   .action(async (path: string, options) => {
+    const format = (options.format || 'html').toLowerCase();
+    if (format !== 'html' && format !== 'pdf') {
+      console.error(chalk.red(`Invalid format "${options.format}". Use "html" or "pdf".`));
+      process.exit(1);
+    }
     const spinner = ora('Generating auditor report...').start();
 
     try {
@@ -833,19 +875,40 @@ program
         process.exit(1);
       }
 
-      const { html, hash } = generateAuditorReport(result, path, {
-        organizationName: options.org,
-        reportPeriod: options.period,
-        auditorName: options.auditor,
-        includeBaseline: options.includeBaseline,
-      });
+      const branding = await buildBranding(path, options.config, options);
+      const outputPath = options.output || (format === 'pdf' ? 'vlayer-audit-report.pdf' : 'vlayer-audit-report.html');
 
-      await writeFile(options.output, html, 'utf-8');
+      let hash: string;
+      if (format === 'pdf') {
+        const pdf = await generateScanPdf(result, path, {
+          organizationName: options.org,
+          reportPeriod: options.period,
+          auditorName: options.auditor,
+          includeBaseline: options.includeBaseline,
+          branding,
+        });
+        await writeFile(outputPath, pdf.buffer);
+        hash = pdf.hash;
+      } else {
+        const report = generateAuditorReport(result, path, {
+          organizationName: options.org,
+          reportPeriod: options.period,
+          auditorName: options.auditor,
+          includeBaseline: options.includeBaseline,
+          branding,
+        });
+        await writeFile(outputPath, report.html, 'utf-8');
+        hash = report.hash;
+      }
 
-      spinner.succeed(`Auditor report generated: ${options.output}`);
+      spinner.succeed(`Auditor report generated: ${outputPath}`);
 
       console.log(chalk.bold('\n📄 Report Details:\n'));
-      console.log(`${chalk.cyan('Location:')} ${options.output}`);
+      console.log(`${chalk.cyan('Location:')} ${outputPath}`);
+      console.log(`${chalk.cyan('Format:')} ${format.toUpperCase()}`);
+      if (branding?.name) {
+        console.log(`${chalk.cyan('Prepared by:')} ${branding.name}`);
+      }
       console.log(`${chalk.cyan('SHA256 Hash:')} ${chalk.gray(hash)}`);
       console.log(`${chalk.cyan('Compliance Score:')} ${formatScore(result.complianceScore)}`);
       console.log(`${chalk.cyan('Total Findings:')} ${result.complianceScore.breakdown.total}`);
@@ -857,7 +920,11 @@ program
       console.log(chalk.gray('   • Detailed findings with HIPAA references'));
       console.log(chalk.gray('   • Suppression and acknowledgment audit trails'));
       console.log(chalk.gray('   • SHA256 hash for document integrity verification'));
-      console.log(chalk.gray('   • Print-friendly CSS for PDF export\n'));
+      if (format === 'html') {
+        console.log(chalk.gray('   • Print-friendly CSS for PDF export\n'));
+      } else {
+        console.log('');
+      }
 
     } catch (error) {
       spinner.fail('Report generation failed');

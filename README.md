@@ -194,9 +194,14 @@ vlayer watch <path>                     # Watch for changes
 vlayer watch <path> -c phi-exposure     # Watch specific categories
 
 # Audit Reports
-vlayer report <path>                    # Generate auditor-ready report
+vlayer report <path>                    # Generate auditor-ready report (HTML)
+vlayer report <path> -f pdf             # Generate as PDF
 vlayer report <path> -o report.html     # Custom output path
 vlayer report <path> --org "Company"    # Set organization name
+
+# White-label branding (agencies / resellers)
+vlayer report <path> --brand-name "Acme Health" --brand-logo ./logo.png
+vlayer scan <path> -f html --brand-name "Acme Health" --brand-logo ./logo.svg
 
 # Training
 vlayer train                            # Start interactive training
@@ -338,9 +343,41 @@ Create `.vlayerrc.json` in your project root:
     "enabled": true,
     "enableTriage": true,
     "budgetCents": 50
+  },
+  "branding": {
+    "name": "Acme Health Devs",
+    "logo": "./assets/logo.png"
   }
 }
 ```
+
+---
+
+## 🏷️ White-Label Reports
+
+Agencies and resellers can put **their own brand** on the HTML and PDF reports.
+
+```bash
+vlayer report ./src --brand-name "Acme Health Devs" --brand-logo ./logo.png
+vlayer report ./src -f pdf --brand-name "Acme Health Devs" --brand-logo ./logo.png
+vlayer scan   ./src -f html --brand-name "Acme Health Devs" --brand-logo ./logo.svg
+```
+
+Or set it once in `.vlayerrc.json`:
+
+```json
+{ "branding": { "name": "Acme Health Devs", "logo": "./logo.png" } }
+```
+
+Behavior:
+
+- **Cover / header**: your logo on top, your name shown as **"Prepared by …"**.
+- **Page footer**: `Prepared by {brand} · Powered by VLayer` (repeats on every printed/PDF page).
+- **Precedence**: CLI flags (`--brand-name`, `--brand-logo`) override the config block.
+- **Logos**: `.png`, `.jpg`/`.jpeg`, `.svg` are accepted (PDF embeds PNG/JPG; SVG is used in HTML only).
+- **Safe by default**: a missing or unsupported logo prints a warning and the report
+  still generates without it — the scan never breaks. Brand names are HTML-escaped.
+- **No branding** → reports render exactly as before (default VLayer presentation).
 
 ---
 

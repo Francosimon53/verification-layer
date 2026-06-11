@@ -173,10 +173,37 @@ export interface Report {
 }
 
 export interface ReportOptions {
-  format: 'json' | 'html' | 'markdown';
+  format: 'json' | 'html' | 'markdown' | 'pdf';
   outputPath?: string;
   vulnerabilities?: DependencyVulnerability[];
   scanComparison?: ScanComparison | null;
+  branding?: ResolvedBranding;
+}
+
+/**
+ * White-label branding for reports, as provided by the user via CLI flags
+ * (`--brand-name`, `--brand-logo`) or the `branding` block in config.
+ */
+export interface Branding {
+  /** Name shown as the report author ("Prepared by ..."). */
+  name?: string;
+  /** Path to a logo image (png/jpg/svg) used on the cover and footer. */
+  logo?: string;
+}
+
+/**
+ * Branding after validation: a usable logo (existing file, supported format)
+ * or none, plus any warnings to surface to the user. Reporters consume this.
+ */
+export interface ResolvedBranding {
+  /** Sanitized brand name, or undefined to fall back to default VLayer branding. */
+  name?: string;
+  /** Absolute path to a validated logo file, or undefined if none/invalid. */
+  logoPath?: string;
+  /** Logo format, derived from the file extension. */
+  logoFormat?: 'png' | 'jpg' | 'svg';
+  /** Non-fatal warnings (e.g. missing or unsupported logo) to print to the user. */
+  warnings: string[];
 }
 
 export interface ScanComparison {
@@ -241,6 +268,8 @@ export interface VlayerConfig {
     filterFalsePositives?: boolean;
     budgetCents?: number;
   };
+  /** White-label branding applied to HTML and PDF reports. */
+  branding?: Branding;
 }
 
 export interface FixResult {

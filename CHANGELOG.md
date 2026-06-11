@@ -1,3 +1,19 @@
+## Unreleased
+
+### Features
+
+* **white-label reports**: `vlayer report` and `vlayer scan -f html` now accept
+  `--brand-name` and `--brand-logo` (also configurable via a `branding` block in
+  `.vlayerrc.json`). The brand logo and "Prepared by …" appear on the report cover
+  and a `Prepared by {brand} · Powered by VLayer` footer repeats on every page.
+  CLI flags take precedence over config; a missing/invalid logo warns and is
+  skipped without breaking the scan; brand names are HTML-escaped. With no branding,
+  reports render exactly as before (default VLayer).
+* **`vlayer report -f pdf`**: the auditor report can now be generated as a branded
+  PDF (in addition to HTML), rendered from the scan result via pdfkit.
+
+---
+
 ## [0.18.1](https://github.com/Francosimon53/verification-layer/compare/v0.18.0...v0.18.1) (2026-02-06)
 
 
