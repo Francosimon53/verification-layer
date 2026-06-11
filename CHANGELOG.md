@@ -12,6 +12,24 @@
 * **`vlayer report -f pdf`**: the auditor report can now be generated as a branded
   PDF (in addition to HTML), rendered from the scan result via pdfkit.
 
+### Bug Fixes (scanner precision)
+
+* **Stop scanning vlayer's own output.** File discovery now excludes vlayer's
+  generated artifacts by default (`vlayer-report.*`, `vlayer-audit-report.*`,
+  `.vlayer-baseline.json`, `.vlayer/`, `samples/`), so a re-scan no longer flags
+  the text of a previous report as if it were source code. Opt out with
+  `--include-own-artifacts` (CLI) or `"includeOwnArtifacts": true` (config).
+* **Deduplicate exact findings.** A finding emitted twice on the same line (e.g.
+  a scanner registered under two categories) is now collapsed once, before
+  grouping, so terminal/JSON/HTML/PDF output all show one entry per real issue.
+* **MFA-001 / BACKUP-001 no longer anchor to import lines.** Both now point at
+  real usage; MFA-001 does not fire on an import alone, and BACKUP-001 falls back
+  to the import only for import-only DB libraries (drizzle, knex) to preserve
+  detection.
+* **HIPAA-SEGMENT-001 scoped to its real intent.** No longer fires on client-side
+  `localStorage`/`sessionStorage` or on client `fetch()/axios` calls; still fires
+  on server routes that expose PHI.
+
 ---
 
 ## [0.18.1](https://github.com/Francosimon53/verification-layer/compare/v0.18.0...v0.18.1) (2026-02-06)

@@ -67,6 +67,7 @@ program
   .option('--verbose', 'Show all individual findings instead of grouped summary')
   .option('--brand-name <name>', 'White-label: name shown as report author (html/pdf reports)')
   .option('--brand-logo <path>', 'White-label: logo image (png/jpg/svg) for cover and header')
+  .option('--include-own-artifacts', "Also scan vlayer's own outputs (reports, baseline, samples/) — excluded by default")
   .action(async (path: string, options) => {
     const spinner = ora('Scanning repository...').start();
     const absolutePath = resolve(path);
@@ -105,6 +106,7 @@ program
         configFile: options.config,
         baselineFile: options.baseline,
         minConfidence: options.minConfidence as 'high' | 'medium' | 'low' | undefined,
+        includeOwnArtifacts: options.includeOwnArtifacts,
       });
 
       spinner.succeed(`Scan complete. Found ${result.groupedFindings.length} unique issues (${result.rawFindingsCount} total occurrences).`);
@@ -837,6 +839,7 @@ program
   .option('--include-baseline', 'Include baseline comparison in report')
   .option('--brand-name <name>', 'White-label: name shown as report author')
   .option('--brand-logo <path>', 'White-label: logo image (png/jpg/svg) for cover and header')
+  .option('--include-own-artifacts', "Also scan vlayer's own outputs (reports, baseline, samples/) — excluded by default")
   .action(async (path: string, options) => {
     const format = (options.format || 'html').toLowerCase();
     if (format !== 'html' && format !== 'pdf') {
@@ -868,6 +871,7 @@ program
         exclude: excludePatterns,
         configFile: options.config,
         baselineFile: options.baseline,
+        includeOwnArtifacts: options.includeOwnArtifacts,
       });
 
       if (!result.complianceScore) {

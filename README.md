@@ -184,6 +184,7 @@ vlayer scan <path> -f html -o report.html   # HTML report
 vlayer scan <path> -f markdown -o report.md # Markdown report
 vlayer scan <path> --fix                     # Auto-fix issues
 vlayer scan <path> -c phi-exposure encryption # Specific categories
+vlayer scan <path> --include-own-artifacts   # Also scan vlayer's own reports/baseline/samples (excluded by default)
 
 # Compliance Score
 vlayer score <path>                     # Calculate compliance score (0-100)

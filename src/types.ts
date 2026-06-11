@@ -132,6 +132,11 @@ export interface ScanOptions {
   fix?: boolean;
   baselineFile?: string;
   minConfidence?: Confidence;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false — these are excluded so the scanner never flags its own output.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface Scanner {
@@ -270,6 +275,11 @@ export interface VlayerConfig {
   };
   /** White-label branding applied to HTML and PDF reports. */
   branding?: Branding;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false. The CLI flag `--include-own-artifacts` sets this to true.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface FixResult {
