@@ -6,6 +6,7 @@
 import * as fs from 'fs/promises';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_MFA_PATTERNS, type MFAPattern } from './patterns.js';
+import { isImportLine } from '../utils.js';
 
 export const authenticationScanner: Scanner = {
   name: 'Multi-Factor Authentication Scanner',
@@ -101,14 +102,20 @@ async function scanAuthConfig(
   const hasMfaConfig = pattern.negativePatterns?.some((p) => p.test(content));
   if (hasMfaConfig) return;
 
-  // Find the line with auth configuration
-  let configLine = 1;
+  // Find the line with auth configuration. Skip import/require lines — anchoring
+  // an "auth config without MFA" finding to an `import { createClient } from
+  // '@supabase/...'` line is a false-positive-looking trigger. If the only
+  // evidence is an import, don't fire at all.
+  let configLine = 0;
   for (let i = 0; i < lines.length; i++) {
+    if (isImportLine(lines[i])) continue;
     if (pattern.patterns.some((p) => p.test(lines[i]))) {
       configLine = i + 1;
       break;
     }
   }
+
+  if (configLine === 0) return;
 
   // Create finding for auth config without MFA
   findings.push({

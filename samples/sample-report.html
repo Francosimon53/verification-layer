@@ -519,7 +519,7 @@
       <div class="report-meta-grid">
         <div class="meta-item">
           <div class="meta-label">Report Generated</div>
-          <div class="meta-value">6/11/2026, 9:55:07 PM</div>
+          <div class="meta-value">6/11/2026, 10:39:39 PM</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Auditor</div>
@@ -554,8 +554,8 @@
           <div class="metric-icon">⚠️</div>
           <div class="metric-content">
             <div class="metric-label">Total Issues</div>
-            <div class="metric-value">33</div>
-            <div class="metric-subtext">13 critical, 13 high</div>
+            <div class="metric-value">26</div>
+            <div class="metric-subtext">7 critical, 12 high</div>
           </div>
         </div>
 
@@ -564,7 +564,7 @@
           <div class="metric-content">
             <div class="metric-label">Files Scanned</div>
             <div class="metric-value">2</div>
-            <div class="metric-subtext">in 131ms</div>
+            <div class="metric-subtext">in 129ms</div>
           </div>
         </div>
 
@@ -572,8 +572,8 @@
           <div class="metric-icon">📉</div>
           <div class="metric-content">
             <div class="metric-label">Penalty Points</div>
-            <div class="metric-value">-205</div>
-            <div class="metric-subtext">from 33 findings</div>
+            <div class="metric-value">-140</div>
+            <div class="metric-subtext">from 26 findings</div>
           </div>
         </div>
       </div>
@@ -617,11 +617,11 @@
           <div class="breakdown-grid">
             <div class="breakdown-item">
               <div class="breakdown-label">Critical</div>
-              <div class="breakdown-value critical">13</div>
+              <div class="breakdown-value critical">7</div>
             </div>
             <div class="breakdown-item">
               <div class="breakdown-label">High</div>
-              <div class="breakdown-value high">13</div>
+              <div class="breakdown-value high">12</div>
             </div>
             <div class="breakdown-item">
               <div class="breakdown-label">Medium</div>
@@ -641,7 +641,7 @@
         <div class="recommendations-box">
           <h3>💡 Recommendations</h3>
           <ul>
-            <li>Address 13 critical issue(s) immediately - these pose severe HIPAA compliance risks</li><li>Resolve 13 high severity issue(s) as soon as possible</li><li>Your compliance score is below acceptable levels. Consider a comprehensive security audit</li>
+            <li>Address 7 critical issue(s) immediately - these pose severe HIPAA compliance risks</li><li>Resolve 12 high severity issue(s) as soon as possible</li><li>Your compliance score is below acceptable levels. Consider a comprehensive security audit</li>
           </ul>
         </div>
       
@@ -651,9 +651,9 @@
       <h2>📋 Findings Summary</h2>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (33)</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (13)</button>
-          <button class="filter-btn" onclick="filterFindings('high')">High (13)</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (26)</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (7)</button>
+          <button class="filter-btn" onclick="filterFindings('high')">High (12)</button>
           <button class="filter-btn" onclick="filterFindings('medium')">Medium (5)</button>
           <button class="filter-btn" onclick="filterFindings('low')">Low (0)</button>
         </div>
@@ -700,51 +700,9 @@
           
             <tr class="finding-row" data-severity="critical">
               <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>PHI Data in Error Logs or Thrown Errors</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:27</td>
-              <td>45 CFR §164.312(c) - Integrity Controls</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>PHI Data in Error Logs or Thrown Errors</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:31</td>
-              <td>45 CFR §164.312(c) - Integrity Controls</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>PHI Data in Error Logs or Thrown Errors</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:36</td>
-              <td>45 CFR §164.312(c) - Integrity Controls</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
               <td>ePHI Stored Without Encryption at Rest</td>
               <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:25</td>
               <td>45 CFR §164.312(a)(2)(iv) - Encryption (Required)</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>Missing Network Segmentation for PHI</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:20</td>
-              <td>45 CFR §164.312(e)(1) - Transmission Security (Required)</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>Missing Network Segmentation for PHI</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:25</td>
-              <td>45 CFR §164.312(e)(1) - Transmission Security (Required)</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>Missing Network Segmentation for PHI</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:69</td>
-              <td>45 CFR §164.312(e)(1) - Transmission Security (Required)</td>
             </tr>
           
             <tr class="finding-row" data-severity="critical">
@@ -757,7 +715,7 @@
             <tr class="finding-row" data-severity="critical">
               <td><span class="severity-badge severity-critical">critical</span></td>
               <td>Authentication Configuration Without MFA Enabled</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:2</td>
+              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:10</td>
               <td>NPRM §164.312(d) - Person or Entity Authentication</td>
             </tr>
           
@@ -819,13 +777,6 @@
           
             <tr class="finding-row" data-severity="high">
               <td><span class="severity-badge severity-high">high</span></td>
-              <td>Unsanitized Error Details Sent to User</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:67</td>
-              <td>45 CFR §164.312(b) - Audit Controls</td>
-            </tr>
-          
-            <tr class="finding-row" data-severity="high">
-              <td><span class="severity-badge severity-high">high</span></td>
               <td>Missing Automatic Session Timeout</td>
               <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/dashboard/page.tsx:35</td>
               <td>45 CFR §164.312(a)(2)(iii) - Session Control (Required)</td>
@@ -883,7 +834,7 @@
             <tr class="finding-row" data-severity="medium">
               <td><span class="severity-badge severity-medium">medium</span></td>
               <td>Database Without Backup Configuration</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:2</td>
+              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:10</td>
               <td>45 CFR §164.308(a)(7)(ii)(A) - Data Backup Plan</td>
             </tr>
           
@@ -924,7 +875,7 @@
     <div class="report-footer">
       <p><strong>VLayer HIPAA Compliance Scanner</strong></p>
       <p>Automated compliance scanning for healthcare applications</p>
-      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/11/2026, 9:55:07 PM</p>
+      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/11/2026, 10:39:39 PM</p>
     </div>
   </div>
   

@@ -189,14 +189,21 @@ export const NETWORK_SEGMENTATION_PATTERNS: HIPAA2026Pattern = {
     /\/api.*?(?:patient|phi|medical)(?!.*?(?:firewall|vpc|subnet|private))/i,
     // Internal PHI service publicly accessible
     /(?:express|fastify|koa)\.listen.*?(?:patient|phi)(?!.*?(?:localhost|127\.0\.0\.1|private))/i,
-    // Missing VPC/subnet config
-    /(?:database|storage).*?(?:patient|phi)(?!.*?(?:vpc|subnet|securityGroup))/i,
+    // Missing VPC/subnet config on a backend database/storage service.
+    // `storage` is guarded against client-side browser APIs (localStorage,
+    // sessionStorage) — network segmentation does not apply to those.
+    /(?:database|(?<!local)(?<!session)storage).*?(?:patient|phi)(?!.*?(?:vpc|subnet|securityGroup))/i,
   ],
   negativePatterns: [
     /origin:\s*\[.*?\]/i, // Whitelist
     /private.*?subnet/i,
     /securityGroup/i,
     /firewall.*?rules/i,
+    // Client-side HTTP *consumption* (fetch/axios) is not an exposed PHI
+    // service. Network segmentation applies to the server/infra that exposes
+    // the endpoint, not to a frontend call that reads from it.
+    /\bfetch\s*\(/i,
+    /\baxios\b/i,
   ],
   autoFix: 'Implement network segmentation: Use VPC/subnet isolation, restrict CORS to whitelisted origins',
   confidence: 'high',

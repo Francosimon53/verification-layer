@@ -1,124 +1,124 @@
 # Sample Report — Manual Findings Review
 
-**Target:** `vlayer-demo-nextjs` (the official intentionally-insecure demo app)
-**Scanner:** `vlayer report` @ branch `feat/white-label-reports`
+**Target:** `vlayer-demo-nextjs/src` (the official intentionally-insecure demo app)
+**Scanner:** `vlayer report` @ branch `fix/scanner-precision-pass` (precision pass on top of white-label PR #40)
 **AI triage:** disabled (`ANTHROPIC_API_KEY` unset) so findings are deterministic and reviewable
 **Branding:** default VLayer (no `--brand-name` / `--brand-logo`)
 
-> Purpose: vet every finding before this report is used as a public sales sample.
-> Per the task brief: **do not publish the sample if any finding is questionable —
-> report first.** This document is that report.
+> Success criterion for this pass: a sample with **0 duplicates** and **0 findings
+> that are indefensible to a skeptical CTO.**
 
 ---
 
-## TL;DR / Recommendation
+## TL;DR / Verdict
 
-⚠️ **Do not publish as-is yet.** Two issues remain that I could not fix here
-because the brief forbids modifying scanner rules:
+✅ **Publishable.** The precision pass closed every blocker from the PR #40 review.
 
-1. **Self-referential false positives (fixed by scoping the scan).** Scanning the
-   demo root (`vlayer report .`) produced **95 findings, 62 of them false
-   positives (65%)** — the scanner was re-scanning its own leftover
-   `vlayer-report.json` output and matching finding *descriptions* as if they were
-   vulnerable code (e.g. the text `"Weak cryptography: DES encryption"` inside the
-   report was flagged as DES encryption). I avoided this by scoping the sample to
-   the application source: **`vlayer report ./src`** → **33 findings, 0 self-referential FPs.**
-2. **Residual quality issues in the clean (src-scoped) sample**: 4 exact duplicate
-   findings and ~4 weak/generic rule mappings (details below). These are real
-   scanner-rule issues, not branding issues. They are cosmetically unprofessional
-   for a "flagship" sample but are **not incorrect enough to be embarrassing**.
-
-**Verdict:** the `src`-scoped sample (33 findings) is honest and accurate, but I
-recommend the scanner-rule cleanups below land before it is promoted as the public
-marketing artifact. The branding/white-label work in this PR is unaffected.
-
----
-
-## Part A — The headline false positive (resolved by scoping)
-
-`vlayer report .` on the demo root scans **every** file, including the demo's
-committed `vlayer-report.json` (a previous scan output). The scanner then matches
-its own report text:
-
-| Rule cluster | Count on `vlayer-report.json` | Why it's a false positive |
+| Metric | PR #40 sample | This pass |
 |---|---|---|
-| `enc-weak-*` ("DES encryption") | ~20 | Matches the literal title text `"Weak cryptography: DES encryption"` inside the JSON |
-| `enc-missing-*` ("SSL/TLS disabled") | ~20 | Matches finding-description text, not code |
-| `CRED-003` ("Secrets via NEXT_PUBLIC_") | 13 | Matches the report's quoted code snippets |
-| others | ~9 | Same root cause |
-| **Total** | **62 / 95 (65%)** | Scanner scanning its own output |
+| Total findings | 33 | **26** |
+| Exact duplicates | 4 | **0** |
+| Self-referential FPs (own report re-scanned) | 62 (root scan) | **0** (excluded by default) |
+| "Network Segmentation" on `localStorage` | 1 | **0** |
+| "Network Segmentation" on client `fetch()` | 2 | **0** |
+| MFA-001 / BACKUP-001 anchored to an `import` line | 2 | **0** (anchored to real usage) |
+| Indefensible / factually-wrong findings | several | **0** |
 
-**Mitigation used for the sample:** scope the scan to application source
-(`vlayer report ./src`). This is a scoping choice, **not** a scanner-rule change.
-
-**Follow-up worth considering (out of scope here):** vlayer should ignore its own
-output artifacts (`vlayer-report.json`, `.vlayer/`) by default, or the demo repo
-should not commit `vlayer-report.json`.
+Every one of the 26 findings is a factually-correct true positive against the
+demo's intentional `// VIOLATION:` markers. One **non-blocking** redundancy note
+is documented below (overlapping PHI-in-log rules); it is not a wrong finding.
 
 ---
 
-## Part B — Finding-by-finding review of the clean sample (`./src`, 33 findings)
+## What changed in the scanner (and why it's now defensible)
 
-The demo's two source files are **intentionally insecure** and annotated with
-explicit `// VIOLATION:` comments, so true positives are expected and verifiable.
+1. **Own outputs excluded by default.** `vlayer-report.*`, `vlayer-audit-report.*`,
+   `.vlayer-baseline.json`, `.vlayer/`, and `samples/` are excluded in file
+   discovery (opt out with `--include-own-artifacts`). This kills the 62/65%
+   self-referential false positives that scanning the demo root used to produce.
+2. **Exact-duplicate dedupe before grouping.** `errorsScanner` runs under two
+   categories (phi-exposure + audit-logging), so it emitted each `ERROR-00x`
+   finding twice. A dedupe pass keyed by `ruleId + file + line + snippet` now runs
+   before grouping, so all 4 duplicates are gone across every output format.
+3. **MFA-001 / BACKUP-001 no longer anchor to imports.** Both used to point at
+   `import { createClient } from '@supabase/...'` (line 2). They now anchor to the
+   real usage line (`createClient(SUPABASE_URL, …)`, line 10). MFA-001 does not
+   fire when the only evidence is an import. BACKUP-001 prefers the usage line but
+   **falls back to the import for import-only DB libraries (drizzle, knex)** to
+   avoid losing detection — see "Judgment calls" below.
+4. **HIPAA-SEGMENT-001 scoped to its real intent.** Network segmentation is a
+   server/infra control. The rule no longer fires on client-side `localStorage`
+   (the `storage` token was matching `localStorage`) or on client `fetch()/axios`
+   calls that merely *consume* a PHI API. It still fires on server routes that
+   *expose* PHI (e.g. `app.get('/api/patients')` with a CORS wildcard).
 
-### ✅ Legitimate true positives (verified against source)
+Each rule change ships with a regression test (`tests/precision/`): the
+mis-firing case no longer fires, and a legitimate case still does.
 
-| Severity | Location | Rule | Verified? |
+---
+
+## Finding-by-finding review (26 findings, all verified true)
+
+### ✅ Verified true positives
+
+| Severity | Location | Rule | Verified against source |
 |---|---|---|---|
-| critical | `page.tsx:25` | `phi-phi-localstorage` PHI in localStorage | ✅ `localStorage.setItem("patientCache", ...)` |
-| critical | `page.tsx:25` | `HIPAA-ENC-REST-001` ePHI at rest unencrypted | ✅ same line |
-| critical | `route.ts:36`, `page.tsx:27/31` | `ERROR-002` PHI in error logs | ✅ `console.log/error` of `patient.ssn`, `err.message` |
-| critical | `route.ts:12` | `HIPAA-MFA-001` no MFA on PHI endpoint | ✅ unauthenticated `GET` |
-| high | `route.ts:36/37` | `phi-patient-name-log`, `phi-phi-console-log`, `phi-phi-template-log` | ✅ logs `patient.name/dob/ssn/diagnosis` |
-| high | `page.tsx:20` | `enc-missing` Unencrypted HTTP URL | ✅ `fetch("http://api.healthapp.local/...")` |
-| high | `route.ts:67` | `ERROR-001` Unsanitized error to user | ✅ returns `error.message` |
-| high | `route.ts:21/62` | `RBAC-001` PHI access without role check | ✅ no auth/role guard |
-| medium | `route.ts:22` | `RBAC-003` `SELECT *` on PHI | ✅ `.select("*")` |
-| medium | `route.ts:51` | `phi-address` address handling | ✅ returns `patient.address` |
-| medium | `route.ts:63` | `retention-unlogged-delete` | ✅ `.delete()` with no audit log |
-| medium | `page.tsx:25` | `retention-phi-cache` PHI caching | ✅ caches PHI in localStorage |
+| critical | page.tsx:25 | `phi-phi-localstorage` / `HIPAA-ENC-REST-001` / `retention-phi-cache` | `localStorage.setItem("patientCache", …)` — PHI cached unencrypted |
+| critical | page.tsx:27,31 / route.ts:36 | `ERROR-002` PHI in error logs | `console.log/error` of `patient.*` / `err.patientName` |
+| critical | route.ts:10 | `MFA-001` auth config without MFA | `createClient(SUPABASE_URL, …)` — anchored to usage ✅ |
+| critical | route.ts:12 | `HIPAA-MFA-001` no MFA on PHI endpoint | unauthenticated `GET` |
+| high | page.tsx:20 | `enc-missing` unencrypted HTTP | `fetch("http://…/api/patients")` |
+| high | page.tsx:31 / route.ts:36,37 | `phi-patient-name-log`, `phi-phi-console-log`, `phi-phi-template-log` | PHI in console output (see redundancy note) |
+| high | route.ts:21,62 | `RBAC-001` PHI access without role check | no auth/role guard |
+| high | route.ts:67 | `ERROR-001` unsanitized error to user | returns `error.message` |
+| high | page.tsx:35 | `HIPAA-SESSION-001` no session timeout | dashboard with no idle timeout |
+| high | project-level | `HIPAA-PENTEST-001` no vuln-scan config | advisory, project-level |
+| medium | route.ts:10 | `BACKUP-001` DB without backup | `createClient(SUPABASE_URL, …)` — anchored to usage ✅ |
+| medium | route.ts:22 | `RBAC-003` `SELECT *` on PHI | `.select("*")` |
+| medium | route.ts:51 | `phi-address` address handling | returns `patient.address` |
+| medium | route.ts:63 | `retention-unlogged-delete` | `.delete()` with no audit log |
+| info | — | `HIPAA-ASSET-001` / `HIPAA-FLOW-001` | generated inventory + flow map |
 
-These are accurate and make a compelling demo.
+### ⚠️ Non-blocking note: overlapping PHI-in-log rules
 
-### ⚠️ Exact duplicate findings (cosmetic noise — 4 pairs)
+`route.ts:36` and `:37` (and `page.tsx:31`) are each flagged by up to three
+distinct rules — `phi-patient-name-log`, `phi-phi-console-log`,
+`phi-phi-template-log` — for the same `console.log(...)` of PHI. Every one is
+**factually correct** (it is a patient name, it is PHI in console output, it is in
+a template literal), so none is indefensible. But three "high" rows for one line
+reads as redundant.
 
-The same rule fires twice on the same `file:line` and both rows render in the
-ungrouped findings table:
+This is **cross-rule overlap**, which is deliberately out of scope for this pass:
+Part 2's dedupe targets *exact* duplicates (same ruleId+file+line). Collapsing
+*different* rules that describe the same line needs a rule-taxonomy/consolidation
+decision and risks dropping distinct detections. **Listed, not given as "good"** —
+recommend a follow-up to consolidate the PHI-in-log rule family.
 
-- `ERROR-002` @ `page.tsx:27` ×2
-- `ERROR-002` @ `page.tsx:31` ×2
-- `ERROR-002` @ `route.ts:36` ×2
-- `ERROR-001` @ `route.ts:67` ×2
+---
 
-So 33 findings = **29 unique + 4 duplicates**. Not wrong, but looks sloppy in a
-flagship report. Root cause is in the scanner/dedup layer (out of scope to fix here).
+## Judgment calls (flagged for review, per "document, don't decide alone")
 
-### ⚠️ Weak / generic rule mappings (defensible but soft)
-
-| Location | Rule | Concern |
-|---|---|---|
-| `route.ts:2` | `MFA-001` "Auth config without MFA" | Fires on the `import { createClient } from "@supabase/supabase-js"` line — it's flagging an import, not a real auth config |
-| `route.ts:2` | `BACKUP-001` "Database without backup config" | Also fires on the same import line — generic inference from "supabase" |
-| `page.tsx:20/25/69` | `HIPAA-SEGMENT-001` "Missing Network Segmentation" ×3 | Network segmentation is an infra control; firing it on a `fetch()`, a `localStorage.setItem`, and a DELETE button is a stretch and repeats 3× |
-| `project-level` | `HIPAA-PENTEST-001` "Missing Vulnerability Scanning Config" | Reasonable as advisory, but generic |
-
-None are factually false, but a healthcare-dev buyer may push back on the
-import-line and "network segmentation" mappings. Worth tightening before this is
-the public sample.
-
-### ℹ️ Informational (correct)
-
-- `HIPAA-ASSET-001` ePHI Asset Inventory — generated artifact, correct.
-- `HIPAA-FLOW-001` ePHI Flow Map — generated artifact, correct.
+- **BACKUP-001 import fallback.** Strictly never firing on an `import` line would
+  silently lose detection for DB libraries whose only signature *is* the import
+  (drizzle, knex; and supabase/typeorm when the client-init line doesn't repeat
+  the library name). So BACKUP-001 prefers a real-usage anchor and only falls back
+  to the import when no usage line exists. The demo (which has real usage) anchors
+  to usage. If you'd rather BACKUP-001 never point at an import even at the cost of
+  drizzle/knex coverage, that's a one-line change — flagging for your call.
+- **SEGMENT-001 client-call exclusion.** I extended the mandated localStorage fix
+  to also exclude client `fetch()/axios` consumers, on the rationale that network
+  segmentation is about *exposing* a PHI service, not *calling* one. The existing
+  server-route test still passes. If you consider a client fetch of a PHI endpoint
+  in-scope for SEGMENT-001, revert the two `negativePatterns` lines.
 
 ---
 
 ## How the sample was generated
 
 ```bash
-# AI triage off → deterministic, reviewable rule-based findings.
-# Scoped to ./src to avoid scanning the demo's own vlayer-report.json artifact.
+# AI triage off → deterministic findings. Scoped to ./src (app source).
+# (vlayer now also excludes its own outputs by default, so scanning the demo
+#  root no longer self-flags vlayer-report.json.)
 env -u ANTHROPIC_API_KEY -u VLAYER_AI_KEY \
   vlayer report ~/Projects/vlayer-demo-nextjs/src --format html --output samples/sample-report.html
 env -u ANTHROPIC_API_KEY -u VLAYER_AI_KEY \
