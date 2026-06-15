@@ -119,11 +119,16 @@ function normalizeOneRef(raw: string): string | null {
   if (!sectionMatch) return trimmed; // unrecognised shape — leave untouched
 
   const section = sectionMatch[1].replace(/\s+/g, '');
+  // NPRM refs cite a PROPOSED rule, not a current obligation — keep that
+  // distinction explicit so the report never presents a proposed requirement
+  // as enforceable.
+  const isNprm = /\bNPRM\b/i.test(trimmed);
   // Inline control name = text after a dash delimiter, if present.
   const dashMatch = trimmed.match(/[-–—]\s*(.+)$/);
   const name = (dashMatch ? dashMatch[1].trim() : undefined) ?? nameForSection(section);
 
-  return name ? `45 CFR §${section} — ${name}` : `45 CFR §${section}`;
+  const base = name ? `45 CFR §${section} — ${name}` : `45 CFR §${section}`;
+  return isNprm ? `${base} (NPRM — proposed rule)` : base;
 }
 
 /**
@@ -134,6 +139,8 @@ function normalizeOneRef(raw: string): string | null {
  *   - already-full  "45 CFR §164.312(c) - Integrity Controls"
  *   - bare section  "§164.502, §164.514"
  *   - NPRM-prefixed "NPRM §164.312(d) - Person or Entity Authentication"
+ *     → kept distinct as a proposed rule:
+ *       "45 CFR §164.312(d) — Person or Entity Authentication (NPRM — proposed rule)"
  *
  * Multi-section refs (comma-separated) are expanded into each canonical ref,
  * joined with "; ". The original string is never mutated on the finding object.

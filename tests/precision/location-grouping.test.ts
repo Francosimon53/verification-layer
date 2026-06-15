@@ -111,9 +111,9 @@ describe('formatHipaaRef — unify to one canonical style', () => {
     );
   });
 
-  it('normalizes the NPRM prefix to 45 CFR (the section is codified)', () => {
+  it('preserves the NPRM (proposed rule) distinction with a consistent format', () => {
     expect(formatHipaaRef('NPRM §164.312(d) - Person or Entity Authentication')).toBe(
-      '45 CFR §164.312(d) — Person or Entity Authentication',
+      '45 CFR §164.312(d) — Person or Entity Authentication (NPRM — proposed rule)',
     );
   });
 
