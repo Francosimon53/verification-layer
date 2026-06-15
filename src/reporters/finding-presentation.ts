@@ -1,0 +1,148 @@
+/**
+ * Presentation-layer helpers for the HTML/PDF reports.
+ *
+ * IMPORTANT: this module is purely cosmetic. It never mutates findings, never
+ * changes detection, and is NOT used to build the JSON output. It only decides
+ * how rows are *grouped and labelled* in the rendered reports. The underlying
+ * findings (and the JSON downstream tools depend on) are unchanged — every
+ * finding still exists, it is just shown once per file:line when several rules
+ * fire on the same location.
+ */
+import type { Finding, Severity } from '../types.js';
+
+const SEVERITY_RANK: Record<Severity, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  info: 4,
+};
+
+/** One screen entry: all findings that share a (file, line) location. */
+export interface LocationGroup {
+  key: string;
+  file: string;
+  line: number | undefined;
+  /** Highest severity among the members — drives the group badge and sort. */
+  severity: Severity;
+  /** Members, sorted highest-severity first then by title. */
+  members: Finding[];
+}
+
+/**
+ * Group findings by (file + line). Locations with a single finding produce a
+ * one-member group (rendered as a normal row); locations where multiple rules
+ * fire produce a multi-member group (rendered as one consolidated entry).
+ *
+ * Groups are ordered by group severity (critical first), then file, then line.
+ * The total member count always equals the input length — nothing is dropped.
+ */
+export function groupFindingsByLocation(findings: Finding[]): LocationGroup[] {
+  const byLocation = new Map<string, Finding[]>();
+  for (const f of findings) {
+    const key = `${f.file}::${f.line ?? ''}`;
+    const existing = byLocation.get(key);
+    if (existing) existing.push(f);
+    else byLocation.set(key, [f]);
+  }
+
+  const groups: LocationGroup[] = [];
+  for (const [key, members] of byLocation) {
+    const sorted = [...members].sort(
+      (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.title.localeCompare(b.title),
+    );
+    groups.push({
+      key,
+      file: sorted[0].file,
+      line: sorted[0].line,
+      severity: sorted[0].severity, // highest, since sorted ascending by rank
+      members: sorted,
+    });
+  }
+
+  groups.sort(
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+      a.file.localeCompare(b.file) ||
+      (a.line ?? 0) - (b.line ?? 0),
+  );
+  return groups;
+}
+
+/** Count location-groups by their group severity (for summary/filter labels). */
+export function countGroupsBySeverity(groups: LocationGroup[]): Record<Severity, number> {
+  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  for (const g of groups) counts[g.severity]++;
+  return counts;
+}
+
+/**
+ * Official 45 CFR Part 164 control names, keyed by section. Used only to fill in
+ * the control name for findings whose hipaaReference is a bare citation
+ * (e.g. "§164.502"). Findings that already carry a name keep their own wording.
+ */
+const SECTION_NAMES: Record<string, string> = {
+  '164.308(a)(1)(ii)(A)': 'Risk Analysis',
+  '164.308(a)(7)(ii)(A)': 'Data Backup Plan',
+  '164.308(a)(8)': 'Evaluation',
+  '164.312(a)(1)': 'Access Control',
+  '164.312(a)(2)(i)': 'Unique User Identification',
+  '164.312(a)(2)(iii)': 'Automatic Logoff',
+  '164.312(a)(2)(iv)': 'Encryption and Decryption',
+  '164.312(b)': 'Audit Controls',
+  '164.312(c)': 'Integrity',
+  '164.312(d)': 'Person or Entity Authentication',
+  '164.312(e)(1)': 'Transmission Security',
+  '164.502': 'Uses and Disclosures of PHI: General Rules',
+  '164.502(b)': 'Minimum Necessary',
+  '164.514': 'De-identification and Minimum Necessary',
+  '164.530(j)': 'Documentation',
+};
+
+/** Progressively strip trailing "(...)" groups to find a fallback name. */
+function nameForSection(section: string): string | undefined {
+  let candidate = section;
+  while (candidate) {
+    if (SECTION_NAMES[candidate]) return SECTION_NAMES[candidate];
+    const stripped = candidate.replace(/\([^)]*\)$/, '');
+    if (stripped === candidate) break;
+    candidate = stripped;
+  }
+  return undefined;
+}
+
+function normalizeOneRef(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '-' || trimmed === '—') return null;
+
+  const sectionMatch = trimmed.match(/(\d{3}\.\d+(?:\s*\([^)]*\))*)/);
+  if (!sectionMatch) return trimmed; // unrecognised shape — leave untouched
+
+  const section = sectionMatch[1].replace(/\s+/g, '');
+  // Inline control name = text after a dash delimiter, if present.
+  const dashMatch = trimmed.match(/[-–—]\s*(.+)$/);
+  const name = (dashMatch ? dashMatch[1].trim() : undefined) ?? nameForSection(section);
+
+  return name ? `45 CFR §${section} — ${name}` : `45 CFR §${section}`;
+}
+
+/**
+ * Normalize any hipaaReference string to one canonical style:
+ * "45 CFR §164.312(c) — Integrity Controls".
+ *
+ * Handles the three styles currently emitted by the scanners:
+ *   - already-full  "45 CFR §164.312(c) - Integrity Controls"
+ *   - bare section  "§164.502, §164.514"
+ *   - NPRM-prefixed "NPRM §164.312(d) - Person or Entity Authentication"
+ *
+ * Multi-section refs (comma-separated) are expanded into each canonical ref,
+ * joined with "; ". The original string is never mutated on the finding object.
+ */
+export function formatHipaaRef(raw: string | undefined | null): string {
+  if (!raw) return '—';
+  // Split only at commas that begin a new citation, so control names that
+  // happen to contain a comma are not broken apart.
+  const parts = raw.split(/,\s*(?=(?:45 CFR|NPRM|§|\d{3}\.))/);
+  const normalized = parts.map(normalizeOneRef).filter((p): p is string => Boolean(p));
+  return normalized.length > 0 ? normalized.join('; ') : '—';
+}

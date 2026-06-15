@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import { createHash } from 'crypto';
 import type { Finding, ScanResult, ResolvedBranding, Severity } from '../types.js';
 import { brandFooterText, brandPreparedBy, pdfLogoPath } from './branding.js';
+import { groupFindingsByLocation, formatHipaaRef, type LocationGroup } from './finding-presentation.js';
 
 const COLORS = {
   primary: '#4f46e5',
@@ -80,9 +81,10 @@ export function generateScanPdf(
     const activeFindings = result.findings.filter(f => !f.isBaseline && !f.suppressed);
 
     try {
-      renderCover(doc, result, targetPath, options, preparedBy, logoPath);
+      const groups = groupFindingsByLocation(activeFindings);
+      renderCover(doc, result, targetPath, options, preparedBy, logoPath, activeFindings.length, groups.length);
       doc.addPage();
-      renderFindings(doc, activeFindings);
+      renderFindings(doc, groups, activeFindings.length);
       stampFooters(doc, footerLine);
       doc.end();
     } catch (err) {
@@ -99,7 +101,9 @@ function renderCover(
   targetPath: string,
   options: ScanPdfReportOptions,
   preparedBy: string,
-  logoPath: string | null
+  logoPath: string | null,
+  findingCount: number,
+  locationCount: number
 ) {
   const left = doc.page.margins.left;
   const contentWidth = PAGE_WIDTH(doc);
@@ -157,6 +161,8 @@ function renderCover(
   const statsY = 430;
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(15)
     .text('Scan Summary', left + 20, statsY);
+  doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
+    .text(`${findingCount} findings across ${locationCount} locations`, left + 20, statsY + 20);
 
   const counts = countBySeverity(result.findings.filter(f => !f.isBaseline && !f.suppressed));
   const stats: Array<{ label: string; value: string; color: string }> = [
@@ -168,7 +174,7 @@ function renderCover(
 
   const gap = 10;
   const cardW = (contentWidth - gap * 3) / 4;
-  const cardsY = statsY + 30;
+  const cardsY = statsY + 44;
   stats.forEach((stat, i) => {
     const x = left + i * (cardW + gap);
     doc.rect(x, cardsY, cardW, 70).fill(stat.color);
@@ -189,87 +195,121 @@ function renderCover(
   }
 }
 
-function renderFindings(doc: PDFKit.PDFDocument, findings: Finding[]) {
+/**
+ * Render findings grouped by location. A location with a single finding renders
+ * as one entry; a location with several rules renders as one consolidated entry
+ * with the file:line header and an indented list of the controls flagged there.
+ * No finding is dropped — every member of every group is printed.
+ */
+function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findingCount: number) {
   const left = doc.page.margins.left;
   const contentWidth = PAGE_WIDTH(doc);
 
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(20)
-    .text('Findings', left, doc.page.margins.top);
-  doc.moveDown(0.5);
+    .text('Findings by Location', left, doc.page.margins.top);
+  doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
+    .text(`${findingCount} findings across ${groups.length} locations — grouped by file & line.`, { width: contentWidth });
+  doc.moveDown(0.6);
 
-  if (findings.length === 0) {
+  if (groups.length === 0) {
     doc.fillColor(COLORS.text).font('Helvetica').fontSize(12)
       .text('No active compliance findings. ✅', { width: contentWidth });
     return;
   }
 
-  // Column layout: severity | finding (title + file) | HIPAA ref
-  const cols = {
-    sev: left,
-    sevW: 70,
-    finding: left + 80,
-    findingW: contentWidth - 80 - 110,
-    hipaa: left + contentWidth - 110,
-    hipaaW: 110,
-  };
+  const refX = left + 16;
+  const refW = contentWidth - 16;
 
-  drawFindingsHeader(doc, cols);
-
-  doc.font('Helvetica').fontSize(10);
-  for (const f of findings) {
-    const titleHeight = doc.heightOfString(f.title, { width: cols.findingW });
-    const fileText = `${f.file}${f.line ? `:${f.line}` : ''}`;
-    const fileHeight = doc.heightOfString(fileText, { width: cols.findingW });
-    const rowHeight = Math.max(titleHeight + fileHeight + 10, 26);
-
-    // Page break with header repeat.
-    if (doc.y + rowHeight > doc.page.height - doc.page.margins.bottom) {
-      doc.addPage();
-      doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(20)
-        .text('Findings (continued)', left, doc.page.margins.top);
-      doc.moveDown(0.5);
-      drawFindingsHeader(doc, cols);
-      doc.font('Helvetica').fontSize(10);
+  for (const g of groups) {
+    if (g.members.length === 1) {
+      renderSingleEntry(doc, g.members[0], left, contentWidth);
+    } else {
+      renderGroupedEntry(doc, g, left, contentWidth, refX, refW);
     }
-
-    const rowY = doc.y;
-
-    // Severity badge
-    const sevColor = SEVERITY_COLOR[f.severity] || COLORS.info;
-    doc.roundedRect(cols.sev, rowY, cols.sevW - 8, 16, 3).fill(sevColor);
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(8)
-      .text(f.severity.toUpperCase(), cols.sev, rowY + 4, { width: cols.sevW - 8, align: 'center' });
-
-    // Finding title + file
-    doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10)
-      .text(f.title, cols.finding, rowY, { width: cols.findingW });
-    doc.fillColor(COLORS.muted).font('Courier').fontSize(8)
-      .text(fileText, cols.finding, doc.y + 1, { width: cols.findingW });
-
-    // HIPAA ref
-    doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
-      .text(f.hipaaReference || '-', cols.hipaa, rowY, { width: cols.hipaaW });
-
-    doc.y = rowY + rowHeight;
-    doc.moveTo(left, doc.y - 5).lineTo(left + contentWidth, doc.y - 5).strokeColor(COLORS.border).stroke();
   }
 }
 
-function drawFindingsHeader(
+/** Add a page (with a continued header) if `needed` vertical space is unavailable. */
+function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
+  if (doc.y + needed > doc.page.height - doc.page.margins.bottom) {
+    doc.addPage();
+    doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(14)
+      .text('Findings by Location (continued)', doc.page.margins.left, doc.page.margins.top);
+    doc.moveDown(0.6);
+  }
+}
+
+function severityBadge(doc: PDFKit.PDFDocument, severity: Severity, x: number, y: number, width = 62) {
+  const color = SEVERITY_COLOR[severity] || COLORS.info;
+  doc.roundedRect(x, y, width, 15, 3).fill(color);
+  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(7.5)
+    .text(severity.toUpperCase(), x, y + 4, { width, align: 'center' });
+}
+
+function renderSingleEntry(doc: PDFKit.PDFDocument, f: Finding, left: number, contentWidth: number) {
+  const textX = left + 72;
+  const textW = contentWidth - 72;
+  const ref = formatHipaaRef(f.hipaaReference);
+  const titleH = doc.font('Helvetica-Bold').fontSize(10.5).heightOfString(f.title, { width: textW });
+  const refH = doc.font('Helvetica').fontSize(8).heightOfString(ref, { width: textW });
+  const blockH = Math.max(titleH + refH + 8, 30);
+
+  ensureSpace(doc, blockH + 8);
+  const y = doc.y;
+
+  severityBadge(doc, f.severity, left, y);
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10.5)
+    .text(f.title, textX, y, { width: textW });
+  doc.fillColor(COLORS.muted).font('Courier').fontSize(8)
+    .text(`${f.file}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
+  doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
+    .text(ref, textX, doc.y + 1, { width: textW });
+
+  doc.y = y + blockH;
+  doc.moveTo(left, doc.y - 4).lineTo(left + contentWidth, doc.y - 4).strokeColor(COLORS.border).stroke();
+}
+
+function renderGroupedEntry(
   doc: PDFKit.PDFDocument,
-  cols: { sev: number; sevW: number; finding: number; findingW: number; hipaa: number; hipaaW: number }
+  g: LocationGroup,
+  left: number,
+  contentWidth: number,
+  refX: number,
+  refW: number,
 ) {
-  const headerY = doc.y;
-  doc.fillColor(COLORS.secondary).font('Helvetica-Bold').fontSize(9);
-  doc.text('SEVERITY', cols.sev, headerY, { width: cols.sevW });
-  doc.text('FINDING', cols.finding, headerY, { width: cols.findingW });
-  doc.text('HIPAA REF', cols.hipaa, headerY, { width: cols.hipaaW });
-  doc.y = headerY + 16;
-  doc.moveTo(cols.sev, doc.y - 4)
-    .lineTo(cols.hipaa + cols.hipaaW, doc.y - 4)
-    .strokeColor(COLORS.border)
-    .stroke();
-  doc.moveDown(0.3);
+  // Header: group-severity badge + file:line + control count.
+  const headerText = `${g.file}${g.line ? `:${g.line}` : ''}  ·  ${g.members.length} controls flagged at this location`;
+  const headerH = doc.font('Helvetica-Bold').fontSize(10).heightOfString(headerText, { width: contentWidth - 72 });
+  ensureSpace(doc, Math.max(headerH, 16) + 14);
+
+  const hy = doc.y;
+  severityBadge(doc, g.severity, left, hy);
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10)
+    .text(headerText, left + 72, hy, { width: contentWidth - 72 });
+  doc.y = Math.max(doc.y, hy + 16) + 4;
+
+  // One indented line block per control.
+  for (const f of g.members) {
+    const label = `${f.severity.toUpperCase()} · ${f.title}`;
+    const ref = formatHipaaRef(f.hipaaReference);
+    const labelH = doc.font('Helvetica').fontSize(9.5).heightOfString(label, { width: refW });
+    const refH = doc.font('Helvetica').fontSize(8).heightOfString(ref, { width: refW - 12 });
+    const memberH = labelH + refH + 6;
+
+    ensureSpace(doc, memberH + 2);
+    const my = doc.y;
+    doc.fillColor(SEVERITY_COLOR[f.severity] || COLORS.info).font('Helvetica-Bold').fontSize(9.5)
+      .text(`${f.severity.toUpperCase()} · `, refX, my, { continued: true });
+    doc.fillColor(COLORS.text).font('Helvetica').fontSize(9.5)
+      .text(f.title, { width: refW });
+    doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
+      .text(ref, refX + 12, doc.y + 1, { width: refW - 12 });
+    doc.y = my + memberH;
+  }
+
+  doc.moveDown(0.2);
+  doc.moveTo(left, doc.y).lineTo(left + contentWidth, doc.y).strokeColor(COLORS.border).stroke();
+  doc.moveDown(0.4);
 }
 
 /** Stamp the brand footer + page numbers on every buffered page. */

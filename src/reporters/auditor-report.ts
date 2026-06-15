@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import type { ScanResult, ResolvedBranding } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
 import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
+import { groupFindingsByLocation, countGroupsBySeverity, formatHipaaRef } from './finding-presentation.js';
 
 interface AuditorReportOptions {
   organizationName?: string;
@@ -40,6 +41,10 @@ export function generateAuditorReport(
 
   // Calculate findings
   const activeFindings = result.findings.filter(f => !f.isBaseline && !f.suppressed);
+  // Presentation-only: collapse multiple rules on the same file:line into one
+  // grouped entry. The findings themselves are untouched (count is preserved).
+  const locationGroups = groupFindingsByLocation(activeFindings);
+  const groupCounts = countGroupsBySeverity(locationGroups);
   const acknowledgedFindings = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
   const suppressedFindings = result.findings.filter(f => f.suppressed);
   const baselineFindings = result.findings.filter(f => f.isBaseline);
@@ -197,6 +202,61 @@ export function generateAuditorReport(
     .severity-high { background: #ea580c; }
     .severity-medium { background: #ca8a04; }
     .severity-low { background: #2563eb; }
+    .severity-info { background: #6b7280; }
+
+    /* Consolidated multi-rule location entries */
+    .findings-count-note {
+      color: #4b5563;
+      font-size: 0.95rem;
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    .finding-group td { vertical-align: top; }
+
+    .group-location {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .group-location-path {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .group-controls {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .group-control {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 0.75rem;
+      align-items: baseline;
+      padding: 0.35rem 0;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .group-control:first-child { border-top: none; }
+    .group-control-sev { justify-self: start; }
+    .group-control-title { color: #1f2937; }
+
+    .group-control-ref {
+      color: #6b7280;
+      font-size: 0.85rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    @media (max-width: 640px) {
+      .group-control {
+        grid-template-columns: 1fr;
+        gap: 0.15rem;
+      }
+      .group-control-ref { text-align: left; }
+    }
 
     .evidence-box {
       background: #f9fafb;
@@ -321,13 +381,18 @@ export function generateAuditorReport(
       ${generateComplianceScoreGauge(score)}
 
       <h2>📋 Findings Summary</h2>
+      <p class="findings-count-note">
+        <strong>${activeFindings.length} findings</strong> across
+        <strong>${locationGroups.length} locations</strong>
+        — grouped by file &amp; line. Filters count locations.
+      </p>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (${activeFindings.length})</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${activeFindings.filter(f => f.severity === 'critical').length})</button>
-          <button class="filter-btn" onclick="filterFindings('high')">High (${activeFindings.filter(f => f.severity === 'high').length})</button>
-          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${activeFindings.filter(f => f.severity === 'medium').length})</button>
-          <button class="filter-btn" onclick="filterFindings('low')">Low (${activeFindings.filter(f => f.severity === 'low').length})</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (${locationGroups.length})</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${groupCounts.critical})</button>
+          <button class="filter-btn" onclick="filterFindings('high')">High (${groupCounts.high})</button>
+          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${groupCounts.medium})</button>
+          <button class="filter-btn" onclick="filterFindings('low')">Low (${groupCounts.low})</button>
         </div>
       </div>
 
@@ -341,14 +406,34 @@ export function generateAuditorReport(
           </tr>
         </thead>
         <tbody>
-          ${activeFindings.map(f => `
-            <tr class="finding-row" data-severity="${f.severity}">
-              <td><span class="severity-badge severity-${f.severity}">${f.severity}</span></td>
+          ${locationGroups.map(g => {
+            const fileLine = `${escapeHtml(g.file)}:${g.line ?? 'N/A'}`;
+            if (g.members.length === 1) {
+              const f = g.members[0];
+              return `
+            <tr class="finding-row" data-severity="${g.severity}">
+              <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
               <td>${escapeHtml(f.title)}</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line || 'N/A'}</td>
-              <td>${f.hipaaReference || '-'}</td>
-            </tr>
-          `).join('')}
+              <td style="font-family: monospace; font-size: 0.875rem;">${fileLine}</td>
+              <td>${escapeHtml(formatHipaaRef(f.hipaaReference))}</td>
+            </tr>`;
+            }
+            const controls = g.members.map(f => `
+                <li class="group-control">
+                  <span class="severity-badge severity-${f.severity} group-control-sev">${f.severity}</span>
+                  <span class="group-control-title">${escapeHtml(f.title)}</span>
+                  <span class="group-control-ref">${escapeHtml(formatHipaaRef(f.hipaaReference))}</span>
+                </li>`).join('');
+            return `
+            <tr class="finding-row finding-group" data-severity="${g.severity}">
+              <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
+              <td colspan="3">
+                <div class="group-location"><span class="group-location-path">${fileLine}</span> · ${g.members.length} controls flagged at this location</div>
+                <ul class="group-controls">${controls}
+                </ul>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
 
