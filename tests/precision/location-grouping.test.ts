@@ -3,6 +3,7 @@ import {
   groupFindingsByLocation,
   countGroupsBySeverity,
   formatHipaaRef,
+  isProposedFinding,
 } from '../../src/reporters/finding-presentation.js';
 import type { Finding } from '../../src/types.js';
 
@@ -40,14 +41,45 @@ describe('groupFindingsByLocation', () => {
     expect(groups[0].members).toHaveLength(1);
   });
 
-  it('collapses multiple rules on the same file:line into one group', () => {
+  it('collapses multiple rules of the same category on the same file:line into one group', () => {
     const groups = groupFindingsByLocation([
-      finding({ id: 'R1', file: 'src/a.ts', line: 36, severity: 'high' }),
-      finding({ id: 'R2', file: 'src/a.ts', line: 36, severity: 'critical' }),
-      finding({ id: 'R3', file: 'src/a.ts', line: 36, severity: 'high' }),
+      finding({ id: 'R1', file: 'src/a.ts', line: 36, category: 'phi-exposure', severity: 'high' }),
+      finding({ id: 'R2', file: 'src/a.ts', line: 36, category: 'phi-exposure', severity: 'critical' }),
+      finding({ id: 'R3', file: 'src/a.ts', line: 36, category: 'phi-exposure', severity: 'high' }),
     ]);
     expect(groups).toHaveLength(1);
     expect(groups[0].members).toHaveLength(3);
+  });
+
+  it('does NOT group unrelated rule categories that share a file:line', () => {
+    // route.ts:10 — MFA (access-control) + backup (data-retention) are different
+    // problems; they must render as separate rows, not one confusing group.
+    const groups = groupFindingsByLocation([
+      finding({ id: 'MFA-001', file: 'src/r.ts', line: 10, category: 'access-control', severity: 'critical' }),
+      finding({ id: 'BACKUP-001', file: 'src/r.ts', line: 10, category: 'data-retention', severity: 'medium' }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.every(g => g.members.length === 1)).toBe(true);
+  });
+
+  it('excludes proposed (NPRM) findings from the headline severity', () => {
+    // A proposed critical must not make the group look critical; the current
+    // (vigente) medium drives the header. The NPRM finding is still listed.
+    const groups = groupFindingsByLocation([
+      finding({ id: 'MFA-001', file: 'src/r.ts', line: 10, category: 'access-control', severity: 'critical', hipaaReference: 'NPRM §164.312(d) - Person or Entity Authentication' }),
+      finding({ id: 'X', file: 'src/r.ts', line: 10, category: 'access-control', severity: 'medium', hipaaReference: '45 CFR §164.308(a)(7)(ii)(A) - Data Backup Plan' }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].severity).toBe('medium');
+    expect(groups[0].members).toHaveLength(2);
+  });
+
+  it('falls back to the highest proposed severity when every member is proposed', () => {
+    const groups = groupFindingsByLocation([
+      finding({ id: 'A', file: 'src/r.ts', line: 5, category: 'access-control', severity: 'high', hipaaReference: 'NPRM §164.312(d) - x' }),
+      finding({ id: 'B', file: 'src/r.ts', line: 5, category: 'access-control', severity: 'critical', hipaaReference: 'NPRM §164.312(d) - y' }),
+    ]);
+    expect(groups[0].severity).toBe('critical');
   });
 
   it('sets group severity to the highest among members', () => {
@@ -126,5 +158,16 @@ describe('formatHipaaRef — unify to one canonical style', () => {
   it('returns an em dash placeholder for empty refs', () => {
     expect(formatHipaaRef(undefined)).toBe('—');
     expect(formatHipaaRef('')).toBe('—');
+  });
+});
+
+describe('isProposedFinding', () => {
+  it('flags findings whose ref cites the NPRM', () => {
+    expect(isProposedFinding(finding({ hipaaReference: 'NPRM §164.312(d) - Person or Entity Authentication' }))).toBe(true);
+  });
+
+  it('does not flag codified 45 CFR refs', () => {
+    expect(isProposedFinding(finding({ hipaaReference: '45 CFR §164.312(c) - Integrity Controls' }))).toBe(false);
+    expect(isProposedFinding(finding({ hipaaReference: undefined }))).toBe(false);
   });
 });

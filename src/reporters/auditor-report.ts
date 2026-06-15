@@ -383,8 +383,8 @@ export function generateAuditorReport(
       <h2>📋 Findings Summary</h2>
       <p class="findings-count-note">
         <strong>${activeFindings.length} findings</strong> across
-        <strong>${locationGroups.length} locations</strong>
-        — grouped by file &amp; line. Filters count locations.
+        <strong>${locationGroups.length} entries</strong>
+        — grouped by file, line &amp; control family. Filters count entries.
       </p>
       <div class="filters">
         <div class="filter-buttons">

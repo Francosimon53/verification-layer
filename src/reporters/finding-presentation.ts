@@ -18,44 +18,75 @@ const SEVERITY_RANK: Record<Severity, number> = {
   info: 4,
 };
 
-/** One screen entry: all findings that share a (file, line) location. */
+/**
+ * A finding is "proposed" when its HIPAA reference cites the NPRM (the proposed
+ * 2026 Security Rule), not a current obligation. Such findings are still shown,
+ * but they must not inflate a group's headline severity.
+ */
+export function isProposedFinding(f: Finding): boolean {
+  return /\bNPRM\b/i.test(f.hipaaReference ?? '');
+}
+
+/** One screen entry: findings that share a (file, line, rule category). */
 export interface LocationGroup {
   key: string;
   file: string;
   line: number | undefined;
-  /** Highest severity among the members — drives the group badge and sort. */
+  /** Rule category shared by all members (the "family"). */
+  category: string;
+  /** Headline severity — highest among CURRENT (non-proposed) members. */
   severity: Severity;
   /** Members, sorted highest-severity first then by title. */
   members: Finding[];
 }
 
+/** Highest severity among the given findings; null if the list is empty. */
+function highestSeverity(findings: Finding[]): Severity | null {
+  let best: Severity | null = null;
+  for (const f of findings) {
+    if (best === null || SEVERITY_RANK[f.severity] < SEVERITY_RANK[best]) best = f.severity;
+  }
+  return best;
+}
+
 /**
- * Group findings by (file + line). Locations with a single finding produce a
- * one-member group (rendered as a normal row); locations where multiple rules
- * fire produce a multi-member group (rendered as one consolidated entry).
+ * Group findings by (file + line + rule category). Several rules that flag the
+ * same line for the SAME reason (e.g. all PHI-in-logs on route.ts:36) collapse
+ * into one entry; unrelated rules on the same line (e.g. MFA + backup) stay as
+ * separate rows. A single-member group renders as a normal row.
  *
- * Groups are ordered by group severity (critical first), then file, then line.
- * The total member count always equals the input length — nothing is dropped.
+ * The headline severity reflects only CURRENT requirements — proposed (NPRM)
+ * findings never raise it (they stay listed inside with their own badge). When
+ * every member is proposed, the highest proposed severity is used.
+ *
+ * Groups are ordered by group severity (critical first), then file, line, and
+ * category. The total member count always equals the input length — nothing is
+ * dropped.
  */
 export function groupFindingsByLocation(findings: Finding[]): LocationGroup[] {
-  const byLocation = new Map<string, Finding[]>();
+  const byKey = new Map<string, Finding[]>();
   for (const f of findings) {
-    const key = `${f.file}::${f.line ?? ''}`;
-    const existing = byLocation.get(key);
+    const key = `${f.file}::${f.line ?? ''}::${f.category}`;
+    const existing = byKey.get(key);
     if (existing) existing.push(f);
-    else byLocation.set(key, [f]);
+    else byKey.set(key, [f]);
   }
 
   const groups: LocationGroup[] = [];
-  for (const [key, members] of byLocation) {
+  for (const [key, members] of byKey) {
     const sorted = [...members].sort(
       (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.title.localeCompare(b.title),
     );
+    const current = sorted.filter(f => !isProposedFinding(f));
+    // Headline severity: highest among current findings; if the group is
+    // entirely proposed, fall back to the highest proposed severity.
+    const severity = highestSeverity(current.length > 0 ? current : sorted)!;
     groups.push({
       key,
       file: sorted[0].file,
       line: sorted[0].line,
-      severity: sorted[0].severity, // highest, since sorted ascending by rank
+      category: sorted[0].category,
+      severity,
       members: sorted,
     });
   }
@@ -64,7 +95,8 @@ export function groupFindingsByLocation(findings: Finding[]): LocationGroup[] {
     (a, b) =>
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       a.file.localeCompare(b.file) ||
-      (a.line ?? 0) - (b.line ?? 0),
+      (a.line ?? 0) - (b.line ?? 0) ||
+      a.category.localeCompare(b.category),
   );
   return groups;
 }

@@ -162,7 +162,7 @@ function renderCover(
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(15)
     .text('Scan Summary', left + 20, statsY);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${findingCount} findings across ${locationCount} locations`, left + 20, statsY + 20);
+    .text(`${findingCount} findings across ${locationCount} entries`, left + 20, statsY + 20);
 
   const counts = countBySeverity(result.findings.filter(f => !f.isBaseline && !f.suppressed));
   const stats: Array<{ label: string; value: string; color: string }> = [
@@ -208,7 +208,7 @@ function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findin
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(20)
     .text('Findings by Location', left, doc.page.margins.top);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${findingCount} findings across ${groups.length} locations — grouped by file & line.`, { width: contentWidth });
+    .text(`${findingCount} findings across ${groups.length} entries — grouped by file, line & control family.`, { width: contentWidth });
   doc.moveDown(0.6);
 
   if (groups.length === 0) {
