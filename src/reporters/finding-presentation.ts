@@ -27,6 +27,28 @@ export function isProposedFinding(f: Finding): boolean {
   return /\bNPRM\b/i.test(f.hipaaReference ?? '');
 }
 
+/**
+ * Split findings into CURRENT obligations and PROPOSED (NPRM) ones. Proposed
+ * findings are rendered in their own "Upcoming Requirements" subsection and are
+ * excluded from the current-severity Scan Summary, so a proposed rule is never
+ * shown as a current red/critical violation.
+ */
+export function partitionFindingsByStatus(findings: Finding[]): { current: Finding[]; proposed: Finding[] } {
+  const current: Finding[] = [];
+  const proposed: Finding[] = [];
+  for (const f of findings) {
+    (isProposedFinding(f) ? proposed : current).push(f);
+  }
+  return { current, proposed };
+}
+
+/** Stable ordering for the proposed-requirements list: by file, line, title. */
+export function sortProposedFindings(findings: Finding[]): Finding[] {
+  return [...findings].sort(
+    (a, b) => a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0) || a.title.localeCompare(b.title),
+  );
+}
+
 /** One screen entry: findings that share a (file, line, rule category). */
 export interface LocationGroup {
   key: string;

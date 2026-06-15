@@ -2,7 +2,13 @@ import PDFDocument from 'pdfkit';
 import { createHash } from 'crypto';
 import type { Finding, ScanResult, ResolvedBranding, Severity } from '../types.js';
 import { brandFooterText, brandPreparedBy, pdfLogoPath } from './branding.js';
-import { groupFindingsByLocation, formatHipaaRef, type LocationGroup } from './finding-presentation.js';
+import {
+  groupFindingsByLocation,
+  formatHipaaRef,
+  partitionFindingsByStatus,
+  sortProposedFindings,
+  type LocationGroup,
+} from './finding-presentation.js';
 
 const COLORS = {
   primary: '#4f46e5',
@@ -15,6 +21,7 @@ const COLORS = {
   medium: '#ca8a04',
   low: '#2563eb',
   info: '#6b7280',
+  proposed: '#64748b',
   background: '#f9fafb',
   border: '#e5e7eb',
   white: '#ffffff',
@@ -80,11 +87,15 @@ export function generateScanPdf(
 
     const activeFindings = result.findings.filter(f => !f.isBaseline && !f.suppressed);
 
+    const { current, proposed: proposedRaw } = partitionFindingsByStatus(activeFindings);
+    const proposed = sortProposedFindings(proposedRaw);
+
     try {
-      const groups = groupFindingsByLocation(activeFindings);
-      renderCover(doc, result, targetPath, options, preparedBy, logoPath, activeFindings.length, groups.length);
+      const groups = groupFindingsByLocation(current);
+      renderCover(doc, result, targetPath, options, preparedBy, logoPath, current, groups.length, proposed.length);
       doc.addPage();
-      renderFindings(doc, groups, activeFindings.length);
+      renderFindings(doc, groups, current.length);
+      if (proposed.length > 0) renderProposedSection(doc, proposed);
       stampFooters(doc, footerLine);
       doc.end();
     } catch (err) {
@@ -102,8 +113,9 @@ function renderCover(
   options: ScanPdfReportOptions,
   preparedBy: string,
   logoPath: string | null,
-  findingCount: number,
-  locationCount: number
+  currentFindings: Finding[],
+  locationCount: number,
+  proposedCount: number
 ) {
   const left = doc.page.margins.left;
   const contentWidth = PAGE_WIDTH(doc);
@@ -162,9 +174,13 @@ function renderCover(
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(15)
     .text('Scan Summary', left + 20, statsY);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${findingCount} findings across ${locationCount} entries`, left + 20, statsY + 20);
+    .text(`${currentFindings.length} current findings across ${locationCount} entries`, left + 20, statsY + 20);
+  if (proposedCount > 0) {
+    doc.fillColor(COLORS.secondary).font('Helvetica-Oblique').fontSize(9)
+      .text(`+ ${proposedCount} upcoming requirement${proposedCount === 1 ? '' : 's'} (NPRM — proposed rule)`, left + 20, statsY + 33);
+  }
 
-  const counts = countBySeverity(result.findings.filter(f => !f.isBaseline && !f.suppressed));
+  const counts = countBySeverity(currentFindings);
   const stats: Array<{ label: string; value: string; color: string }> = [
     { label: 'Critical', value: String(counts.critical), color: COLORS.critical },
     { label: 'High', value: String(counts.high), color: COLORS.high },
@@ -208,7 +224,7 @@ function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findin
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(20)
     .text('Findings by Location', left, doc.page.margins.top);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${findingCount} findings across ${groups.length} entries — grouped by file, line & control family.`, { width: contentWidth });
+    .text(`${findingCount} current findings across ${groups.length} entries — grouped by file, line & control family.`, { width: contentWidth });
   doc.moveDown(0.6);
 
   if (groups.length === 0) {
@@ -310,6 +326,53 @@ function renderGroupedEntry(
   doc.moveDown(0.2);
   doc.moveTo(left, doc.y).lineTo(left + contentWidth, doc.y).strokeColor(COLORS.border).stroke();
   doc.moveDown(0.4);
+}
+
+/**
+ * Render proposed (NPRM) requirements in their own subsection, after the current
+ * findings. Neutral "PROPOSED" badge — never a red/critical severity — so a
+ * proposed rule is never shown as a current violation.
+ */
+function renderProposedSection(doc: PDFKit.PDFDocument, proposed: Finding[]) {
+  const left = doc.page.margins.left;
+  const contentWidth = PAGE_WIDTH(doc);
+
+  doc.moveDown(0.8);
+  ensureSpace(doc, 110);
+  doc.fillColor(COLORS.proposed).font('Helvetica-Bold').fontSize(16)
+    .text('Upcoming Requirements', left, doc.y, { width: contentWidth });
+  doc.fillColor(COLORS.secondary).font('Helvetica-Oblique').fontSize(9.5)
+    .text('NPRM — proposed rule, not yet in effect', { width: contentWidth });
+  doc.moveDown(0.4);
+  doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(9)
+    .text(
+      'These reference the proposed 2026 HIPAA Security Rule (NPRM). They are not current obligations and are excluded from the severity summary above. They will apply if and when the rule is finalized.',
+      { width: contentWidth },
+    );
+  doc.moveDown(0.6);
+
+  for (const f of proposed) {
+    const ref = formatHipaaRef(f.hipaaReference);
+    const textX = left + 72;
+    const textW = contentWidth - 72;
+    const titleH = doc.font('Helvetica-Bold').fontSize(10.5).heightOfString(f.title, { width: textW });
+    const refH = doc.font('Helvetica').fontSize(8).heightOfString(ref, { width: textW });
+    const blockH = Math.max(titleH + refH + 8, 30);
+
+    ensureSpace(doc, blockH + 8);
+    const y = doc.y;
+    doc.roundedRect(left, y, 62, 15, 3).fill(COLORS.proposed);
+    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(7.5)
+      .text('PROPOSED', left, y + 4, { width: 62, align: 'center' });
+    doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10.5)
+      .text(f.title, textX, y, { width: textW });
+    doc.fillColor(COLORS.muted).font('Courier').fontSize(8)
+      .text(`${f.file}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
+    doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
+      .text(ref, textX, doc.y + 1, { width: textW });
+    doc.y = y + blockH;
+    doc.moveTo(left, doc.y - 4).lineTo(left + contentWidth, doc.y - 4).strokeColor(COLORS.border).stroke();
+  }
 }
 
 /** Stamp the brand footer + page numbers on every buffered page. */

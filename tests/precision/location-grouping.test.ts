@@ -4,6 +4,7 @@ import {
   countGroupsBySeverity,
   formatHipaaRef,
   isProposedFinding,
+  partitionFindingsByStatus,
 } from '../../src/reporters/finding-presentation.js';
 import type { Finding } from '../../src/types.js';
 
@@ -169,5 +170,32 @@ describe('isProposedFinding', () => {
   it('does not flag codified 45 CFR refs', () => {
     expect(isProposedFinding(finding({ hipaaReference: '45 CFR §164.312(c) - Integrity Controls' }))).toBe(false);
     expect(isProposedFinding(finding({ hipaaReference: undefined }))).toBe(false);
+  });
+});
+
+describe('partitionFindingsByStatus', () => {
+  it('separates proposed (NPRM) findings from current ones without losing any', () => {
+    const findings = [
+      finding({ id: 'A', hipaaReference: '45 CFR §164.312(c) - Integrity Controls' }),
+      finding({ id: 'B', hipaaReference: 'NPRM §164.312(d) - Person or Entity Authentication' }),
+      finding({ id: 'C', hipaaReference: '§164.502, §164.514' }),
+    ];
+    const { current, proposed } = partitionFindingsByStatus(findings);
+    expect(current.map(f => f.id)).toEqual(['A', 'C']);
+    expect(proposed.map(f => f.id)).toEqual(['B']);
+    expect(current.length + proposed.length).toBe(findings.length);
+  });
+
+  it('keeps proposed findings out of the current location groups', () => {
+    const findings = [
+      finding({ id: 'MFA', file: 'src/r.ts', line: 10, category: 'access-control', severity: 'critical', hipaaReference: 'NPRM §164.312(d) - x' }),
+      finding({ id: 'BACKUP', file: 'src/r.ts', line: 10, category: 'data-retention', severity: 'medium', hipaaReference: '45 CFR §164.308(a)(7)(ii)(A) - Data Backup Plan' }),
+    ];
+    const { current } = partitionFindingsByStatus(findings);
+    const groups = groupFindingsByLocation(current);
+    // The proposed MFA is gone from the current groups; only the backup remains.
+    expect(groups).toHaveLength(1);
+    expect(groups[0].severity).toBe('medium');
+    expect(groups[0].members.map(m => m.id)).toEqual(['BACKUP']);
   });
 });

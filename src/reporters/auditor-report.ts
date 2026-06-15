@@ -2,7 +2,13 @@ import { createHash } from 'crypto';
 import type { ScanResult, ResolvedBranding } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
 import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
-import { groupFindingsByLocation, countGroupsBySeverity, formatHipaaRef } from './finding-presentation.js';
+import {
+  groupFindingsByLocation,
+  countGroupsBySeverity,
+  formatHipaaRef,
+  partitionFindingsByStatus,
+  sortProposedFindings,
+} from './finding-presentation.js';
 
 interface AuditorReportOptions {
   organizationName?: string;
@@ -41,9 +47,12 @@ export function generateAuditorReport(
 
   // Calculate findings
   const activeFindings = result.findings.filter(f => !f.isBaseline && !f.suppressed);
-  // Presentation-only: collapse multiple rules on the same file:line into one
-  // grouped entry. The findings themselves are untouched (count is preserved).
-  const locationGroups = groupFindingsByLocation(activeFindings);
+  // Presentation-only: separate proposed (NPRM) findings from current ones, then
+  // collapse multiple rules on the same file:line into one grouped entry. The
+  // findings themselves are untouched (count is preserved).
+  const { current: currentFindings, proposed: proposedRaw } = partitionFindingsByStatus(activeFindings);
+  const proposedFindings = sortProposedFindings(proposedRaw);
+  const locationGroups = groupFindingsByLocation(currentFindings);
   const groupCounts = countGroupsBySeverity(locationGroups);
   const acknowledgedFindings = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
   const suppressedFindings = result.findings.filter(f => f.suppressed);
@@ -203,6 +212,28 @@ export function generateAuditorReport(
     .severity-medium { background: #ca8a04; }
     .severity-low { background: #2563eb; }
     .severity-info { background: #6b7280; }
+    /* Proposed (NPRM) — deliberately neutral: not a current violation. */
+    .severity-proposed { background: #64748b; }
+
+    .upcoming-subtitle {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    .upcoming-note {
+      background: #f1f5f9;
+      border-left: 3px solid #64748b;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0 1rem;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+
+    .upcoming-inline {
+      color: #475569;
+      font-weight: 600;
+    }
 
     /* Consolidated multi-rule location entries */
     .findings-count-note {
@@ -382,9 +413,12 @@ export function generateAuditorReport(
 
       <h2>📋 Findings Summary</h2>
       <p class="findings-count-note">
-        <strong>${activeFindings.length} findings</strong> across
+        <strong>${currentFindings.length} current findings</strong> across
         <strong>${locationGroups.length} entries</strong>
         — grouped by file, line &amp; control family. Filters count entries.
+        ${proposedFindings.length > 0
+          ? `<br><span class="upcoming-inline">+ ${proposedFindings.length} upcoming requirement${proposedFindings.length === 1 ? '' : 's'} (NPRM — proposed rule)</span> — listed separately below.`
+          : ''}
       </p>
       <div class="filters">
         <div class="filter-buttons">
@@ -436,6 +470,35 @@ export function generateAuditorReport(
           }).join('')}
         </tbody>
       </table>
+
+      ${proposedFindings.length > 0 ? `
+        <h2>🕓 Upcoming Requirements <span class="upcoming-subtitle">(NPRM — proposed rule, not yet in effect)</span></h2>
+        <p class="upcoming-note">
+          These reference the proposed 2026 HIPAA Security Rule (NPRM). They are
+          <strong>not current obligations</strong> and are excluded from the severity counts above.
+          They will apply if and when the rule is finalized — treat them as forward-looking guidance.
+        </p>
+        <table class="findings-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Requirement</th>
+              <th>File</th>
+              <th>HIPAA Ref</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${proposedFindings.map(f => `
+              <tr>
+                <td><span class="severity-badge severity-proposed">Proposed</span></td>
+                <td>${escapeHtml(f.title)}</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line ?? 'N/A'}</td>
+                <td>${escapeHtml(formatHipaaRef(f.hipaaReference))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : ''}
 
       ${suppressedFindings.length > 0 ? `
         <h2>🔕 Suppression Audit Trail</h2>

@@ -421,6 +421,28 @@
     .severity-medium { background: #ca8a04; }
     .severity-low { background: #2563eb; }
     .severity-info { background: #6b7280; }
+    /* Proposed (NPRM) — deliberately neutral: not a current violation. */
+    .severity-proposed { background: #64748b; }
+
+    .upcoming-subtitle {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    .upcoming-note {
+      background: #f1f5f9;
+      border-left: 3px solid #64748b;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0 1rem;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+
+    .upcoming-inline {
+      color: #475569;
+      font-weight: 600;
+    }
 
     /* Consolidated multi-rule location entries */
     .findings-count-note {
@@ -574,7 +596,7 @@
       <div class="report-meta-grid">
         <div class="meta-item">
           <div class="meta-label">Report Generated</div>
-          <div class="meta-value">6/16/2026, 12:08:57 AM</div>
+          <div class="meta-value">6/16/2026, 12:20:21 AM</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Auditor</div>
@@ -619,7 +641,7 @@
           <div class="metric-content">
             <div class="metric-label">Files Scanned</div>
             <div class="metric-value">2</div>
-            <div class="metric-subtext">in 131ms</div>
+            <div class="metric-subtext">in 128ms</div>
           </div>
         </div>
 
@@ -705,14 +727,15 @@
 
       <h2>📋 Findings Summary</h2>
       <p class="findings-count-note">
-        <strong>26 findings</strong> across
-        <strong>21 entries</strong>
+        <strong>25 current findings</strong> across
+        <strong>20 entries</strong>
         — grouped by file, line &amp; control family. Filters count entries.
+        <br><span class="upcoming-inline">+ 1 upcoming requirement (NPRM — proposed rule)</span> — listed separately below.
       </p>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (21)</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (7)</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (20)</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (6)</button>
           <button class="filter-btn" onclick="filterFindings('high')">High (7)</button>
           <button class="filter-btn" onclick="filterFindings('medium')">Medium (5)</button>
           <button class="filter-btn" onclick="filterFindings('low')">Low (0)</button>
@@ -730,12 +753,6 @@
         </thead>
         <tbody>
           
-            <tr class="finding-row" data-severity="critical">
-              <td><span class="severity-badge severity-critical">critical</span></td>
-              <td>Authentication Configuration Without MFA Enabled</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:10</td>
-              <td>45 CFR §164.312(d) — Person or Entity Authentication (NPRM — proposed rule)</td>
-            </tr>
             <tr class="finding-row" data-severity="critical">
               <td><span class="severity-badge severity-critical">critical</span></td>
               <td>Missing Multi-Factor Authentication for PHI Access</td>
@@ -906,6 +923,35 @@
       </table>
 
       
+        <h2>🕓 Upcoming Requirements <span class="upcoming-subtitle">(NPRM — proposed rule, not yet in effect)</span></h2>
+        <p class="upcoming-note">
+          These reference the proposed 2026 HIPAA Security Rule (NPRM). They are
+          <strong>not current obligations</strong> and are excluded from the severity counts above.
+          They will apply if and when the rule is finalized — treat them as forward-looking guidance.
+        </p>
+        <table class="findings-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Requirement</th>
+              <th>File</th>
+              <th>HIPAA Ref</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td><span class="severity-badge severity-proposed">Proposed</span></td>
+                <td>Authentication Configuration Without MFA Enabled</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:10</td>
+                <td>45 CFR §164.312(d) — Person or Entity Authentication (NPRM — proposed rule)</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+
+      
 
       
 
@@ -925,7 +971,7 @@
     <div class="report-footer">
       <p><strong>VLayer HIPAA Compliance Scanner</strong></p>
       <p>Automated compliance scanning for healthcare applications</p>
-      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/16/2026, 12:08:57 AM</p>
+      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/16/2026, 12:20:21 AM</p>
     </div>
   </div>
   
