@@ -129,8 +129,10 @@ export const ACCESS_REVOCATION_PATTERNS: HIPAA2026Pattern = {
     /(?:deactivate|disable|remove)User(?!.*?(?:revoke|invalidate|blacklist).*?(?:token|session))/i,
     // Delete user without session cleanup
     /(?:deleteUser|removeUser).*?(?!.*?(?:logout|invalidate|clearSessions))/i,
-    // Missing token blacklist
-    /(?:user|admin).*?(?:deactivat|terminat).*?(?!.*?blacklist)/i,
+    // Termination/deactivation as an actual operation — identifier or method call.
+    // Must NOT match prose/log strings like console.log('User deactivated ...'),
+    // which describe an action rather than perform one (false positive).
+    /(?:deactivat|terminat|disabl)e?(?:User|Account|Member|Employee)|(?:user|account|member|employee)(?:Deactivation|Termination)|(?:user|account|member)\.(?:deactivate|terminate|disable)\b/i,
     // Role change without re-auth
     /(?:updateRole|changePermissions)(?!.*?(?:logout|reauth|invalidate))/i,
   ],
