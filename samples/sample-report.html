@@ -596,7 +596,7 @@
       <div class="report-meta-grid">
         <div class="meta-item">
           <div class="meta-label">Report Generated</div>
-          <div class="meta-value">6/16/2026, 12:20:21 AM</div>
+          <div class="meta-value">6/16/2026, 9:09:15 AM</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Auditor</div>
@@ -631,8 +631,8 @@
           <div class="metric-icon">⚠️</div>
           <div class="metric-content">
             <div class="metric-label">Total Issues</div>
-            <div class="metric-value">26</div>
-            <div class="metric-subtext">7 critical, 12 high</div>
+            <div class="metric-value">27</div>
+            <div class="metric-subtext">8 critical, 12 high</div>
           </div>
         </div>
 
@@ -641,7 +641,7 @@
           <div class="metric-content">
             <div class="metric-label">Files Scanned</div>
             <div class="metric-value">2</div>
-            <div class="metric-subtext">in 128ms</div>
+            <div class="metric-subtext">in 138ms</div>
           </div>
         </div>
 
@@ -649,8 +649,8 @@
           <div class="metric-icon">📉</div>
           <div class="metric-content">
             <div class="metric-label">Penalty Points</div>
-            <div class="metric-value">-140</div>
-            <div class="metric-subtext">from 26 findings</div>
+            <div class="metric-value">-150</div>
+            <div class="metric-subtext">from 27 findings</div>
           </div>
         </div>
       </div>
@@ -694,7 +694,7 @@
           <div class="breakdown-grid">
             <div class="breakdown-item">
               <div class="breakdown-label">Critical</div>
-              <div class="breakdown-value critical">7</div>
+              <div class="breakdown-value critical">8</div>
             </div>
             <div class="breakdown-item">
               <div class="breakdown-label">High</div>
@@ -718,7 +718,7 @@
         <div class="recommendations-box">
           <h3>💡 Recommendations</h3>
           <ul>
-            <li>Address 7 critical issue(s) immediately - these pose severe HIPAA compliance risks</li><li>Resolve 12 high severity issue(s) as soon as possible</li><li>Your compliance score is below acceptable levels. Consider a comprehensive security audit</li>
+            <li>Address 8 critical issue(s) immediately - these pose severe HIPAA compliance risks</li><li>Resolve 12 high severity issue(s) as soon as possible</li><li>Your compliance score is below acceptable levels. Consider a comprehensive security audit</li>
           </ul>
         </div>
       
@@ -727,15 +727,15 @@
 
       <h2>📋 Findings Summary</h2>
       <p class="findings-count-note">
-        <strong>25 current findings</strong> across
-        <strong>20 entries</strong>
+        <strong>26 current findings</strong> across
+        <strong>21 entries</strong>
         — grouped by file, line &amp; control family. Filters count entries.
         <br><span class="upcoming-inline">+ 1 upcoming requirement (NPRM — proposed rule)</span> — listed separately below.
       </p>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (20)</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (6)</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (21)</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (7)</button>
           <button class="filter-btn" onclick="filterFindings('high')">High (7)</button>
           <button class="filter-btn" onclick="filterFindings('medium')">Medium (5)</button>
           <button class="filter-btn" onclick="filterFindings('low')">Low (0)</button>
@@ -786,6 +786,12 @@
                 </li>
                 </ul>
               </td>
+            </tr>
+            <tr class="finding-row" data-severity="critical">
+              <td><span class="severity-badge severity-critical">critical</span></td>
+              <td>Missing Multi-Factor Authentication for PHI Access</td>
+              <td style="font-family: monospace; font-size: 0.875rem;">/Users/simonfranco/Projects/vlayer-demo-nextjs/src/app/api/patients/route.ts:55</td>
+              <td>45 CFR §164.312(a)(2)(i) — Access Control (Required)</td>
             </tr>
             <tr class="finding-row" data-severity="critical">
               <td><span class="severity-badge severity-critical">critical</span></td>
@@ -971,7 +977,7 @@
     <div class="report-footer">
       <p><strong>VLayer HIPAA Compliance Scanner</strong></p>
       <p>Automated compliance scanning for healthcare applications</p>
-      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/16/2026, 12:20:21 AM</p>
+      <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: 6/16/2026, 9:09:15 AM</p>
     </div>
   </div>
   
