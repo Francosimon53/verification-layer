@@ -106,7 +106,11 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
     /session.*?(?!.*?(?:idle|inactivity).*?timeout)/i,
   ],
   negativePatterns: [
-    /maxAge:\s*[1-8][0-9]{5}/i, // <= 900000 (15 min)
+    // Compliant session length: maxAge with a 1–6 digit value (≤ 999999 ms,
+    // i.e. ≤ ~16 min). The \b stops it matching a prefix of a longer (>15 min)
+    // value, which the positive pattern above flags. Includes the exact 900000
+    // (15 min) boundary the autofix recommends — the old [1-8][0-9]{5} excluded it.
+    /maxAge:\s*[1-9][0-9]{0,5}\b/i,
     /expiresIn:\s*['"](?:1[0-5]m|[1-9]m)['"]/i,
     /idleTimeout/i,
   ],
