@@ -39,11 +39,16 @@ export const PHI_ACCESS_NO_AUTHZ: RBACPattern = {
     /prisma\.(?:patient|healthRecord|medicalRecord|diagnosis|treatment|prescription|medication)\.(?:findMany|findUnique|findFirst)/i,
   ],
   negativePatterns: [
-    // Indicators of authorization checks
-    /role/i,
+    // Indicators of authorization checks. These must match real authz CHECKS,
+    // not the same words appearing inside OTHER violations in the file — e.g.
+    // `service_role` (a leaked key, RBAC-002) is not a role check, and
+    // `const [isAdmin] = useState(true)` (an admin default, RBAC-002) is not an
+    // isAdmin guard. Hence \brole\b (not the substring in service_role) and an
+    // isAdmin that is read as a guard (`.isAdmin`, `!isAdmin`), not defaulted.
+    /\brole\b/i,
     /permission/i,
     /authorize/i,
-    /isAdmin/i,
+    /[.!]\s*(?:\w+\.)*isAdmin\b/i,
     /canAccess/i,
     /hasPermission/i,
     /checkAccess/i,
@@ -78,6 +83,8 @@ export const SERVICE_ROLE_CLIENT_SIDE: RBACPattern = {
     /isAdmin\s*[:=]\s*true/i,
     /role\s*[:=]\s*['"`]admin['"`]/i,
     /admin\s*:\s*true/i,
+    // React state defaulting admin to true: `const [isAdmin, setIsAdmin] = useState(true)`
+    /\[\s*isAdmin\b[^\]]*\]\s*=\s*useState\s*\(\s*true\s*\)/i,
 
     // Always-admin conditions
     /if\s*\(\s*true\s*\).*admin/i,

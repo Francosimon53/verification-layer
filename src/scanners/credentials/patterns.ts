@@ -109,10 +109,9 @@ export const HARDCODED_CREDENTIALS: CredentialPattern = {
     // Empty or template strings
     /['"]\s*['"]/i,
     /\$\{/i, // Template literals
-
-    // Comments
-    /\/\//i,
-    /\/\*/i,
+    // NOTE: no `//` / `/*` comment negatives here. Comment-only lines are
+    // already skipped before matching (see index.ts), and a bare `//` wrongly
+    // suppressed real secrets in URL connection strings (e.g. postgresql://…).
   ],
   recommendation:
     'Move credentials to environment variables. Use process.env.PASSWORD or a secure secrets manager. Never commit credentials to source control. Add credentials to .gitignore.',

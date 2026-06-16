@@ -17,9 +17,13 @@ export const credentialsScanner: Scanner = {
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    // Filter to code and config files
+    // Filter to code and config files. `.env` plus its variants
+    // (.env.local, .env.production, …) are where secrets actually live, so
+    // match them explicitly — a plain `env$` extension test misses them.
     const codeFiles = files.filter((f) =>
-      /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs|env|yml|yaml|json)$/i.test(f)
+      /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs|yml|yaml|json)$/i.test(f) ||
+      /(?:^|[\\/])\.env(?:\.[\w-]+)*$/i.test(f) || // .env, .env.local, .env.production
+      /\.env$/i.test(f)                            // foo.env
     );
 
     for (const file of codeFiles) {
