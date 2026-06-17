@@ -26,3 +26,5 @@ export type {
 } from './types.js';
 export type { LoadRulesResult, RuleLoadError, CustomRuleDefinition, RulesFile } from './rules/index.js';
 export type { Baseline, BaselineEntry } from './baseline.js';
+export { scanCode } from './scan-code.js';
+export type { CodeInput, ScanCodeOptions } from './scan-code.js';
