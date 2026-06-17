@@ -1,13 +1,16 @@
 import { createHash } from 'crypto';
+import { resolve, basename } from 'path';
 import type { ScanResult, ResolvedBranding } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
+import { generateRecommendations } from '../compliance-score.js';
 import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
 import {
   groupFindingsByLocation,
-  countGroupsBySeverity,
+  countFindingsBySeverity,
   formatHipaaRef,
   partitionFindingsByStatus,
   sortProposedFindings,
+  toRelativeDisplayPath,
 } from './finding-presentation.js';
 
 interface AuditorReportOptions {
@@ -53,10 +56,35 @@ export function generateAuditorReport(
   const { current: currentFindings, proposed: proposedRaw } = partitionFindingsByStatus(activeFindings);
   const proposedFindings = sortProposedFindings(proposedRaw);
   const locationGroups = groupFindingsByLocation(currentFindings);
-  const groupCounts = countGroupsBySeverity(locationGroups);
+  // Per-severity counts come from the RAW current findings (proposed excluded),
+  // so the summary cards, recommendations, and filter chips all show the SAME
+  // numbers. Location-grouping below is purely a display device for the list.
+  const severityCounts = countFindingsBySeverity(currentFindings);
   const acknowledgedFindings = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
   const suppressedFindings = result.findings.filter(f => f.suppressed);
   const baselineFindings = result.findings.filter(f => f.isBaseline);
+
+  // Display-corrected score: the stored breakdown counts ALL active findings
+  // (it includes proposed/NPRM), which would show e.g. "8 critical" up top while
+  // the current-obligation list shows 7. Re-key the breakdown to the current
+  // findings so every rendered number reconciles, and regenerate the
+  // recommendation text from those same numbers. The compliance score value,
+  // grade and penalties are left untouched — only the displayed counts change.
+  const absTargetRoot = resolve(targetPath);
+  const displayTarget = basename(absTargetRoot) || targetPath;
+  const displayBreakdown = {
+    ...score.breakdown,
+    critical: severityCounts.critical,
+    high: severityCounts.high,
+    medium: severityCounts.medium,
+    low: severityCounts.low,
+    total: currentFindings.length,
+  };
+  const displayScore = {
+    ...score,
+    breakdown: displayBreakdown,
+    recommendations: generateRecommendations(displayBreakdown, score.score),
+  };
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -397,7 +425,7 @@ export function generateAuditorReport(
         </div>
         <div class="meta-item">
           <div class="meta-label">Target Path</div>
-          <div class="meta-value">${targetPath}</div>
+          <div class="meta-value">${escapeHtml(displayTarget)}</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Files Scanned</div>
@@ -407,26 +435,27 @@ export function generateAuditorReport(
     </div>
 
     <div class="content">
-      ${generateExecutiveSummary(score, result.scannedFiles, result.scanDuration)}
+      ${generateExecutiveSummary(displayScore, result.scannedFiles, result.scanDuration)}
 
-      ${generateComplianceScoreGauge(score)}
+      ${generateComplianceScoreGauge(displayScore)}
 
       <h2>📋 Findings Summary</h2>
       <p class="findings-count-note">
-        <strong>${currentFindings.length} current findings</strong> across
-        <strong>${locationGroups.length} entries</strong>
-        — grouped by file, line &amp; control family. Filters count entries.
+        <strong>${currentFindings.length} findings grouped into ${locationGroups.length} location${locationGroups.length === 1 ? '' : 's'}</strong>
+        — multiple controls flagged at the same file &amp; line are shown together,
+        but each is counted individually. The chip counts below match the
+        Executive Summary.
         ${proposedFindings.length > 0
-          ? `<br><span class="upcoming-inline">+ ${proposedFindings.length} upcoming requirement${proposedFindings.length === 1 ? '' : 's'} (NPRM — proposed rule)</span> — listed separately below.`
+          ? `<br><span class="upcoming-inline">+ ${proposedFindings.length} upcoming requirement${proposedFindings.length === 1 ? '' : 's'} (NPRM — proposed rule)</span> — listed separately below, excluded from the counts above.`
           : ''}
       </p>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (${locationGroups.length})</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${groupCounts.critical})</button>
-          <button class="filter-btn" onclick="filterFindings('high')">High (${groupCounts.high})</button>
-          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${groupCounts.medium})</button>
-          <button class="filter-btn" onclick="filterFindings('low')">Low (${groupCounts.low})</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (${currentFindings.length})</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${severityCounts.critical})</button>
+          <button class="filter-btn" onclick="filterFindings('high')">High (${severityCounts.high})</button>
+          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${severityCounts.medium})</button>
+          <button class="filter-btn" onclick="filterFindings('low')">Low (${severityCounts.low})</button>
         </div>
       </div>
 
@@ -441,11 +470,14 @@ export function generateAuditorReport(
         </thead>
         <tbody>
           ${locationGroups.map(g => {
-            const fileLine = `${escapeHtml(g.file)}:${g.line ?? 'N/A'}`;
+            const fileLine = `${escapeHtml(toRelativeDisplayPath(g.file, absTargetRoot))}:${g.line ?? 'N/A'}`;
+            // A row matches a filter chip if ANY member has that severity, so the
+            // chip count (raw findings) and the rows it reveals stay consistent.
+            const memberSeverities = [...new Set(g.members.map(m => m.severity))].join(' ');
             if (g.members.length === 1) {
               const f = g.members[0];
               return `
-            <tr class="finding-row" data-severity="${g.severity}">
+            <tr class="finding-row" data-severity="${g.severity}" data-severities="${memberSeverities}">
               <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
               <td>${escapeHtml(f.title)}</td>
               <td style="font-family: monospace; font-size: 0.875rem;">${fileLine}</td>
@@ -459,7 +491,7 @@ export function generateAuditorReport(
                   <span class="group-control-ref">${escapeHtml(formatHipaaRef(f.hipaaReference))}</span>
                 </li>`).join('');
             return `
-            <tr class="finding-row finding-group" data-severity="${g.severity}">
+            <tr class="finding-row finding-group" data-severity="${g.severity}" data-severities="${memberSeverities}">
               <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
               <td colspan="3">
                 <div class="group-location"><span class="group-location-path">${fileLine}</span> · ${g.members.length} controls flagged at this location</div>
@@ -492,7 +524,7 @@ export function generateAuditorReport(
               <tr>
                 <td><span class="severity-badge severity-proposed">Proposed</span></td>
                 <td>${escapeHtml(f.title)}</td>
-                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line ?? 'N/A'}</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(toRelativeDisplayPath(f.file, absTargetRoot))}:${f.line ?? 'N/A'}</td>
                 <td>${escapeHtml(formatHipaaRef(f.hipaaReference))}</td>
               </tr>
             `).join('')}
@@ -516,7 +548,7 @@ export function generateAuditorReport(
               <tr>
                 <td>${escapeHtml(f.title)}</td>
                 <td>${f.suppression?.reason || 'No reason provided'}</td>
-                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line || 'N/A'}</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(toRelativeDisplayPath(f.file, absTargetRoot))}:${f.line || 'N/A'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -583,7 +615,8 @@ export function generateAuditorReport(
       event.target.classList.add('active');
 
       rows.forEach(row => {
-        if (severity === 'all' || row.dataset.severity === severity) {
+        const severities = (row.dataset.severities || row.dataset.severity || '').split(' ');
+        if (severity === 'all' || severities.indexOf(severity) !== -1) {
           row.style.display = '';
         } else {
           row.style.display = 'none';

@@ -123,7 +123,7 @@ export function calculateComplianceScore(result: ScanResult): ComplianceScore {
   };
 }
 
-function generateRecommendations(
+export function generateRecommendations(
   breakdown: ComplianceScore['breakdown'],
   score: number
 ): string[] {
