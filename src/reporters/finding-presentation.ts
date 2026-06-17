@@ -8,6 +8,7 @@
  * finding still exists, it is just shown once per file:line when several rules
  * fire on the same location.
  */
+import { relative, isAbsolute, basename } from 'path';
 import type { Finding, Severity } from '../types.js';
 
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -128,6 +129,38 @@ export function countGroupsBySeverity(groups: LocationGroup[]): Record<Severity,
   const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
   for (const g of groups) counts[g.severity]++;
   return counts;
+}
+
+/**
+ * Count findings by their OWN severity — one tally per finding. Unlike
+ * countGroupsBySeverity (which counts location groups, so collapsing inflates
+ * nothing but deflates the visible numbers), this matches the raw per-severity
+ * numbers the Executive Summary uses, so the report shows the SAME counts in the
+ * summary cards, the recommendations, and the filter chips.
+ *
+ * Proposed (NPRM) findings must be excluded by the caller — pass only the
+ * current findings so a proposed rule never lands in a current-severity bucket.
+ */
+export function countFindingsBySeverity(findings: Finding[]): Record<Severity, number> {
+  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  for (const f of findings) counts[f.severity]++;
+  return counts;
+}
+
+/**
+ * Render a file path for display relative to the scan target root. A white-label
+ * report an agency hands to its client must never leak the developer's absolute
+ * machine path or username, so an absolute path is always reduced to a path
+ * relative to the scan root (e.g. "src/app/api/patients/route.ts"). Already-
+ * relative paths are returned unchanged; an absolute path that escapes the root
+ * falls back to its basename rather than leaking the full path.
+ */
+export function toRelativeDisplayPath(file: string, root: string): string {
+  if (!file) return '';
+  if (!isAbsolute(file)) return file;
+  const rel = relative(root, file);
+  if (!rel || rel.startsWith('..')) return basename(file);
+  return rel;
 }
 
 /**

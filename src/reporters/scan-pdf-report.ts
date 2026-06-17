@@ -1,12 +1,15 @@
 import PDFDocument from 'pdfkit';
 import { createHash } from 'crypto';
+import { resolve as resolvePath, basename } from 'path';
 import type { Finding, ScanResult, ResolvedBranding, Severity } from '../types.js';
 import { brandFooterText, brandPreparedBy, pdfLogoPath } from './branding.js';
 import {
   groupFindingsByLocation,
+  countFindingsBySeverity,
   formatHipaaRef,
   partitionFindingsByStatus,
   sortProposedFindings,
+  toRelativeDisplayPath,
   type LocationGroup,
 } from './finding-presentation.js';
 
@@ -90,12 +93,16 @@ export function generateScanPdf(
     const { current, proposed: proposedRaw } = partitionFindingsByStatus(activeFindings);
     const proposed = sortProposedFindings(proposedRaw);
 
+    // Resolve the scan root so every file path can be rendered relative to it —
+    // a white-label PDF must never leak the developer's absolute machine path.
+    const absTargetRoot = resolvePath(targetPath);
+
     try {
       const groups = groupFindingsByLocation(current);
-      renderCover(doc, result, targetPath, options, preparedBy, logoPath, current, groups.length, proposed.length);
+      renderCover(doc, result, absTargetRoot, options, preparedBy, logoPath, current, groups.length, proposed.length);
       doc.addPage();
-      renderFindings(doc, groups, current.length);
-      if (proposed.length > 0) renderProposedSection(doc, proposed);
+      renderFindings(doc, groups, current.length, absTargetRoot);
+      if (proposed.length > 0) renderProposedSection(doc, proposed, absTargetRoot);
       stampFooters(doc, footerLine);
       doc.end();
     } catch (err) {
@@ -109,7 +116,7 @@ const PAGE_WIDTH = (doc: PDFKit.PDFDocument) => doc.page.width - doc.page.margin
 function renderCover(
   doc: PDFKit.PDFDocument,
   result: ScanResult,
-  targetPath: string,
+  absTargetRoot: string,
   options: ScanPdfReportOptions,
   preparedBy: string,
   logoPath: string | null,
@@ -155,7 +162,7 @@ function renderCover(
     .text('Project Information', left + 20, boxY + 18);
 
   const infoItems: Array<[string, string]> = [
-    ['Target Path:', targetPath],
+    ['Target Path:', basename(absTargetRoot) || absTargetRoot],
     ['Organization:', options.organizationName || 'Not specified'],
     ['Report Generated:', new Date().toLocaleString()],
     ['Files Scanned:', String(result.scannedFiles)],
@@ -174,13 +181,13 @@ function renderCover(
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(15)
     .text('Scan Summary', left + 20, statsY);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${currentFindings.length} current findings across ${locationCount} entries`, left + 20, statsY + 20);
+    .text(`${currentFindings.length} findings grouped into ${locationCount} location${locationCount === 1 ? '' : 's'}`, left + 20, statsY + 20);
   if (proposedCount > 0) {
     doc.fillColor(COLORS.secondary).font('Helvetica-Oblique').fontSize(9)
-      .text(`+ ${proposedCount} upcoming requirement${proposedCount === 1 ? '' : 's'} (NPRM — proposed rule)`, left + 20, statsY + 33);
+      .text(`+ ${proposedCount} upcoming requirement${proposedCount === 1 ? '' : 's'} (NPRM — proposed rule), excluded from the counts below`, left + 20, statsY + 33);
   }
 
-  const counts = countBySeverity(currentFindings);
+  const counts = countFindingsBySeverity(currentFindings);
   const stats: Array<{ label: string; value: string; color: string }> = [
     { label: 'Critical', value: String(counts.critical), color: COLORS.critical },
     { label: 'High', value: String(counts.high), color: COLORS.high },
@@ -217,14 +224,14 @@ function renderCover(
  * with the file:line header and an indented list of the controls flagged there.
  * No finding is dropped — every member of every group is printed.
  */
-function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findingCount: number) {
+function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findingCount: number, absTargetRoot: string) {
   const left = doc.page.margins.left;
   const contentWidth = PAGE_WIDTH(doc);
 
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(20)
     .text('Findings by Location', left, doc.page.margins.top);
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(10)
-    .text(`${findingCount} current findings across ${groups.length} entries — grouped by file, line & control family.`, { width: contentWidth });
+    .text(`${findingCount} findings grouped into ${groups.length} location${groups.length === 1 ? '' : 's'} — multiple controls at the same file & line are shown together, each counted individually.`, { width: contentWidth });
   doc.moveDown(0.6);
 
   if (groups.length === 0) {
@@ -238,9 +245,9 @@ function renderFindings(doc: PDFKit.PDFDocument, groups: LocationGroup[], findin
 
   for (const g of groups) {
     if (g.members.length === 1) {
-      renderSingleEntry(doc, g.members[0], left, contentWidth);
+      renderSingleEntry(doc, g.members[0], left, contentWidth, absTargetRoot);
     } else {
-      renderGroupedEntry(doc, g, left, contentWidth, refX, refW);
+      renderGroupedEntry(doc, g, left, contentWidth, refX, refW, absTargetRoot);
     }
   }
 }
@@ -262,10 +269,11 @@ function severityBadge(doc: PDFKit.PDFDocument, severity: Severity, x: number, y
     .text(severity.toUpperCase(), x, y + 4, { width, align: 'center' });
 }
 
-function renderSingleEntry(doc: PDFKit.PDFDocument, f: Finding, left: number, contentWidth: number) {
+function renderSingleEntry(doc: PDFKit.PDFDocument, f: Finding, left: number, contentWidth: number, absTargetRoot: string) {
   const textX = left + 72;
   const textW = contentWidth - 72;
   const ref = formatHipaaRef(f.hipaaReference);
+  const relFile = toRelativeDisplayPath(f.file, absTargetRoot);
   const titleH = doc.font('Helvetica-Bold').fontSize(10.5).heightOfString(f.title, { width: textW });
   const refH = doc.font('Helvetica').fontSize(8).heightOfString(ref, { width: textW });
   const blockH = Math.max(titleH + refH + 8, 30);
@@ -277,7 +285,7 @@ function renderSingleEntry(doc: PDFKit.PDFDocument, f: Finding, left: number, co
   doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10.5)
     .text(f.title, textX, y, { width: textW });
   doc.fillColor(COLORS.muted).font('Courier').fontSize(8)
-    .text(`${f.file}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
+    .text(`${relFile}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
   doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
     .text(ref, textX, doc.y + 1, { width: textW });
 
@@ -292,9 +300,11 @@ function renderGroupedEntry(
   contentWidth: number,
   refX: number,
   refW: number,
+  absTargetRoot: string,
 ) {
   // Header: group-severity badge + file:line + control count.
-  const headerText = `${g.file}${g.line ? `:${g.line}` : ''}  ·  ${g.members.length} controls flagged at this location`;
+  const relFile = toRelativeDisplayPath(g.file, absTargetRoot);
+  const headerText = `${relFile}${g.line ? `:${g.line}` : ''}  ·  ${g.members.length} controls flagged at this location`;
   const headerH = doc.font('Helvetica-Bold').fontSize(10).heightOfString(headerText, { width: contentWidth - 72 });
   ensureSpace(doc, Math.max(headerH, 16) + 14);
 
@@ -333,7 +343,7 @@ function renderGroupedEntry(
  * findings. Neutral "PROPOSED" badge — never a red/critical severity — so a
  * proposed rule is never shown as a current violation.
  */
-function renderProposedSection(doc: PDFKit.PDFDocument, proposed: Finding[]) {
+function renderProposedSection(doc: PDFKit.PDFDocument, proposed: Finding[], absTargetRoot: string) {
   const left = doc.page.margins.left;
   const contentWidth = PAGE_WIDTH(doc);
 
@@ -367,7 +377,7 @@ function renderProposedSection(doc: PDFKit.PDFDocument, proposed: Finding[]) {
     doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(10.5)
       .text(f.title, textX, y, { width: textW });
     doc.fillColor(COLORS.muted).font('Courier').fontSize(8)
-      .text(`${f.file}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
+      .text(`${toRelativeDisplayPath(f.file, absTargetRoot)}${f.line ? `:${f.line}` : ''}`, textX, doc.y + 1, { width: textW });
     doc.fillColor(COLORS.secondary).font('Helvetica').fontSize(8)
       .text(ref, textX, doc.y + 1, { width: textW });
     doc.y = y + blockH;
@@ -395,12 +405,4 @@ function stampFooters(doc: PDFKit.PDFDocument, footerLine: string) {
         lineBreak: false,
       });
   }
-}
-
-function countBySeverity(findings: Finding[]) {
-  const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  for (const f of findings) {
-    counts[f.severity] = (counts[f.severity] || 0) + 1;
-  }
-  return counts;
 }
