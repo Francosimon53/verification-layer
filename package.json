@@ -28,7 +28,7 @@
     "test:run": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
