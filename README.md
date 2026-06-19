@@ -1,6 +1,6 @@
 # vlayer - HIPAA Compliance on Every Commit
 
-**Automated security scanning for healthcare applications.** 140+ detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.
+**Automated security scanning for healthcare applications.** 131 detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.
 
 [![CI](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/verification-layer)](https://www.npmjs.com/package/verification-layer)
@@ -16,20 +16,22 @@
 
 ```bash
 # Install globally
-npm install -g verification-layer
+npm install -g @francosimon/vlayer
 
 # Or use with npx (no install needed)
-npx vlayer scan ./src
+npx @francosimon/vlayer scan ./src
 
 # Scan with HTML report
-npx vlayer scan ./src -f html -o report.html
+npx @francosimon/vlayer scan ./src -f html -o report.html
 
 # Check compliance score
-npx vlayer score ./src
+npx @francosimon/vlayer score ./src
 
 # Auto-fix issues
-npx vlayer scan ./src --fix
+npx @francosimon/vlayer scan ./src --fix
 ```
+
+> Published on npm as `@francosimon/vlayer` (the bare name `vlayer` is taken); the installed binary is still `vlayer`.
 
 ---
 
@@ -38,7 +40,7 @@ npx vlayer scan ./src --fix
 vlayer is a CLI tool and platform that scans your codebase for HIPAA compliance issues. Built for healthcare startups and developers building applications that handle Protected Health Information (PHI).
 
 **🎯 Key Features:**
-- **140+ detection rules** across 5 HIPAA categories (PHI exposure, encryption, access control, audit logging, data retention)
+- **131 detection rules** (125 pattern-based + 6 AI-powered) across 5 HIPAA categories (PHI exposure, encryption, access control, audit logging, data retention)
 - **HIPAA 2026 NPRM ready** - Covers all 15 new cybersecurity requirements
 - **10 training modules** with 45+ questions and SHA-256 verifiable certificates
 - **5 HIPAA templates** - IRP, BAA, NPP, Security Officer role, Physical Safeguards
@@ -64,7 +66,7 @@ vlayer is a CLI tool and platform that scans your codebase for HIPAA compliance 
 
 | Plan | Price | Features |
 |------|-------|----------|
-| **Open Source** | **$0/forever** | Full scanner, CLI, 140+ rules, compliance scoring, training module, community support |
+| **Open Source** | **$0/forever** | Full scanner, CLI, 131 rules, compliance scoring, training module, community support |
 | **Pro** | **$49/month** ($490/year) | Everything in OSS + GitHub App with PR comments, pre-commit hooks, historical scan dashboard, HIPAA document templates, team tracking (10 users), PDF audit reports, email support (48h SLA). **14-day free trial** |
 | **Enterprise** | **Custom** | Everything in Pro + custom detection rules, self-hosted deployment, SSO/RBAC integration, dedicated compliance consultant, custom training modules, audit preparation support, priority support (4h SLA). Contact: [sales@vlayer.app](mailto:sales@vlayer.app) |
 
@@ -102,7 +104,7 @@ The new HIPAA Security Rule (NPRM 2026) adds 15 cybersecurity requirements. vlay
 
 ## 📊 Detection Categories
 
-vlayer scans for **140+ security patterns** across 5 HIPAA compliance categories:
+vlayer scans for **131 rules (125 pattern-based + 6 AI-powered)** across 5 HIPAA compliance categories:
 
 | Category | Rules | What it detects |
 |----------|-------|-----------------|
@@ -119,7 +121,7 @@ vlayer scans for **140+ security patterns** across 5 HIPAA compliance categories
 | **Session Management** | 8 | Weak session configs, missing timeouts, insecure cookies |
 | **Third-Party Risk** | 6 | Unsafe vendor integrations, missing BAAs, unvetted third-party code |
 
-**Total: 140+ rules**
+**Total: 131 rules (125 pattern-based + 6 AI-powered)**
 
 ---
 
@@ -244,14 +246,14 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npx vlayer scan ./src
+      - run: npx @francosimon/vlayer scan ./src
 ```
 
 ### Pre-commit Hook
 
 ```bash
 # Install pre-commit hook
-npx vlayer install-hook
+npx @francosimon/vlayer install-hook
 
 # .git/hooks/pre-commit will now run vlayer on staged files
 ```
