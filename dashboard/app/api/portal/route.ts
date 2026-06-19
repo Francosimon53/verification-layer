@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { jsonError } from '@/lib/api-errors';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,7 +31,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error('Portal error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to open billing portal' }, { status: 500 });
+    return jsonError(error, 'Failed to open billing portal', 500);
   }
 }
