@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProject, getScans, getFindings } from '@/lib/storage';
+import { jsonError } from '@/lib/api-errors';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -335,7 +336,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('[reports/generate] Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to generate report' }, { status: 500 });
+    return jsonError(error, 'Failed to generate report', 500);
   }
 }
