@@ -17,7 +17,7 @@ No install needed. Paste any code snippet and see vlayer findings instantly:
 ### Step 1: Run your first scan
 
 ```bash
-npx vlayer scan ./src
+npx @francosimon/vlayer scan ./src
 ```
 
 vlayer scans every file in `./src` and prints findings grouped by severity: Critical, High, Medium, Low.
@@ -25,7 +25,7 @@ vlayer scans every file in `./src` and prints findings grouped by severity: Crit
 ### Step 2: Get your compliance score
 
 ```bash
-npx vlayer score ./src
+npx @francosimon/vlayer score ./src
 ```
 
 Returns a 0–100 HIPAA compliance score with a letter grade (A–F) and a breakdown by category.
@@ -33,7 +33,7 @@ Returns a 0–100 HIPAA compliance score with a letter grade (A–F) and a break
 ### Step 3: Generate an HTML report
 
 ```bash
-npx vlayer scan ./src -f html -o hipaa-report.html
+npx @francosimon/vlayer scan ./src -f html -o hipaa-report.html
 ```
 
 Opens a self-contained HTML report with findings, remediation guides, and HIPAA references. Share it with your team or compliance officer.
@@ -41,7 +41,7 @@ Opens a self-contained HTML report with findings, remediation guides, and HIPAA 
 ### Step 4 (optional): Auto-fix what you can
 
 ```bash
-npx vlayer scan ./src --fix
+npx @francosimon/vlayer scan ./src --fix
 ```
 
 vlayer applies safe, automatic fixes where possible — adding `httpOnly` to cookies, replacing `md5` with `sha256`, masking PHI in logs, and more. Review the changes before committing.
@@ -50,7 +50,7 @@ vlayer applies safe, automatic fixes where possible — adding `httpOnly` to coo
 
 ## What gets scanned
 
-vlayer checks your code against 140+ rules across the 5 HIPAA compliance categories:
+vlayer checks your code against 131 rules (125 pattern-based + 6 AI-powered) across the 5 HIPAA compliance categories:
 
 | Category | What it checks |
 |----------|---------------|
