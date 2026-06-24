@@ -23,7 +23,7 @@ afterAll(async () => {
 // A realistic prior vlayer report whose *text* would self-flag if re-scanned.
 const PRIOR_REPORT = JSON.stringify({
   findings: [
-    { ruleId: 'enc-weak', title: 'Weak cryptography: DES encryption' },
+    { ruleId: 'enc-des', title: 'Weak cryptography: DES encryption' },
     { ruleId: 'phi-ssn-hardcoded', title: 'Potential SSN 123-45-6789 detected' },
     { ruleId: 'CRED-003', title: 'Secrets Exposed via NEXT_PUBLIC_ Prefix' },
   ],

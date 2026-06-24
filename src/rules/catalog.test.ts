@@ -53,6 +53,36 @@ describe('built-in rule catalog', () => {
     }
   });
 
+  it('lists every distinct encryption check with stable ids (no collapsed families)', () => {
+    const encryption = getRulesByCategory('encryption');
+    const ids = encryption.map((r) => r.id);
+
+    // 16 encryption-scanner patterns + 3 credentials + 1 AI (HIPAA-SEC-001)
+    expect(encryption.length).toBe(20);
+
+    // The collapsed families must be gone.
+    expect(ids).not.toContain('enc-weak');
+    expect(ids).not.toContain('enc-missing');
+
+    // Every distinct check is now individually enumerated.
+    const expectedEncryptionScannerIds = [
+      'enc-md5', 'enc-sha1', 'enc-des', 'enc-rc4', 'enc-deprecated-cipher', 'enc-ecb-mode',
+      'enc-http-url', 'enc-ssl-disabled', 'enc-ssl-verify-disabled',
+      'enc-tls-cert-validation-disabled', 'enc-backup-encryption-disabled',
+      'enc-db-backup-no-ssl', 'enc-backup-file-unencrypted', 'enc-phi-backup-unencrypted',
+      'enc-s3-backup-no-sse', 'enc-backup-storage-unencrypted',
+    ];
+    for (const id of expectedEncryptionScannerIds) {
+      expect(ids).toContain(id);
+    }
+
+    // Severities are preserved from the patterns (not flattened to one value).
+    const desRule = encryption.find((r) => r.id === 'enc-des');
+    expect(desRule?.severity).toBe('critical');
+    const sha1Rule = encryption.find((r) => r.id === 'enc-sha1');
+    expect(sha1Rule?.severity).toBe('medium');
+  });
+
   it('normalizes severity to lowercase and marks AI rules as info', () => {
     const severities = new Set(['critical', 'high', 'medium', 'low', 'info']);
     for (const rule of RULE_CATALOG) {
