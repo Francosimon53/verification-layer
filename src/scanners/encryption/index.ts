@@ -4,32 +4,33 @@ import { isSafeHttpUrl, DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
 export const WEAK_CRYPTO_PATTERNS = [
-  { regex: /\bmd5\s*\(/i, issue: 'MD5 hash function', severity: 'high' as const },
-  { regex: /\bsha1\s*\(/i, issue: 'SHA1 hash function', severity: 'medium' as const },
-  { regex: /\bdes\b/i, issue: 'DES encryption', severity: 'critical' as const },
-  { regex: /\b(rc4|arcfour)\b/i, issue: 'RC4 encryption', severity: 'critical' as const },
-  { regex: /createCipher\s*\(/i, issue: 'Deprecated cipher method', severity: 'high' as const },
-  { regex: /\bECB\b/, issue: 'ECB mode encryption', severity: 'high' as const },
+  { id: 'enc-md5', regex: /\bmd5\s*\(/i, issue: 'MD5 hash function', severity: 'high' as const },
+  { id: 'enc-sha1', regex: /\bsha1\s*\(/i, issue: 'SHA1 hash function', severity: 'medium' as const },
+  { id: 'enc-des', regex: /\bdes\b/i, issue: 'DES encryption', severity: 'critical' as const },
+  { id: 'enc-rc4', regex: /\b(rc4|arcfour)\b/i, issue: 'RC4 encryption', severity: 'critical' as const },
+  { id: 'enc-deprecated-cipher', regex: /createCipher\s*\(/i, issue: 'Deprecated cipher method', severity: 'high' as const },
+  { id: 'enc-ecb-mode', regex: /\bECB\b/, issue: 'ECB mode encryption', severity: 'high' as const },
 ];
 
 export const MISSING_ENCRYPTION_PATTERNS: Array<{
+  id: string;
   regex: RegExp;
   issue: string;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   checkSafe?: boolean;
   fixType?: FixType;
 }> = [
-  { regex: /http:\/\/(?!localhost|127\.0\.0\.1)/i, issue: 'Unencrypted HTTP URL', severity: 'high' as const, checkSafe: true, fixType: 'http-url' },
-  { regex: /ssl\s*[:=]\s*false/i, issue: 'SSL disabled', severity: 'critical' as const },
-  { regex: /verify\s*[:=]\s*false.*ssl/i, issue: 'SSL verification disabled', severity: 'critical' as const },
-  { regex: /rejectUnauthorized\s*:\s*false/i, issue: 'TLS certificate validation disabled', severity: 'critical' as const },
+  { id: 'enc-http-url', regex: /http:\/\/(?!localhost|127\.0\.0\.1)/i, issue: 'Unencrypted HTTP URL', severity: 'high' as const, checkSafe: true, fixType: 'http-url' },
+  { id: 'enc-ssl-disabled', regex: /ssl\s*[:=]\s*false/i, issue: 'SSL disabled', severity: 'critical' as const },
+  { id: 'enc-ssl-verify-disabled', regex: /verify\s*[:=]\s*false.*ssl/i, issue: 'SSL verification disabled', severity: 'critical' as const },
+  { id: 'enc-tls-cert-validation-disabled', regex: /rejectUnauthorized\s*:\s*false/i, issue: 'TLS certificate validation disabled', severity: 'critical' as const },
   // Unencrypted backup patterns
-  { regex: /backup.*encrypt\s*[:=]\s*false|encrypt\s*[:=]\s*false.*backup/i, issue: 'Backup encryption disabled', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
-  { regex: /mysqldump(?!.*--ssl).*password|pg_dump(?!.*--ssl)/i, issue: 'Database backup without SSL', severity: 'high' as const },
-  { regex: /backup.*(\.sql|\.csv|\.json|\.txt)\b(?!.*encrypt|.*gpg|.*aes)/i, issue: 'Unencrypted backup file format', severity: 'high' as const, fixType: 'backup-unencrypted' as FixType },
-  { regex: /writeFile.*backup.*patient|patient.*backup.*writeFile/i, issue: 'PHI backup without encryption', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
-  { regex: /s3.*upload.*backup(?!.*encrypt|.*sse|.*kms)/i, issue: 'S3 backup without server-side encryption', severity: 'high' as const },
-  { regex: /backup.*storage(?!.*encrypt)|storage.*backup(?!.*encrypt)/i, issue: 'Backup storage without encryption specified', severity: 'medium' as const },
+  { id: 'enc-backup-encryption-disabled', regex: /backup.*encrypt\s*[:=]\s*false|encrypt\s*[:=]\s*false.*backup/i, issue: 'Backup encryption disabled', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
+  { id: 'enc-db-backup-no-ssl', regex: /mysqldump(?!.*--ssl).*password|pg_dump(?!.*--ssl)/i, issue: 'Database backup without SSL', severity: 'high' as const },
+  { id: 'enc-backup-file-unencrypted', regex: /backup.*(\.sql|\.csv|\.json|\.txt)\b(?!.*encrypt|.*gpg|.*aes)/i, issue: 'Unencrypted backup file format', severity: 'high' as const, fixType: 'backup-unencrypted' as FixType },
+  { id: 'enc-phi-backup-unencrypted', regex: /writeFile.*backup.*patient|patient.*backup.*writeFile/i, issue: 'PHI backup without encryption', severity: 'critical' as const, fixType: 'backup-unencrypted' as FixType },
+  { id: 'enc-s3-backup-no-sse', regex: /s3.*upload.*backup(?!.*encrypt|.*sse|.*kms)/i, issue: 'S3 backup without server-side encryption', severity: 'high' as const },
+  { id: 'enc-backup-storage-unencrypted', regex: /backup.*storage(?!.*encrypt)|storage.*backup(?!.*encrypt)/i, issue: 'Backup storage without encryption specified', severity: 'medium' as const },
 ];
 
 /** Detect test, fixture, example, doc, migration, and seed files */
@@ -44,31 +45,6 @@ function isCommentOrNonFunctional(line: string): boolean {
   if (/\b(see|docs|reference|spec|rfc|example|documentation)\b/i.test(trimmed)) return true;
   return false;
 }
-
-/**
- * Stable rule families emitted by this scanner for the built-in rule catalog.
- * Findings carry dynamic ids (`enc-weak-<line>`, `enc-missing-<line>`) derived
- * from WEAK_CRYPTO_PATTERNS and MISSING_ENCRYPTION_PATTERNS; these are the FIXED
- * families only — never the per-finding suffix.
- */
-export const ENCRYPTION_RULES = [
-  {
-    id: 'enc-weak',
-    severity: 'high' as const,
-    title: 'Weak cryptography',
-    description: 'Weak or deprecated cryptographic primitive (MD5, SHA1, DES, RC4, ECB mode, or a deprecated cipher method) used where PHI must be protected.',
-    recommendation: 'Use AES-256-GCM for encryption and SHA-256 or stronger for hashing.',
-    hipaaReference: '§164.312(a)(2)(iv), §164.312(e)(2)(ii)',
-  },
-  {
-    id: 'enc-missing',
-    severity: 'high' as const,
-    title: 'Missing or disabled encryption',
-    description: 'Unencrypted transport (HTTP), disabled TLS/SSL verification, or unencrypted backups that may expose PHI in transit or at rest.',
-    recommendation: 'Enforce TLS 1.2+ for all PHI transmission and encrypt backups at rest.',
-    hipaaReference: '§164.312(e)(1)',
-  },
-];
 
 export const encryptionScanner: Scanner = {
   name: 'Encryption Scanner',
@@ -92,7 +68,7 @@ export const encryptionScanner: Scanner = {
           for (const pattern of WEAK_CRYPTO_PATTERNS) {
             if (pattern.regex.test(line)) {
               findings.push({
-                id: `enc-weak-${lineNum}`,
+                id: `${pattern.id}-${lineNum}`,
                 category: 'encryption',
                 severity: pattern.severity,
                 title: `Weak cryptography: ${pattern.issue}`,
@@ -123,7 +99,7 @@ export const encryptionScanner: Scanner = {
               }
 
               findings.push({
-                id: `enc-missing-${lineNum}`,
+                id: `${pattern.id}-${lineNum}`,
                 category: 'encryption',
                 severity: pattern.severity,
                 title: `Encryption issue: ${pattern.issue}`,

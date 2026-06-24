@@ -7,10 +7,12 @@
  * Three forms of built-in rules are folded in here:
  *   1. Exported pattern arrays (e.g. PHI_PATTERNS, ALL_*_PATTERNS).
  *   2. Inline rule arrays that live in a scanner's index.ts (ACCESS_CONTROL_ISSUES,
- *      RETENTION_ISSUES, SECURITY_PATTERNS).
- *   3. Scanners that build findings inline with dynamic per-finding ids
- *      (audit, encryption). These expose an explicit metadata array of their
- *      STABLE rule families (AUDIT_RULES, ENCRYPTION_RULES) — fixed ids only.
+ *      RETENTION_ISSUES, SECURITY_PATTERNS, WEAK_CRYPTO_PATTERNS,
+ *      MISSING_ENCRYPTION_PATTERNS).
+ *   3. Scanners that build findings inline with dynamic per-finding ids. The
+ *      audit scanner exposes an explicit metadata array of its STABLE rule
+ *      families (AUDIT_RULES) — fixed ids only. (Encryption now carries a stable
+ *      `id` on every pattern, so each distinct check is listed individually.)
  *
  * The category of a rule is ALWAYS the owning scanner's canonical `.category`
  * (the AI rules are normalized from their short tokens). A module-load
@@ -39,10 +41,10 @@ import { ALL_REVOCATION_PATTERNS } from '../scanners/revocation/patterns.js';
 import { ACCESS_CONTROL_ISSUES } from '../scanners/access/index.js';
 import { RETENTION_ISSUES } from '../scanners/retention/index.js';
 import { SECURITY_PATTERNS } from '../scanners/security/index.js';
+import { WEAK_CRYPTO_PATTERNS, MISSING_ENCRYPTION_PATTERNS } from '../scanners/encryption/index.js';
 
 // Form 3 — stable families for scanners that emit dynamic per-finding ids
 import { AUDIT_RULES } from '../scanners/audit/index.js';
-import { ENCRYPTION_RULES } from '../scanners/encryption/index.js';
 
 export { type Category };
 
@@ -130,6 +132,43 @@ function fromAiRules(): CatalogRule[] {
   });
 }
 
+/**
+ * The encryption scanner builds findings inline (with `<id>-<line>` finding ids),
+ * so its checks are mapped to catalog entries directly from the two pattern
+ * arrays. Each pattern carries a stable `id` and an `issue` (its short title);
+ * we attach an accurate HIPAA-relevant description, fix recommendation, and the
+ * same HIPAA reference the scanner emits. Detection logic is unchanged — these
+ * are the same checks, now enumerated individually.
+ */
+const WEAK_CRYPTO_HIPAA_REF = '§164.312(a)(2)(iv), §164.312(e)(2)(ii)';
+const MISSING_ENCRYPTION_HIPAA_REF = '§164.312(e)(1)';
+
+function encryptionRules(): CatalogRule[] {
+  const weak = WEAK_CRYPTO_PATTERNS.map((pattern): CatalogRule => ({
+    id: pattern.id,
+    category: 'encryption',
+    severity: normalizeSeverity(pattern.severity),
+    title: pattern.issue,
+    description: `${pattern.issue} is not suitable for protecting PHI.`,
+    recommendation: 'Use AES-256-GCM for encryption and SHA-256 or stronger for hashing.',
+    hipaaReference: WEAK_CRYPTO_HIPAA_REF,
+    source: 'pattern',
+    scanner: 'encryption',
+  }));
+  const missing = MISSING_ENCRYPTION_PATTERNS.map((pattern): CatalogRule => ({
+    id: pattern.id,
+    category: 'encryption',
+    severity: normalizeSeverity(pattern.severity),
+    title: pattern.issue,
+    description: `${pattern.issue} may expose PHI in transit or at rest.`,
+    recommendation: 'Enforce TLS 1.2+ for PHI in transit and encrypt PHI (including backups) at rest.',
+    hipaaReference: MISSING_ENCRYPTION_HIPAA_REF,
+    source: 'pattern',
+    scanner: 'encryption',
+  }));
+  return [...weak, ...missing];
+}
+
 function buildCatalog(): CatalogRule[] {
   const rules: CatalogRule[] = [
     // Form 1 — exported pattern arrays (category = owning scanner's .category)
@@ -149,9 +188,10 @@ function buildCatalog(): CatalogRule[] {
     ...fromScanner('access', 'access-control', ACCESS_CONTROL_ISSUES),
     ...fromScanner('retention', 'data-retention', RETENTION_ISSUES),
     ...fromScanner('security', 'access-control', SECURITY_PATTERNS),
-    // Form 3 — stable families for dynamic-id scanners
+    // Form 3 — dynamic-id scanners
     ...fromScanner('audit', 'audit-logging', AUDIT_RULES),
-    ...fromScanner('encryption', 'encryption', ENCRYPTION_RULES),
+    // Encryption: one catalog entry per distinct check (stable ids on patterns).
+    ...encryptionRules(),
     // AI rules (normalized categories)
     ...fromAiRules(),
   ];
