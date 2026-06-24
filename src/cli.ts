@@ -11,6 +11,7 @@ import { generateFixReport } from './reporters/fix-report.js';
 import { loadAuditTrail, getAuditSummary } from './audit/index.js';
 import { generateAuditReport, generateTextAuditReport } from './reporters/audit-report.js';
 import { loadCustomRules, validateRulesFile } from './rules/index.js';
+import { RULE_CATALOG, getCategoryCounts } from './rules/catalog.js';
 import { formatScore, getScoreColor } from './compliance-score.js';
 import { generateAuditorReport } from './reporters/auditor-report.js';
 import { generateScanPdf } from './reporters/scan-pdf-report.js';
@@ -1077,7 +1078,46 @@ rulesCommand
   .description('List all loaded custom rules')
   .argument('[path]', 'Path to the project', '.')
   .option('--rules <path>', 'Path to custom rules YAML file')
+  .option('--builtin', "List vlayer's built-in rule catalog instead of custom rules")
+  .option('-f, --format <type>', 'Output format for --builtin: text or json', 'text')
   .action(async (path: string, options) => {
+    // Built-in catalog listing — additive, does not touch custom-rule loading.
+    if (options.builtin) {
+      if (options.format === 'json') {
+        console.log(JSON.stringify({
+          total: RULE_CATALOG.length,
+          counts: getCategoryCounts(),
+          rules: RULE_CATALOG,
+        }, null, 2));
+        return;
+      }
+
+      const severityColors: Record<string, typeof chalk.red> = {
+        critical: chalk.red,
+        high: chalk.yellow,
+        medium: chalk.hex('#ca8a04'),
+        low: chalk.green,
+        info: chalk.blue,
+      };
+      const counts = getCategoryCounts();
+      console.log(chalk.bold(`\nBuilt-in rule catalog — ${RULE_CATALOG.length} rule(s):\n`));
+      for (const rule of RULE_CATALOG) {
+        const color = severityColors[rule.severity] || chalk.white;
+        console.log(`  ${chalk.cyan(rule.id)}`);
+        console.log(`    Title: ${rule.title}`);
+        console.log(`    Category: ${rule.category}`);
+        console.log(`    Severity: ${color(rule.severity)}`);
+        console.log(`    Source: ${rule.source} (${rule.scanner})`);
+        console.log('');
+      }
+      console.log(chalk.bold('By category:'));
+      for (const [category, n] of Object.entries(counts)) {
+        console.log(`  ${category}: ${chalk.cyan(n)}`);
+      }
+      console.log('');
+      return;
+    }
+
     const absolutePath = resolve(path);
 
     try {

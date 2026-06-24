@@ -3,7 +3,7 @@ import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
-const ACCESS_CONTROL_ISSUES = [
+export const ACCESS_CONTROL_ISSUES = [
   {
     regex: /\*\s*FROM\s+(patient|user|health|medical)/i,
     id: 'select-star',

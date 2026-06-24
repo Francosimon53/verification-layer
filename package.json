@@ -21,7 +21,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/build-catalog.mjs",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest",
