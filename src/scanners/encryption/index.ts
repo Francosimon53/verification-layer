@@ -3,7 +3,7 @@ import type { Scanner, Finding, ScanOptions, FixType } from '../../types.js';
 import { isSafeHttpUrl, DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
-const WEAK_CRYPTO_PATTERNS = [
+export const WEAK_CRYPTO_PATTERNS = [
   { regex: /\bmd5\s*\(/i, issue: 'MD5 hash function', severity: 'high' as const },
   { regex: /\bsha1\s*\(/i, issue: 'SHA1 hash function', severity: 'medium' as const },
   { regex: /\bdes\b/i, issue: 'DES encryption', severity: 'critical' as const },
@@ -12,7 +12,7 @@ const WEAK_CRYPTO_PATTERNS = [
   { regex: /\bECB\b/, issue: 'ECB mode encryption', severity: 'high' as const },
 ];
 
-const MISSING_ENCRYPTION_PATTERNS: Array<{
+export const MISSING_ENCRYPTION_PATTERNS: Array<{
   regex: RegExp;
   issue: string;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -44,6 +44,31 @@ function isCommentOrNonFunctional(line: string): boolean {
   if (/\b(see|docs|reference|spec|rfc|example|documentation)\b/i.test(trimmed)) return true;
   return false;
 }
+
+/**
+ * Stable rule families emitted by this scanner for the built-in rule catalog.
+ * Findings carry dynamic ids (`enc-weak-<line>`, `enc-missing-<line>`) derived
+ * from WEAK_CRYPTO_PATTERNS and MISSING_ENCRYPTION_PATTERNS; these are the FIXED
+ * families only — never the per-finding suffix.
+ */
+export const ENCRYPTION_RULES = [
+  {
+    id: 'enc-weak',
+    severity: 'high' as const,
+    title: 'Weak cryptography',
+    description: 'Weak or deprecated cryptographic primitive (MD5, SHA1, DES, RC4, ECB mode, or a deprecated cipher method) used where PHI must be protected.',
+    recommendation: 'Use AES-256-GCM for encryption and SHA-256 or stronger for hashing.',
+    hipaaReference: '§164.312(a)(2)(iv), §164.312(e)(2)(ii)',
+  },
+  {
+    id: 'enc-missing',
+    severity: 'high' as const,
+    title: 'Missing or disabled encryption',
+    description: 'Unencrypted transport (HTTP), disabled TLS/SSL verification, or unencrypted backups that may expose PHI in transit or at rest.',
+    recommendation: 'Enforce TLS 1.2+ for all PHI transmission and encrypt backups at rest.',
+    hipaaReference: '§164.312(e)(1)',
+  },
+];
 
 export const encryptionScanner: Scanner = {
   name: 'Encryption Scanner',
