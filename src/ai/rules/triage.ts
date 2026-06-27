@@ -108,6 +108,7 @@ export async function triageFindings(
   fileContents: Map<string, string>
 ): Promise<TriagedFinding[]> {
   const cap = AI_CONFIG.triage.maxFindings;
+  const concurrency = AI_CONFIG.triage.concurrency;
 
   // Honest fallback: a finding we did not AI-verify is returned regex-flagged,
   // never dropped, so the report stays complete.
@@ -119,22 +120,41 @@ export async function triageFindings(
     source: 'static',
   });
 
-  const triaged: TriagedFinding[] = [];
-  let calls = 0;
+  // Phase 1 (no API): decide each finding's fate in input order, preserving the
+  // existing cap / no-content semantics. Only findings WITH content use a cap slot.
+  const out: TriagedFinding[] = new Array(findings.length);
+  const toTriage: { index: number; finding: Finding; content: string }[] = [];
+  let scheduled = 0;
 
-  for (const finding of findings) {
-    if (calls >= cap) {
-      triaged.push(notVerified(finding, 'Not AI-verified (triage cap reached) — regex-flagged only'));
-      continue;
+  findings.forEach((finding, i) => {
+    if (scheduled >= cap) {
+      out[i] = notVerified(finding, 'Not AI-verified (triage cap reached) — regex-flagged only');
+      return;
     }
     const content = fileContents.get(finding.file);
     if (!content) {
-      triaged.push(notVerified(finding, 'File content not available for triage'));
-      continue;
+      out[i] = notVerified(finding, 'File content not available for triage');
+      return;
     }
-    triaged.push(await triageFinding(finding, content, finding.file));
-    calls++;
-  }
+    toTriage.push({ index: i, finding, content });
+    scheduled++;
+  });
 
-  return triaged;
+  // Phase 2: triage the selected findings with bounded concurrency. Each worker
+  // pulls the next index synchronously (safe in JS's single-threaded loop) and
+  // writes to a fixed output slot, so order is preserved.
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < toTriage.length) {
+      const item = toTriage[next++];
+      out[item.index] = await triageFinding(item.finding, item.content, item.finding.file);
+    }
+  };
+  const workers = Array.from(
+    { length: Math.min(concurrency, toTriage.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
+
+  return out;
 }
