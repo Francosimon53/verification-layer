@@ -12,6 +12,11 @@ export const AI_CONFIG = {
     maxCallsPerMinute: 20,
     maxCallsPerScan: 50,
   },
+  triage: {
+    timeoutMs: 30_000,   // abort a single triage call that hangs
+    maxRetries: 1,       // keep total time bounded
+    maxFindings: 50,     // hard cap; findings beyond this are returned regex-only, not AI-verified
+  },
   budget: {
     defaultMaxCentsPerScan: 50, // $0.50 default
     estimatedCostPerCall: 1.5, // ~$0.015 per call with Sonnet
