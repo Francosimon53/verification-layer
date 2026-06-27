@@ -64,7 +64,7 @@ Is this a real security issue or a false positive? Respond in JSON:
 
   try {
     const response = await client.messages.create({
-      model: AI_CONFIG.model,
+      model: AI_CONFIG.triage.model,
       max_tokens: AI_CONFIG.maxTokens,
       temperature: AI_CONFIG.temperature,
       system: TRIAGE_SYSTEM_PROMPT,
