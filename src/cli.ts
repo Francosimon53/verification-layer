@@ -108,6 +108,7 @@ program
         baselineFile: options.baseline,
         minConfidence: options.minConfidence as 'high' | 'medium' | 'low' | undefined,
         includeOwnArtifacts: options.includeOwnArtifacts,
+        enableAI: options.ai !== false,
       });
 
       spinner.succeed(`Scan complete. Found ${result.groupedFindings.length} unique issues (${result.rawFindingsCount} total occurrences).`);

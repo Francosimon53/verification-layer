@@ -236,7 +236,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   });
 
   // Apply AI triage if enabled and available
-  if (config.ai?.enableTriage !== false && isAIAvailable()) {
+  if (options.enableAI !== false && config.ai?.enableTriage !== false && isAIAvailable()) {
     try {
       // Load file contents for triage (skip special/virtual files)
       const fileContents = new Map<string, string>();

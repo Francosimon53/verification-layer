@@ -132,6 +132,8 @@ export interface ScanOptions {
   fix?: boolean;
   baselineFile?: string;
   minConfidence?: Confidence;
+  /** Enable AI-powered triage. The CLI --no-ai flag sets this false. Default: true. */
+  enableAI?: boolean;
   /**
    * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
    * Default false — these are excluded so the scanner never flags its own output.
