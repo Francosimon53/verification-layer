@@ -14,6 +14,7 @@ export const AI_CONFIG = {
   },
   triage: {
     model: 'claude-haiku-4-5-20251001', // Haiku for triage (pattern-level, ~3x cheaper than Sonnet)
+    concurrency: 5,      // parallel triage calls (Haiku has the rate headroom)
     timeoutMs: 30_000,   // abort a single triage call that hangs
     maxRetries: 1,       // keep total time bounded
     maxFindings: 50,     // hard cap; findings beyond this are returned regex-only, not AI-verified
