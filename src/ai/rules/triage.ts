@@ -69,6 +69,9 @@ Is this a real security issue or a false positive? Respond in JSON:
       temperature: AI_CONFIG.temperature,
       system: TRIAGE_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
+    }, {
+      timeout: AI_CONFIG.triage.timeoutMs,
+      maxRetries: AI_CONFIG.triage.maxRetries,
     });
 
     const content = response.content[0];
@@ -104,24 +107,33 @@ export async function triageFindings(
   findings: Finding[],
   fileContents: Map<string, string>
 ): Promise<TriagedFinding[]> {
+  const cap = AI_CONFIG.triage.maxFindings;
+
+  // Honest fallback: a finding we did not AI-verify is returned regex-flagged,
+  // never dropped, so the report stays complete.
+  const notVerified = (f: Finding, reason: string): TriagedFinding => ({
+    ...f,
+    aiClassification: 'likely',
+    aiConfidence: 0.5,
+    aiReasoning: reason,
+    source: 'static',
+  });
+
   const triaged: TriagedFinding[] = [];
+  let calls = 0;
 
   for (const finding of findings) {
-    const content = fileContents.get(finding.file);
-    if (!content) {
-      // No content available, keep finding as-is
-      triaged.push({
-        ...finding,
-        aiClassification: 'likely',
-        aiConfidence: 0.5,
-        aiReasoning: 'File content not available for triage',
-        source: 'static',
-      });
+    if (calls >= cap) {
+      triaged.push(notVerified(finding, 'Not AI-verified (triage cap reached) — regex-flagged only'));
       continue;
     }
-
-    const triagedFinding = await triageFinding(finding, content, finding.file);
-    triaged.push(triagedFinding);
+    const content = fileContents.get(finding.file);
+    if (!content) {
+      triaged.push(notVerified(finding, 'File content not available for triage'));
+      continue;
+    }
+    triaged.push(await triageFinding(finding, content, finding.file));
+    calls++;
   }
 
   return triaged;
