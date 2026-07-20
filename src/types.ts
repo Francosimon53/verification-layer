@@ -113,6 +113,20 @@ export interface ComplianceScore {
   recommendations: string[];
 }
 
+/**
+ * Informational report artifact (e.g. asset inventory, PHI flow map).
+ * These are generated documentation, not compliance violations — they are
+ * surfaced as report metadata and never count toward finding stats.
+ */
+export interface InformationalArtifact {
+  id: string;
+  title: string;
+  description: string;
+  /** Formatted artifact body (inventory table, flow map, etc.) */
+  content: string;
+  hipaaReference?: string;
+}
+
 export interface ScanResult {
   findings: Finding[];
   groupedFindings: GroupedFinding[];
@@ -121,6 +135,8 @@ export interface ScanResult {
   scanDuration: number;
   stack?: StackInfo;
   complianceScore?: ComplianceScore;
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ScanOptions {
@@ -177,6 +193,8 @@ export interface Report {
   scanDuration: number;
   stack?: StackInfo;
   vulnerabilities?: DependencyVulnerability[];
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ReportOptions {
