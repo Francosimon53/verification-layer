@@ -6,7 +6,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MarketplaceRegistry } from './registry.js';
-import type { MarketplaceRule, InstalledRule, InstallationConfig } from './types.js';
+import type { MarketplaceRule, InstalledRule } from './types.js';
 
 const MARKETPLACE_DIR = '.vlayer/marketplace';
 const INSTALLED_RULES_FILE = `${MARKETPLACE_DIR}/installed.json`;
@@ -107,7 +107,7 @@ export class RulesInstaller {
 
     try {
       await fs.unlink(ruleFilePath);
-    } catch (error) {
+    } catch {
       // File might not exist
     }
 
@@ -122,7 +122,7 @@ export class RulesInstaller {
       const installedPath = path.join(this.projectRoot, INSTALLED_RULES_FILE);
       const content = await fs.readFile(installedPath, 'utf-8');
       return JSON.parse(content);
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -148,7 +148,7 @@ export class RulesInstaller {
           await this.install(rule.id, latest.version);
           updated.push(rule.id);
         }
-      } catch (error) {
+      } catch {
         failed.push(rule.id);
       }
     }

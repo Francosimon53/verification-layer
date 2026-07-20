@@ -6,7 +6,7 @@ import { getAIClient } from '../client.js';
 import { AI_CONFIG } from '../config.js';
 import { sanitizeCodeForLLM } from '../sanitizer.js';
 import type { Finding } from '../../types.js';
-import type { TriageClassification, TriageResponse, TriagedFinding } from './types.js';
+import type { TriageResponse, TriagedFinding } from './types.js';
 
 const TRIAGE_SYSTEM_PROMPT = `You are a HIPAA compliance expert analyzing potential security findings.
 Your job is to classify findings as:
@@ -32,7 +32,7 @@ export async function triageFinding(
   const client = getAIClient();
 
   // Sanitize code before sending
-  const { sanitizedCode, warnings } = sanitizeCodeForLLM(fileContent, filePath);
+  const { sanitizedCode } = sanitizeCodeForLLM(fileContent, filePath);
 
   // Get context around the finding (±10 lines)
   const lines = sanitizedCode.split('\n');
@@ -64,11 +64,14 @@ Is this a real security issue or a false positive? Respond in JSON:
 
   try {
     const response = await client.messages.create({
-      model: AI_CONFIG.model,
+      model: AI_CONFIG.triage.model,
       max_tokens: AI_CONFIG.maxTokens,
       temperature: AI_CONFIG.temperature,
       system: TRIAGE_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
+    }, {
+      timeout: AI_CONFIG.triage.timeoutMs,
+      maxRetries: AI_CONFIG.triage.maxRetries,
     });
 
     const content = response.content[0];
@@ -104,25 +107,54 @@ export async function triageFindings(
   findings: Finding[],
   fileContents: Map<string, string>
 ): Promise<TriagedFinding[]> {
-  const triaged: TriagedFinding[] = [];
+  const cap = AI_CONFIG.triage.maxFindings;
+  const concurrency = AI_CONFIG.triage.concurrency;
 
-  for (const finding of findings) {
+  // Honest fallback: a finding we did not AI-verify is returned regex-flagged,
+  // never dropped, so the report stays complete.
+  const notVerified = (f: Finding, reason: string): TriagedFinding => ({
+    ...f,
+    aiClassification: 'likely',
+    aiConfidence: 0.5,
+    aiReasoning: reason,
+    source: 'static',
+  });
+
+  // Phase 1 (no API): decide each finding's fate in input order, preserving the
+  // existing cap / no-content semantics. Only findings WITH content use a cap slot.
+  const out: TriagedFinding[] = new Array(findings.length);
+  const toTriage: { index: number; finding: Finding; content: string }[] = [];
+  let scheduled = 0;
+
+  findings.forEach((finding, i) => {
+    if (scheduled >= cap) {
+      out[i] = notVerified(finding, 'Not AI-verified (triage cap reached) — regex-flagged only');
+      return;
+    }
     const content = fileContents.get(finding.file);
     if (!content) {
-      // No content available, keep finding as-is
-      triaged.push({
-        ...finding,
-        aiClassification: 'likely',
-        aiConfidence: 0.5,
-        aiReasoning: 'File content not available for triage',
-        source: 'static',
-      });
-      continue;
+      out[i] = notVerified(finding, 'File content not available for triage');
+      return;
     }
+    toTriage.push({ index: i, finding, content });
+    scheduled++;
+  });
 
-    const triagedFinding = await triageFinding(finding, content, finding.file);
-    triaged.push(triagedFinding);
-  }
+  // Phase 2: triage the selected findings with bounded concurrency. Each worker
+  // pulls the next index synchronously (safe in JS's single-threaded loop) and
+  // writes to a fixed output slot, so order is preserved.
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < toTriage.length) {
+      const item = toTriage[next++];
+      out[item.index] = await triageFinding(item.finding, item.content, item.finding.file);
+    }
+  };
+  const workers = Array.from(
+    { length: Math.min(concurrency, toTriage.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
 
-  return triaged;
+  return out;
 }

@@ -9,8 +9,8 @@ import * as path from 'path';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import {
   ALL_HIPAA_2026_PATTERNS,
-  type HIPAA2026Pattern,
 } from './patterns.js';
+import { findWindowedViolations } from '../utils.js';
 
 interface AssetInventoryItem {
   type: 'database' | 'storage' | 'api' | 'third-party';
@@ -322,34 +322,23 @@ export const hipaa2026Scanner: Scanner = {
             continue;
           }
 
-          // Standard pattern matching
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const lineNumber = i + 1;
-
-            // Check if line matches violation pattern
-            const matched = pattern.patterns.some((p) => p.test(line));
-            if (!matched) continue;
-
-            // Check if negative patterns indicate compliance
-            const isCompliant =
-              pattern.negativePatterns?.some((p) => {
-                // Check current line and next 3 lines for compliance indicators
-                const context = lines.slice(i, i + 4).join('\n');
-                return p.test(context);
-              }) || false;
-
-            if (isCompliant) continue;
-
-            // Create finding
+          // Standard pattern matching — multi-line aware positives with a
+          // bidirectional compliance window (see findWindowedViolations).
+          const violations = findWindowedViolations(
+            lines,
+            pattern.patterns,
+            pattern.negativePatterns,
+            { skipImportLines: true },
+          );
+          for (const v of violations) {
             findings.push({
               id: pattern.id,
               category: pattern.category as any,
               severity: pattern.severity,
               title: pattern.name,
-              description: `${pattern.description}\n\nCode: ${line.trim()}`,
+              description: `${pattern.description}\n\nCode: ${v.code}`,
               file: file,
-              line: lineNumber,
+              line: v.lineIndex + 1,
               recommendation:
                 pattern.autoFix ||
                 `Address ${pattern.name} per ${pattern.hipaaReference}`,
@@ -358,7 +347,7 @@ export const hipaa2026Scanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }

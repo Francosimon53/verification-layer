@@ -384,8 +384,8 @@ export default async function HomePage() {
                 </svg>
                 <span className="font-medium text-white">CLI</span>
               </div>
-              <p className="text-xs text-slate-400 mb-3">140+ rules. Scan any directory from your terminal.</p>
-              <code className="text-xs text-emerald-400 bg-slate-900 px-2 py-1 rounded">npx vlayer scan ./src</code>
+              <p className="text-xs text-slate-400 mb-3">131 rules. Scan any directory from your terminal.</p>
+              <code className="text-xs text-emerald-400 bg-slate-900 px-2 py-1 rounded">npx @francosimon/vlayer scan ./src</code>
             </div>
             {/* VS Code */}
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">

@@ -11,7 +11,7 @@ export const skillsScanner: Scanner = {
   name: 'AI Agent Skills Scanner',
   category: 'access-control',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to only SKILL.md files

@@ -1,6 +1,13 @@
 export { scan, groupFindings } from './scan.js';
 export { generateReport } from './reporters/index.js';
 export { loadCustomRules, validateRulesFile, scanWithCustomRules } from './rules/index.js';
+export {
+  RULE_CATALOG,
+  getAllRules,
+  getRulesByCategory,
+  getCategoryCounts,
+} from './rules/catalog.js';
+export type { CatalogRule, CatalogSeverity, Category } from './rules/catalog.js';
 export { loadBaseline, saveBaseline, applyBaseline, generateFindingHash } from './baseline.js';
 export { checkInlineSuppression, applyInlineSuppressions } from './suppression.js';
 export { checkAcknowledgment, applyAcknowledgments } from './acknowledgments.js';

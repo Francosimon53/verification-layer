@@ -43,7 +43,8 @@ jobs:
               return;
             }
 
-            const { summary, findings, scannedFiles, scanDuration } = report;
+            // Counts come from report.stats; report.summary is the grouped-findings array.
+            const { stats: summary, findings, scannedFiles, scanDuration } = report;
 
             const severityIcon = {
               critical: '\u{1F534}',
@@ -59,7 +60,7 @@ jobs:
             const summaryRows = severityOrder.map(s => {
               const icon = severityIcon[s];
               const label = s.charAt(0).toUpperCase() + s.slice(1);
-              return `| ${icon} ${label} | ${summary[s]} |`;
+              return `| ${icon} ${label} | ${summary[s] ?? 0} |`;
             }).join('\n');
 
             let body = `<!-- vlayer-hipaa-check -->\n## \u{1F3E5} HIPAA Compliance Report\n\n`;
@@ -166,7 +167,7 @@ jobs:
             }
 
             const duration = (scanDuration / 1000).toFixed(1);
-            body += `\n---\n\u{1F4CA} Scanned ${scannedFiles} files in ${duration}s | Powered by [vlayer](https://vlayer.dev)\n`;
+            body += `\n---\n\u{1F4CA} Scanned ${scannedFiles} files in ${duration}s | Powered by [vlayer](https://vlayer.app)\n`;
 
             // Find existing comment
             const marker = '<!-- vlayer-hipaa-check -->';

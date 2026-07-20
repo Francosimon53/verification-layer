@@ -324,7 +324,7 @@ export async function showTrainingStatus(): Promise<void> {
     }
 
     console.log(chalk.gray(`Total certificates: ${certificates.length}\n`));
-  } catch (error) {
+  } catch {
     console.log(chalk.yellow('\n⚠️  No training records found.\n'));
     console.log(chalk.gray('Run "vlayer training" to complete the training.\n'));
   }
