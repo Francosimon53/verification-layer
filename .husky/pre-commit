@@ -5,8 +5,16 @@
 
 TMPFILE="/tmp/vlayer-precommit.json"
 
-# Run vlayer scan and output JSON
-npx vlayer scan . -f json -o "$TMPFILE" 2>/dev/null
+# Run vlayer scan and output JSON.
+# Exclude samples/ — those are curated report artifacts (HTML/PDF) that would
+# otherwise self-flag and block commits, forcing --no-verify. (vlayer also
+# excludes its own outputs by default, but we keep this explicit for the hook.)
+# Use local build if available, otherwise fallback to npx.
+if [ -f "dist/cli.js" ]; then
+  node dist/cli.js scan . -f json -o "$TMPFILE" -e samples 2>/dev/null
+else
+  npx vlayer scan . -f json -o "$TMPFILE" -e samples 2>/dev/null
+fi
 
 if [ ! -f "$TMPFILE" ]; then
   echo "⚠ vlayer scan did not produce output — skipping check"

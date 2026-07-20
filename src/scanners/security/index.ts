@@ -3,7 +3,7 @@ import type { Scanner, Finding, ScanOptions, FixType } from '../../types.js';
 import { DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
-const SECURITY_PATTERNS: Array<{
+export const SECURITY_PATTERNS: Array<{
   regex: RegExp;
   id: string;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';

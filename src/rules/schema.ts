@@ -9,11 +9,26 @@ export const CustomRuleFixSchema = z.object({
   }).optional(),
 });
 
+/**
+ * Canonical HIPAA compliance categories. This is the single source of truth for
+ * the five category tokens used throughout vlayer (scanners, custom rules, and
+ * the built-in rule catalog). Never add a sixth without updating the scanners.
+ */
+export const CategoryEnum = z.enum([
+  'phi-exposure',
+  'encryption',
+  'audit-logging',
+  'access-control',
+  'data-retention',
+]);
+
+export type Category = z.infer<typeof CategoryEnum>;
+
 export const CustomRuleSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, 'Rule ID must be lowercase alphanumeric with hyphens'),
   name: z.string().min(1, 'Rule name is required'),
   description: z.string().min(1, 'Rule description is required'),
-  category: z.enum(['phi-exposure', 'encryption', 'audit-logging', 'access-control', 'data-retention']),
+  category: CategoryEnum,
   severity: z.enum(['critical', 'high', 'medium', 'low', 'info']),
   pattern: z.string().min(1, 'Pattern is required'),
   flags: z.string().optional().default('gi'),
@@ -23,6 +38,10 @@ export const CustomRuleSchema = z.object({
   hipaaReference: z.string().optional(),
   mustNotContain: z.string().optional(),
   fix: CustomRuleFixSchema.optional(),
+  // Semantic awareness fields
+  confidence: z.enum(['high', 'medium', 'low']).optional(),
+  contexts: z.array(z.enum(['code', 'string', 'comment', 'template'])).optional(),
+  adjustConfidenceByContext: z.boolean().optional().default(true),
 });
 
 export const RulesFileSchema = z.object({

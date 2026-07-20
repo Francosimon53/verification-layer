@@ -1,0 +1,212 @@
+{
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test-project/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/src/training/**",
+    "**/src/ai/rules/**",
+    "**/src/marketplace/registry.ts"
+  ],
+  "excludeReasons": [
+    {
+      "pattern": "**/src/training/**",
+      "reason": "Training curriculum (questions.ts, modules.ts) embeds intentional vulnerable examples — sample SSNs, weak-crypto snippets — as teaching content. The scanner flags its own example material, not product runtime. Excluded from the self-scan.",
+      "addedBy": "Self-audit reconciliation (PR)",
+      "addedAt": "2026-06-19T00:00:00Z",
+      "reviewBy": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/ai/rules/**",
+      "reason": "LLM rule definitions and prompts embed example vulnerable code (DES, weak hashing, auth-bypass) so the model learns what to detect. Detection content, not runtime code.",
+      "addedBy": "Self-audit reconciliation (PR)",
+      "addedAt": "2026-06-19T00:00:00Z",
+      "reviewBy": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/marketplace/registry.ts",
+      "reason": "Rule catalog metadata. The scanner matches its own rule titles/descriptions (e.g. 'Missing MFA for PHI Access'). Detection content, not runtime code.",
+      "addedBy": "Self-audit reconciliation (PR)",
+      "addedAt": "2026-06-19T00:00:00Z",
+      "reviewBy": "2026-12-19T00:00:00Z"
+    }
+  ],
+  "ignorePaths": [
+    "sample-data",
+    "demo-data",
+    "__mocks__"
+  ],
+  "safeHttpDomains": [
+    "example.com",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "contextLines": 2,
+  "categories": [
+    "phi-exposure",
+    "encryption",
+    "audit-logging",
+    "access-control",
+    "data-retention"
+  ],
+  "acknowledgedFindings": [
+    {
+      "pattern": "**/src/scanners/**/*.ts",
+      "reason": "Scanner source code contains intentional example patterns for detecting PHI exposure, weak encryption, and security vulnerabilities. These are demonstration patterns used for detection logic, not actual production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/fixer/**/*.ts",
+      "reason": "Fixer code intentionally contains before/after examples of vulnerable code patterns for transformation strategies. These are fix templates used to demonstrate remediation, not production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/reporters/**/*.ts",
+      "reason": "Reporter code handles and displays finding data which may contain PHI-like strings in examples and remediation guides. This is necessary for report generation and documentation, not actual PHI or production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/tests/**/*.test.ts",
+      "reason": "Test files contain intentional vulnerable code examples to verify scanner detection capabilities and ensure comprehensive coverage of security patterns.",
+      "acknowledgedBy": "Development Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/package-lock.json",
+      "reason": "Package lock file may contain references to cryptographic algorithms in dependency names or metadata. These are dependency references, not actual usage in production code.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/vlayer-rules.example.yaml",
+      "reason": "Example configuration file contains sample patterns including HTTP URLs for demonstration purposes. This is documentation, not production configuration.",
+      "acknowledgedBy": "Documentation Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/stack-detector/**/*.ts",
+      "reason": "Stack detection guides contain example code snippets and configuration patterns for various frameworks. These examples may include security anti-patterns for educational purposes.",
+      "acknowledgedBy": "Security Team",
+      "acknowledgedAt": "2026-02-06T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/cli.ts",
+      "id": "ERROR-002",
+      "reason": "CLI help/template guidance text (e.g. 'obtain signed acknowledgment', 'patient notice') printed to the console — user-facing output, not PHI written to error logs.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/components/RescanButton.tsx",
+      "reason": "Hardcoded demo-animation data: the FAKE_FILES and FINDING_TITLES arrays render a simulated scan. Strings like 'Weak MD5 hash for passwords', 'No session timeout configured', and 'src/models/patient.ts' are display literals, not real auth/crypto/PHI code.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/api/stripe/checkout/route.ts",
+      "id": "HIPAA-SESSION-001",
+      "reason": "Matches the Stripe Checkout Session API (stripe.checkout.sessions.create / session.id / session.url) — a payment session, not an authentication session-timeout control.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/api/webhooks/stripe/route.ts",
+      "id": "HIPAA-SESSION-001",
+      "reason": "Matches the Stripe webhook event 'checkout.session.completed' and the Stripe.Checkout.Session object — a payment session, not an authentication session.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/api/portal/route.ts",
+      "id": "HIPAA-SESSION-001",
+      "reason": "Matches stripe.billingPortal.sessions.create — a billing-portal session, not an authentication session-timeout control.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/pricing/page.tsx",
+      "id": "HIPAA-SESSION-001",
+      "reason": "Matches the string literal 'Error creating checkout session' in a client-side alert; refers to Stripe checkout, not an authentication session.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/legal/privacy/page.tsx",
+      "id": "HIPAA-SESSION-001",
+      "reason": "Legal/privacy prose describing Supabase Auth session cookies; documentation copy, not a session-timeout configuration.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/lib/supabase/server.ts",
+      "id": "HIPAA-SESSION-001",
+      "reason": "persistSession:false on the server-side Supabase client is the stateless/secure setting; the rule keyword-matches 'Session'. There is no session-timeout gap here.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/lib/github/auth.ts",
+      "reason": "GitHub App machine-to-machine JWT (jwt.sign with exp = now + 600, GitHub's 10-minute maximum) used to mint installation tokens — not a PHI-bearing user session. SESSION/REVOKE keyword-match jwt.sign; revocation is moot for a 10-minute app JWT.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/lib/storage.ts",
+      "id": "RBAC-003",
+      "reason": "select('*') targets the dashboard's own metadata tables (projects/scans/findings), which store compliance-scan results, not patient PHI; the minimum-necessary-PHI rule is not applicable.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/api/projects/route.ts",
+      "id": "HIPAA-BREACH-001",
+      "reason": "Heuristic fired on a generic CRUD catch block; breach-notification is an organizational/process control, not something implemented per API route.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/dashboard/app/signup/page.tsx",
+      "id": "MFA-001",
+      "reason": "supabase.auth.signUp creates the account; MFA is enrolled via Supabase's separate MFA flow post-signup, not configured at this call. The rule matches the auth-call keyword.",
+      "acknowledgedBy": "Self-audit reconciliation (PR)",
+      "acknowledgedAt": "2026-06-19T00:00:00Z",
+      "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/exclusions.ts",
+      "id": "enc-des",
+      "reason": "False positive: a doc comment quotes the literal finding title as an example of the self-scan noise this file exists to prevent. No cryptography is used in this file.",
+      "acknowledgedBy": "Simon Franco (triage 2026-07-20)",
+      "acknowledgedAt": "2026-07-20T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/scan.ts",
+      "id": "HIPAA-MFA-001",
+      "reason": "False positive: the MFA heuristic matched the scanner registry map (the line registering authenticationScanner and related scanners). vlayer is a local CLI with no endpoints, no login flow, and no PHI access to gate behind MFA. Scanner confidence was 'low'.",
+      "acknowledgedBy": "Simon Franco (triage 2026-07-20)",
+      "acknowledgedAt": "2026-07-20T00:00:00Z"
+    }
+  ]
+}
