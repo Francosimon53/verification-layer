@@ -41,7 +41,6 @@ export async function runAIScan(
   options: AIScanOptions = {}
 ): Promise<AIScanResult> {
   const {
-    enableTriage = true,
     enableLLMRules = true,
     budgetCents = AI_CONFIG.budget.defaultMaxCentsPerScan,
     targetFiles = [],
@@ -140,6 +139,16 @@ export async function triageExistingFindings(
 
   console.log(`🔍 Triaging ${findings.length} findings...`);
   const triaged = await triageFindings(findings, fileContents);
+
+  const cappedCount = triaged.filter(
+    (f) => f.aiReasoning === 'Not AI-verified (triage cap reached) — regex-flagged only'
+  ).length;
+  if (cappedCount > 0) {
+    console.warn(
+      `⚠️  Triage cap reached: ${cappedCount} of ${findings.length} findings were not ` +
+      `AI-verified (reported as regex-flagged only). Raise AI_CONFIG.triage.maxFindings to verify more.`
+    );
+  }
 
   const falsePositives = triaged.filter(
     (f) => f.aiClassification === 'false_positive'

@@ -39,6 +39,8 @@ node dist/cli.js scan . -f html -o report.html  # HTML report
 
 **Report Generation**: `src/reporters/index.ts` transforms `ScanResult` into JSON, HTML, or Markdown output.
 
+**AI Triage** (`src/ai/`): after the static scanners run, findings are triaged by Claude Haiku 4.5 (`AI_CONFIG.triage.model`) to filter false positives. It's gated on `options.enableAI`, the config `ai.enableTriage`, and `ANTHROPIC_API_KEY` — the `--no-ai` CLI flag (or `enableAI: false` programmatically) disables it entirely for deterministic, offline runs. Triage is bounded: a hard cap of `AI_CONFIG.triage.maxFindings` (50) with a per-call timeout, and findings beyond the cap are returned regex-flagged (never dropped, with a `⚠️ Triage cap reached` warning). Calls run through a bounded `AI_CONFIG.triage.concurrency` (10) pool — ~21s for a 50-call scan, down from ~328s sequential. The 6 AI detection *rules* are a separate `ai-scan` command and stay on Sonnet.
+
 ## Type System
 
 Core types in `src/types.ts`:

@@ -11,7 +11,7 @@ export const apiSecurityScanner: Scanner = {
   name: 'API Security Scanner',
   category: 'access-control',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     for (const file of files) {
@@ -151,7 +151,7 @@ export const apiSecurityScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
         continue;
       }

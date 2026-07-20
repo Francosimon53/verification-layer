@@ -3,7 +3,7 @@ import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 
-const RETENTION_ISSUES = [
+export const RETENTION_ISSUES = [
   {
     regex: /deleteAfter\s*[:=]\s*(\d+)\s*(day|hour|minute)/i,
     id: 'short-retention',

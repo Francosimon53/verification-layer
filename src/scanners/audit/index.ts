@@ -16,6 +16,31 @@ const AUDIT_REQUIRED_ACTIONS = [
   { pattern: /\.(login|authenticate|authorize)\s*\(/i, action: 'auth' },
 ];
 
+/**
+ * Stable rule families emitted by this scanner for the built-in rule catalog.
+ * Findings carry dynamic ids (`audit-no-framework`, `audit-unlogged-<action>-<line>`);
+ * these are the FIXED families only — never the per-finding suffix. The ids here
+ * match the stable id prefixes emitted in scan() below.
+ */
+export const AUDIT_RULES = [
+  {
+    id: 'audit-no-framework',
+    severity: 'high' as const,
+    title: 'No audit logging framework detected',
+    description: 'No recognized logging framework found in dependencies.',
+    recommendation: 'Implement structured audit logging using winston, pino, or similar.',
+    hipaaReference: '§164.312(b)',
+  },
+  {
+    id: 'audit-unlogged-action',
+    severity: 'medium' as const,
+    title: 'PHI operation may lack audit logging',
+    description: 'A create, update, delete, read, or auth operation on PHI-related data was found without apparent audit logging in the same file.',
+    recommendation: 'Log all PHI operations with timestamp, user ID, and action details.',
+    hipaaReference: '§164.312(b)',
+  },
+];
+
 export const auditScanner: Scanner = {
   name: 'Audit Logging Scanner',
   category: 'audit-logging',

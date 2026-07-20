@@ -1,7 +1,7 @@
 {
   "name": "verification-layer",
-  "version": "0.24.4",
-  "description": "Open-source HIPAA compliance scanner for healthcare code. 140+ rules, 5 HIPAA categories. CLI + CI/CD + VS Code.",
+  "version": "0.24.5",
+  "description": "Open-source HIPAA compliance scanner for healthcare code. 131 rules, 5 HIPAA categories. CLI + CI/CD + VS Code.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -21,14 +21,14 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/build-catalog.mjs",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

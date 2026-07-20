@@ -1,12 +1,24 @@
 import { createHash } from 'crypto';
-import type { ScanResult } from '../types.js';
+import { resolve, basename } from 'path';
+import type { ScanResult, ResolvedBranding } from '../types.js';
 import { generateComplianceScoreGauge, generateExecutiveSummary, generateEnhancedCSS } from './enhanced-html.js';
+import { generateRecommendations } from '../compliance-score.js';
+import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
+import {
+  groupFindingsByLocation,
+  countFindingsBySeverity,
+  formatHipaaRef,
+  partitionFindingsByStatus,
+  sortProposedFindings,
+  toRelativeDisplayPath,
+} from './finding-presentation.js';
 
 interface AuditorReportOptions {
   organizationName?: string;
   reportPeriod?: string;
   auditorName?: string;
   includeBaseline?: boolean;
+  branding?: ResolvedBranding;
 }
 
 /**
@@ -22,16 +34,57 @@ export function generateAuditorReport(
     reportPeriod = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
     auditorName = 'VLayer Automated Scan',
     includeBaseline = false,
+    branding,
   } = options;
+
+  // White-label branding. When a brand is supplied the cover shows the brand
+  // logo + "Prepared by {brand}", and a footer line repeats on every printed
+  // page. With no branding the report renders exactly as before (default VLayer).
+  const brandLogo = logoDataUri(branding);
+  const hasBrand = Boolean(branding?.name || brandLogo);
+  const preparedBy = brandPreparedBy(branding);
+  const footerLine = brandFooterText(branding);
 
   const timestamp = new Date().toISOString();
   const score = result.complianceScore!;
 
   // Calculate findings
   const activeFindings = result.findings.filter(f => !f.isBaseline && !f.suppressed);
+  // Presentation-only: separate proposed (NPRM) findings from current ones, then
+  // collapse multiple rules on the same file:line into one grouped entry. The
+  // findings themselves are untouched (count is preserved).
+  const { current: currentFindings, proposed: proposedRaw } = partitionFindingsByStatus(activeFindings);
+  const proposedFindings = sortProposedFindings(proposedRaw);
+  const locationGroups = groupFindingsByLocation(currentFindings);
+  // Per-severity counts come from the RAW current findings (proposed excluded),
+  // so the summary cards, recommendations, and filter chips all show the SAME
+  // numbers. Location-grouping below is purely a display device for the list.
+  const severityCounts = countFindingsBySeverity(currentFindings);
   const acknowledgedFindings = result.findings.filter(f => f.acknowledged && !f.acknowledgment?.expired);
   const suppressedFindings = result.findings.filter(f => f.suppressed);
   const baselineFindings = result.findings.filter(f => f.isBaseline);
+
+  // Display-corrected score: the stored breakdown counts ALL active findings
+  // (it includes proposed/NPRM), which would show e.g. "8 critical" up top while
+  // the current-obligation list shows 7. Re-key the breakdown to the current
+  // findings so every rendered number reconciles, and regenerate the
+  // recommendation text from those same numbers. The compliance score value,
+  // grade and penalties are left untouched — only the displayed counts change.
+  const absTargetRoot = resolve(targetPath);
+  const displayTarget = basename(absTargetRoot) || targetPath;
+  const displayBreakdown = {
+    ...score.breakdown,
+    critical: severityCounts.critical,
+    high: severityCounts.high,
+    medium: severityCounts.medium,
+    low: severityCounts.low,
+    total: currentFindings.length,
+  };
+  const displayScore = {
+    ...score,
+    breakdown: displayBreakdown,
+    recommendations: generateRecommendations(displayBreakdown, score.score),
+  };
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -69,6 +122,20 @@ export function generateAuditorReport(
       justify-content: center;
       font-size: 2rem;
       font-weight: bold;
+    }
+
+    .brand-logo {
+      max-height: 80px;
+      max-width: 240px;
+      margin: 0 auto 1rem;
+      display: block;
+      object-fit: contain;
+    }
+
+    .report-header .prepared-by {
+      opacity: 0.95;
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
     }
 
     .report-header h1 {
@@ -172,6 +239,83 @@ export function generateAuditorReport(
     .severity-high { background: #ea580c; }
     .severity-medium { background: #ca8a04; }
     .severity-low { background: #2563eb; }
+    .severity-info { background: #6b7280; }
+    /* Proposed (NPRM) — deliberately neutral: not a current violation. */
+    .severity-proposed { background: #64748b; }
+
+    .upcoming-subtitle {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    .upcoming-note {
+      background: #f1f5f9;
+      border-left: 3px solid #64748b;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0 1rem;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+
+    .upcoming-inline {
+      color: #475569;
+      font-weight: 600;
+    }
+
+    /* Consolidated multi-rule location entries */
+    .findings-count-note {
+      color: #4b5563;
+      font-size: 0.95rem;
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    .finding-group td { vertical-align: top; }
+
+    .group-location {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .group-location-path {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .group-controls {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .group-control {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 0.75rem;
+      align-items: baseline;
+      padding: 0.35rem 0;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .group-control:first-child { border-top: none; }
+    .group-control-sev { justify-self: start; }
+    .group-control-title { color: #1f2937; }
+
+    .group-control-ref {
+      color: #6b7280;
+      font-size: 0.85rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    @media (max-width: 640px) {
+      .group-control {
+        grid-template-columns: 1fr;
+        gap: 0.15rem;
+      }
+      .group-control-ref { text-align: left; }
+    }
 
     .evidence-box {
       background: #f9fafb;
@@ -195,6 +339,23 @@ export function generateAuditorReport(
       border-top: 2px solid #e5e7eb;
       text-align: center;
       color: #6b7280;
+    }
+
+    /* Per-page footer: only visible when printing / exporting to PDF. */
+    .brand-page-footer { display: none; }
+    @media print {
+      .brand-page-footer {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #6b7280;
+        padding: 0.4rem 0;
+      }
+      @page { margin-bottom: 2.2cm; }
     }
 
     .report-hash {
@@ -244,9 +405,12 @@ export function generateAuditorReport(
 <body>
   <div class="container">
     <div class="report-header">
-      <div class="logo-placeholder">VL</div>
+      ${brandLogo
+        ? `<img src="${brandLogo}" alt="${escapeHtml(preparedBy)} logo" class="brand-logo">`
+        : '<div class="logo-placeholder">VL</div>'}
       <h1>HIPAA Compliance Audit Report</h1>
-      <div class="subtitle">${organizationName} - ${reportPeriod}</div>
+      <div class="subtitle">${escapeHtml(organizationName)} - ${escapeHtml(reportPeriod)}</div>
+      ${hasBrand ? `<div class="prepared-by">Prepared by ${escapeHtml(preparedBy)}</div>` : ''}
     </div>
 
     <div class="report-meta">
@@ -261,7 +425,7 @@ export function generateAuditorReport(
         </div>
         <div class="meta-item">
           <div class="meta-label">Target Path</div>
-          <div class="meta-value">${targetPath}</div>
+          <div class="meta-value">${escapeHtml(displayTarget)}</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Files Scanned</div>
@@ -271,18 +435,27 @@ export function generateAuditorReport(
     </div>
 
     <div class="content">
-      ${generateExecutiveSummary(score, result.scannedFiles, result.scanDuration)}
+      ${generateExecutiveSummary(displayScore, result.scannedFiles, result.scanDuration)}
 
-      ${generateComplianceScoreGauge(score)}
+      ${generateComplianceScoreGauge(displayScore)}
 
       <h2>📋 Findings Summary</h2>
+      <p class="findings-count-note">
+        <strong>${currentFindings.length} findings grouped into ${locationGroups.length} location${locationGroups.length === 1 ? '' : 's'}</strong>
+        — multiple controls flagged at the same file &amp; line are shown together,
+        but each is counted individually. The chip counts below match the
+        Executive Summary.
+        ${proposedFindings.length > 0
+          ? `<br><span class="upcoming-inline">+ ${proposedFindings.length} upcoming requirement${proposedFindings.length === 1 ? '' : 's'} (NPRM — proposed rule)</span> — listed separately below, excluded from the counts above.`
+          : ''}
+      </p>
       <div class="filters">
         <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all')">All (${activeFindings.length})</button>
-          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${activeFindings.filter(f => f.severity === 'critical').length})</button>
-          <button class="filter-btn" onclick="filterFindings('high')">High (${activeFindings.filter(f => f.severity === 'high').length})</button>
-          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${activeFindings.filter(f => f.severity === 'medium').length})</button>
-          <button class="filter-btn" onclick="filterFindings('low')">Low (${activeFindings.filter(f => f.severity === 'low').length})</button>
+          <button class="filter-btn active" onclick="filterFindings('all')">All (${currentFindings.length})</button>
+          <button class="filter-btn" onclick="filterFindings('critical')">Critical (${severityCounts.critical})</button>
+          <button class="filter-btn" onclick="filterFindings('high')">High (${severityCounts.high})</button>
+          <button class="filter-btn" onclick="filterFindings('medium')">Medium (${severityCounts.medium})</button>
+          <button class="filter-btn" onclick="filterFindings('low')">Low (${severityCounts.low})</button>
         </div>
       </div>
 
@@ -296,16 +469,68 @@ export function generateAuditorReport(
           </tr>
         </thead>
         <tbody>
-          ${activeFindings.map(f => `
-            <tr class="finding-row" data-severity="${f.severity}">
-              <td><span class="severity-badge severity-${f.severity}">${f.severity}</span></td>
+          ${locationGroups.map(g => {
+            const fileLine = `${escapeHtml(toRelativeDisplayPath(g.file, absTargetRoot))}:${g.line ?? 'N/A'}`;
+            // A row matches a filter chip if ANY member has that severity, so the
+            // chip count (raw findings) and the rows it reveals stay consistent.
+            const memberSeverities = [...new Set(g.members.map(m => m.severity))].join(' ');
+            if (g.members.length === 1) {
+              const f = g.members[0];
+              return `
+            <tr class="finding-row" data-severity="${g.severity}" data-severities="${memberSeverities}">
+              <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
               <td>${escapeHtml(f.title)}</td>
-              <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line || 'N/A'}</td>
-              <td>${f.hipaaReference || '-'}</td>
-            </tr>
-          `).join('')}
+              <td style="font-family: monospace; font-size: 0.875rem;">${fileLine}</td>
+              <td>${escapeHtml(formatHipaaRef(f.hipaaReference))}</td>
+            </tr>`;
+            }
+            const controls = g.members.map(f => `
+                <li class="group-control">
+                  <span class="severity-badge severity-${f.severity} group-control-sev">${f.severity}</span>
+                  <span class="group-control-title">${escapeHtml(f.title)}</span>
+                  <span class="group-control-ref">${escapeHtml(formatHipaaRef(f.hipaaReference))}</span>
+                </li>`).join('');
+            return `
+            <tr class="finding-row finding-group" data-severity="${g.severity}" data-severities="${memberSeverities}">
+              <td><span class="severity-badge severity-${g.severity}">${g.severity}</span></td>
+              <td colspan="3">
+                <div class="group-location"><span class="group-location-path">${fileLine}</span> · ${g.members.length} controls flagged at this location</div>
+                <ul class="group-controls">${controls}
+                </ul>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
+
+      ${proposedFindings.length > 0 ? `
+        <h2>🕓 Upcoming Requirements <span class="upcoming-subtitle">(NPRM — proposed rule, not yet in effect)</span></h2>
+        <p class="upcoming-note">
+          These reference the proposed 2026 HIPAA Security Rule (NPRM). They are
+          <strong>not current obligations</strong> and are excluded from the severity counts above.
+          They will apply if and when the rule is finalized — treat them as forward-looking guidance.
+        </p>
+        <table class="findings-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Requirement</th>
+              <th>File</th>
+              <th>HIPAA Ref</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${proposedFindings.map(f => `
+              <tr>
+                <td><span class="severity-badge severity-proposed">Proposed</span></td>
+                <td>${escapeHtml(f.title)}</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(toRelativeDisplayPath(f.file, absTargetRoot))}:${f.line ?? 'N/A'}</td>
+                <td>${escapeHtml(formatHipaaRef(f.hipaaReference))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : ''}
 
       ${suppressedFindings.length > 0 ? `
         <h2>🔕 Suppression Audit Trail</h2>
@@ -323,7 +548,7 @@ export function generateAuditorReport(
               <tr>
                 <td>${escapeHtml(f.title)}</td>
                 <td>${f.suppression?.reason || 'No reason provided'}</td>
-                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(f.file)}:${f.line || 'N/A'}</td>
+                <td style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(toRelativeDisplayPath(f.file, absTargetRoot))}:${f.line || 'N/A'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -372,11 +597,14 @@ export function generateAuditorReport(
     </div>
 
     <div class="report-footer">
-      <p><strong>VLayer HIPAA Compliance Scanner</strong></p>
+      ${hasBrand
+        ? `<p><strong>${escapeHtml(footerLine)}</strong></p>`
+        : '<p><strong>VLayer HIPAA Compliance Scanner</strong></p>'}
       <p>Automated compliance scanning for healthcare applications</p>
       <p style="margin-top: 1rem; font-size: 0.875rem;">Generated: ${new Date(timestamp).toLocaleString()}</p>
     </div>
   </div>
+  ${hasBrand ? `<div class="brand-page-footer">${escapeHtml(footerLine)}</div>` : ''}
 
   <script>
     function filterFindings(severity) {
@@ -387,7 +615,8 @@ export function generateAuditorReport(
       event.target.classList.add('active');
 
       rows.forEach(row => {
-        if (severity === 'all' || row.dataset.severity === severity) {
+        const severities = (row.dataset.severities || row.dataset.severity || '').split(' ');
+        if (severity === 'all' || severities.indexOf(severity) !== -1) {
           row.style.display = '';
         } else {
           row.style.display = 'none';

@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, InformationalArtifact } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -28,6 +28,7 @@ import { batchAnalyzeSemanticContext } from './semantic-analysis.js';
 import { calculateComplianceScore } from './compliance-score.js';
 import { triageExistingFindings } from './ai/scanner.js';
 import { isAIAvailable } from './ai/client.js';
+import { DEFAULT_VLAYER_OUTPUT_EXCLUDES } from './exclusions.js';
 import * as fs from 'fs/promises';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
@@ -71,10 +72,24 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     '**/build/**',
     '**/.git/**',
     '**/coverage/**',
+    // Dependency lockfiles: machine-generated, not code — integrity hashes
+    // routinely contain substrings that trip content-pattern rules
+    '**/package-lock.json',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/bun.lock',
+    '**/bun.lockb',
   ];
+
+  // Exclude vlayer's own generated outputs by default so the scanner never
+  // re-reads (and re-flags) its own reports/baseline. Opt out via
+  // `--include-own-artifacts` (CLI) or `includeOwnArtifacts: true` (config).
+  const includeOwnArtifacts = options.includeOwnArtifacts ?? config.includeOwnArtifacts ?? false;
+  const ownArtifactExcludes = includeOwnArtifacts ? [] : [...DEFAULT_VLAYER_OUTPUT_EXCLUDES];
 
   const excludePatterns = [
     ...defaultExclude,
+    ...ownArtifactExcludes,
     ...(options.exclude ?? []),
     ...(config.exclude ?? []),
   ];
@@ -181,6 +196,24 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   findings.length = 0;
   findings.push(...deduplicatedFindings);
 
+  // Informational artifacts (asset inventory, PHI flow map) are generated
+  // documentation, not violations — lift them out of the findings list into
+  // report metadata so they never count toward stats or the unacknowledged
+  // total.
+  const informationalArtifactIds = new Set(['HIPAA-ASSET-001', 'HIPAA-FLOW-001']);
+  const informationalArtifacts: InformationalArtifact[] = findings
+    .filter(f => informationalArtifactIds.has(f.id))
+    .map(f => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      content: f.recommendation,
+      hipaaReference: f.hipaaReference,
+    }));
+  const nonArtifactFindings = findings.filter(f => !informationalArtifactIds.has(f.id));
+  findings.length = 0;
+  findings.push(...nonArtifactFindings);
+
   // Sort findings by severity
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   findings.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
@@ -228,7 +261,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   });
 
   // Apply AI triage if enabled and available
-  if (config.ai?.enableTriage !== false && isAIAvailable()) {
+  if (options.enableAI !== false && config.ai?.enableTriage !== false && isAIAvailable()) {
     try {
       // Load file contents for triage (skip special/virtual files)
       const fileContents = new Map<string, string>();
@@ -285,6 +318,12 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     });
   }
 
+  // Collapse exact-duplicate findings (e.g. a scanner registered under two
+  // categories firing twice on the same line) BEFORE grouping, so every output
+  // format — terminal, JSON, HTML, PDF — sees one entry per real finding.
+  const rawFindingCount = processedFindings.length;
+  processedFindings = dedupeFindings(processedFindings);
+
   // Group findings by rule ID + severity
   const groupedFindings = groupFindings(processedFindings);
 
@@ -292,10 +331,11 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const result = {
     findings: processedFindings,
     groupedFindings,
-    rawFindingsCount: processedFindings.length,
+    rawFindingsCount: rawFindingCount,
     scannedFiles: normalFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
+    informationalArtifacts,
   };
 
   const complianceScore = calculateComplianceScore(result);
@@ -304,6 +344,41 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     ...result,
     complianceScore,
   };
+}
+
+/**
+ * Normalize a finding's code snippet for dedupe comparison: take the matched
+ * context line(s) (or fall back to none), lowercase, trim, collapse whitespace.
+ */
+function normalizeSnippet(finding: Finding): string {
+  if (!finding.context || finding.context.length === 0) return '';
+  return finding.context
+    .map(c => c.content.trim().toLowerCase().replace(/\s+/g, ' '))
+    .join('\n');
+}
+
+/**
+ * Remove exact-duplicate findings, keyed by ruleId + file + line + normalized
+ * snippet. Two findings that share all four are the same real issue surfaced
+ * twice (e.g. a scanner that runs under more than one category). The first
+ * occurrence is kept; order is preserved.
+ *
+ * Runs in the results pipeline BEFORE grouping so it applies uniformly to every
+ * output format. Aggregate/virtual findings (project-level, ASSET-INVENTORY,
+ * PHI-FLOW-MAP) are already deduped upstream and pass through unchanged here.
+ */
+export function dedupeFindings(findings: Finding[]): Finding[] {
+  const seen = new Set<string>();
+  const result: Finding[] = [];
+
+  for (const f of findings) {
+    const key = `${f.id}||${f.file}||${f.line ?? ''}||${normalizeSnippet(f)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(f);
+  }
+
+  return result;
 }
 
 /**

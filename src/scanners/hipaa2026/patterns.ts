@@ -4,7 +4,6 @@
  * Expected enforcement: May 2026
  */
 
-import type { Finding } from '../../types.js';
 
 export interface HIPAA2026Pattern {
   id: string;
@@ -107,7 +106,11 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
     /session.*?(?!.*?(?:idle|inactivity).*?timeout)/i,
   ],
   negativePatterns: [
-    /maxAge:\s*[1-8][0-9]{5}/i, // <= 900000 (15 min)
+    // Compliant session length: maxAge with a 1–6 digit value (≤ 999999 ms,
+    // i.e. ≤ ~16 min). The \b stops it matching a prefix of a longer (>15 min)
+    // value, which the positive pattern above flags. Includes the exact 900000
+    // (15 min) boundary the autofix recommends — the old [1-8][0-9]{5} excluded it.
+    /maxAge:\s*[1-9][0-9]{0,5}\b/i,
     /expiresIn:\s*['"](?:1[0-5]m|[1-9]m)['"]/i,
     /idleTimeout/i,
   ],
@@ -130,8 +133,10 @@ export const ACCESS_REVOCATION_PATTERNS: HIPAA2026Pattern = {
     /(?:deactivate|disable|remove)User(?!.*?(?:revoke|invalidate|blacklist).*?(?:token|session))/i,
     // Delete user without session cleanup
     /(?:deleteUser|removeUser).*?(?!.*?(?:logout|invalidate|clearSessions))/i,
-    // Missing token blacklist
-    /(?:user|admin).*?(?:deactivat|terminat).*?(?!.*?blacklist)/i,
+    // Termination/deactivation as an actual operation — identifier or method call.
+    // Must NOT match prose/log strings like console.log('User deactivated ...'),
+    // which describe an action rather than perform one (false positive).
+    /(?:deactivat|terminat|disabl)e?(?:User|Account|Member|Employee)|(?:user|account|member|employee)(?:Deactivation|Termination)|(?:user|account|member)\.(?:deactivate|terminate|disable)\b/i,
     // Role change without re-auth
     /(?:updateRole|changePermissions)(?!.*?(?:logout|reauth|invalidate))/i,
   ],
@@ -190,14 +195,21 @@ export const NETWORK_SEGMENTATION_PATTERNS: HIPAA2026Pattern = {
     /\/api.*?(?:patient|phi|medical)(?!.*?(?:firewall|vpc|subnet|private))/i,
     // Internal PHI service publicly accessible
     /(?:express|fastify|koa)\.listen.*?(?:patient|phi)(?!.*?(?:localhost|127\.0\.0\.1|private))/i,
-    // Missing VPC/subnet config
-    /(?:database|storage).*?(?:patient|phi)(?!.*?(?:vpc|subnet|securityGroup))/i,
+    // Missing VPC/subnet config on a backend database/storage service.
+    // `storage` is guarded against client-side browser APIs (localStorage,
+    // sessionStorage) — network segmentation does not apply to those.
+    /(?:database|(?<!local)(?<!session)storage).*?(?:patient|phi)(?!.*?(?:vpc|subnet|securityGroup))/i,
   ],
   negativePatterns: [
     /origin:\s*\[.*?\]/i, // Whitelist
     /private.*?subnet/i,
     /securityGroup/i,
     /firewall.*?rules/i,
+    // Client-side HTTP *consumption* (fetch/axios) is not an exposed PHI
+    // service. Network segmentation applies to the server/infra that exposes
+    // the endpoint, not to a frontend call that reads from it.
+    /\bfetch\s*\(/i,
+    /\baxios\b/i,
   ],
   autoFix: 'Implement network segmentation: Use VPC/subnet isolation, restrict CORS to whitelisted origins',
   confidence: 'high',
