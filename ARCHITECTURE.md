@@ -257,7 +257,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-      - run: npx vlayer scan . -f json -o hipaa-results.json
+      - run: npx @francosimon/vlayer scan . -f json -o hipaa-results.json
       # Posts findings as PR comment, blocks on critical/high
 ```
 

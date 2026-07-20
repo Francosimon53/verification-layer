@@ -1,68 +1,129 @@
-# [0.10.0](https://github.com/Francosimon53/verification-layer/compare/v0.9.0...v0.10.0) (2026-01-27)
-
-
-### Features
-
-* add pre-commit hook to block commits with critical HIPAA findings ([c0a9e5a](https://github.com/Francosimon53/verification-layer/commit/c0a9e5a1f2bae9faee0daf9d4a5762912d793792)), closes [hi#severity](https://github.com/hi/issues/severity)
-
-# [0.9.0](https://github.com/Francosimon53/verification-layer/compare/v0.8.0...v0.9.0) (2026-01-27)
-
+## Unreleased
 
 ### Features
 
-* add GitHub Actions workflow for HIPAA PR checks ([777bff5](https://github.com/Francosimon53/verification-layer/commit/777bff5479d11c9c3d084e08ea67cb8a8a2fe7e4))
+* **white-label reports**: `vlayer report` and `vlayer scan -f html` now accept
+  `--brand-name` and `--brand-logo` (also configurable via a `branding` block in
+  `.vlayerrc.json`). The brand logo and "Prepared by …" appear on the report cover
+  and a `Prepared by {brand} · Powered by VLayer` footer repeats on every page.
+  CLI flags take precedence over config; a missing/invalid logo warns and is
+  skipped without breaking the scan; brand names are HTML-escaped. With no branding,
+  reports render exactly as before (default VLayer).
+* **`vlayer report -f pdf`**: the auditor report can now be generated as a branded
+  PDF (in addition to HTML), rendered from the scan result via pdfkit.
 
-# [0.8.0](https://github.com/Francosimon53/verification-layer/compare/v0.7.0...v0.8.0) (2026-01-27)
+### Bug Fixes (scanner precision)
 
+* **Stop scanning vlayer's own output.** File discovery now excludes vlayer's
+  generated artifacts by default (`vlayer-report.*`, `vlayer-audit-report.*`,
+  `.vlayer-baseline.json`, `.vlayer/`, `samples/`), so a re-scan no longer flags
+  the text of a previous report as if it were source code. Opt out with
+  `--include-own-artifacts` (CLI) or `"includeOwnArtifacts": true` (config).
+* **Deduplicate exact findings.** A finding emitted twice on the same line (e.g.
+  a scanner registered under two categories) is now collapsed once, before
+  grouping, so terminal/JSON/HTML/PDF output all show one entry per real issue.
+* **MFA-001 / BACKUP-001 no longer anchor to import lines.** Both now point at
+  real usage; MFA-001 does not fire on an import alone, and BACKUP-001 falls back
+  to the import only for import-only DB libraries (drizzle, knex) to preserve
+  detection.
+* **HIPAA-SEGMENT-001 scoped to its real intent.** No longer fires on client-side
+  `localStorage`/`sessionStorage` or on client `fetch()/axios` calls; still fires
+  on server routes that expose PHI.
 
-### Features
+---
 
-* add custom YAML rule definitions support ([327e18f](https://github.com/Francosimon53/verification-layer/commit/327e18fbd2d1c48d1e84722604bf7bb5450342f3))
-
-# [0.7.0](https://github.com/Francosimon53/verification-layer/compare/v0.6.1...v0.7.0) (2026-01-26)
-
-
-### Features
-
-* **vscode-vlayer:** add Slack/Teams notifications for HIPAA findings ([182ec62](https://github.com/Francosimon53/verification-layer/commit/182ec6223b4dbc7b917e729e0f63c8e72a3d502f))
-
-## [0.6.1](https://github.com/Francosimon53/verification-layer/compare/v0.6.0...v0.6.1) (2026-01-26)
+## [0.18.1](https://github.com/Francosimon53/verification-layer/compare/v0.18.0...v0.18.1) (2026-02-06)
 
 
 ### Bug Fixes
 
-* **vscode-vlayer:** fix packaging for vsix distribution ([f502c5a](https://github.com/Francosimon53/verification-layer/commit/f502c5ae340db521112d1bbd07561ce8b1ee77c5))
+* remove sidebar from login/signup pages ([800fb3f](https://github.com/Francosimon53/verification-layer/commit/800fb3f960b41607454e2ab0f65a4ab24db8b879))
 
-# [0.6.0](https://github.com/Francosimon53/verification-layer/compare/v0.5.2...v0.6.0) (2026-01-26)
-
-
-### Features
-
-* add VS Code extension for HIPAA compliance scanning ([852ca1b](https://github.com/Francosimon53/verification-layer/commit/852ca1b126f867ea45cb01aee3b738a3360eea82))
-
-## [0.5.2](https://github.com/Francosimon53/verification-layer/compare/v0.5.1...v0.5.2) (2026-01-26)
-
-
-### Bug Fixes
-
-* test bypass 2fa token ([e897fbd](https://github.com/Francosimon53/verification-layer/commit/e897fbda2fcd23fbc278c8529f53129cc6300c39))
-
-## [0.5.1](https://github.com/Francosimon53/verification-layer/compare/v0.5.0...v0.5.1) (2026-01-26)
-
-
-### Bug Fixes
-
-* test granular token release ([ea6138b](https://github.com/Francosimon53/verification-layer/commit/ea6138b4a06a146883217c97e508ba6b02825dcd))
-
-# [0.5.0](https://github.com/Francosimon53/verification-layer/compare/v0.4.0...v0.5.0) (2026-01-26)
-
-
-### Bug Fixes
-
-* trigger automated release test ([04792bd](https://github.com/Francosimon53/verification-layer/commit/04792bdbca7f3bfeefcda87201d2b08ad3b9b356))
-* update roadmap with completed semantic-release ([f9b535a](https://github.com/Francosimon53/verification-layer/commit/f9b535a012891be891442c13972f0c19b7fd8f2a))
+# [0.18.0](https://github.com/Francosimon53/verification-layer/compare/v0.17.0...v0.18.0) (2026-02-06)
 
 
 ### Features
 
-* add semantic-release for automated npm releases ([519974e](https://github.com/Francosimon53/verification-layer/commit/519974eaa8c89a2bfb5a8949c0c22321a307de4f))
+* add Supabase authentication to dashboard ([18266af](https://github.com/Francosimon53/verification-layer/commit/18266af17e5d02634717e7cd2b3532c09a47742f))
+
+# [0.17.0](https://github.com/Francosimon53/verification-layer/compare/v0.16.0...v0.17.0) (2026-02-06)
+
+
+### Features
+
+* add professional SaaS landing page with 8 sections ([1543f21](https://github.com/Francosimon53/verification-layer/commit/1543f21b22d29f50420856e77fa3ea95f754afa9)), closes [#0A1628](https://github.com/Francosimon53/verification-layer/issues/0A1628) [#0F172A](https://github.com/Francosimon53/verification-layer/issues/0F172A) [#1E293B](https://github.com/Francosimon53/verification-layer/issues/1E293B) [#10b981](https://github.com/Francosimon53/verification-layer/issues/10b981) [#14b8a6](https://github.com/Francosimon53/verification-layer/issues/14b8a6)
+
+# [0.16.0](https://github.com/Francosimon53/verification-layer/compare/v0.15.0...v0.16.0) (2026-02-06)
+
+
+### Features
+
+* redesign dashboard with enterprise-grade professional look ([825e9e9](https://github.com/Francosimon53/verification-layer/commit/825e9e93607337a7443efa3afdc1ba7611c618aa)), closes [#0A1628](https://github.com/Francosimon53/verification-layer/issues/0A1628) [#0F172A](https://github.com/Francosimon53/verification-layer/issues/0F172A) [#1E293B](https://github.com/Francosimon53/verification-layer/issues/1E293B) [#10b981](https://github.com/Francosimon53/verification-layer/issues/10b981) [#14b8a6](https://github.com/Francosimon53/verification-layer/issues/14b8a6)
+
+# [0.15.0](https://github.com/Francosimon53/verification-layer/compare/v0.14.0...v0.15.0) (2026-02-06)
+
+
+### Features
+
+* implement Phase 4A - Next.js Web Dashboard ([8e183e3](https://github.com/Francosimon53/verification-layer/commit/8e183e35c42a88f7446e93829c85e0dfd16ba473))
+
+# [0.14.0](https://github.com/Francosimon53/verification-layer/compare/v0.13.0...v0.14.0) (2026-02-06)
+
+
+### Bug Fixes
+
+* remove unused imports to resolve linting errors ([5fd275e](https://github.com/Francosimon53/verification-layer/commit/5fd275e092774d152642e0da7377ded601d2e635))
+
+
+### Features
+
+* implement Phase 3B - Dashboard & Compliance Score ([1f25b31](https://github.com/Francosimon53/verification-layer/commit/1f25b31c26f94f4c44ff6bf7281d98b14d8a9db1))
+
+# [0.13.0](https://github.com/Francosimon53/verification-layer/compare/v0.12.0...v0.13.0) (2026-02-06)
+
+
+### Features
+
+* implement Phase 3A - IDE & Developer Experience ([152754d](https://github.com/Francosimon53/verification-layer/commit/152754d841cfaf2017c0d4e9dd2ca38221224905))
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Phase 3A: IDE & Developer Experience
+
+#### Added - VS Code Extension v2.0.0
+- **Real-time scanning**: Automatic HIPAA compliance scanning on file save
+- **Inline diagnostics**: Error/warning markers with severity and confidence levels
+- **Hover tooltips**: Rich information showing HIPAA references, descriptions, and recommendations
+- **Quick-fix actions**: Apply auto-fixes directly from the editor
+- **Status bar integration**: Live compliance score for the current file
+- **Commands**:
+  - `VLayer: Scan Current File` - Scan the active file
+  - `VLayer: Scan Workspace` - Scan entire workspace
+  - `VLayer: Clear Diagnostics` - Clear all diagnostics
+- **Configuration options**:
+  - `vlayer.enableAutoScan` - Enable/disable auto-scan on save
+  - `vlayer.minConfidence` - Set minimum confidence level threshold
+  - `vlayer.showStatusBar` - Show/hide compliance score
+  - `vlayer.configPath` - Custom configuration file path
+
+#### Added - Watch Mode
+- **CLI watch command**: `vlayer watch <path>` for continuous monitoring
+- **Real-time scanning**: Automatic scan on file save/create
+- **Colored output**: Terminal output with severity-based colors
+- **Diff tracking**: Shows new findings vs. previous scan
+- **Critical alerts**: Notifications for new critical/high severity findings
+- **Smart filtering**: Excludes node_modules, dist, build directories by default
+
+## [0.12.0] - 2026-02-06
+
+### Fixed
+- Resolved linting errors (unused variables, unused imports)
+- Updated baseline with 89 current findings
+- All 270 tests passing

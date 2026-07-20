@@ -14,6 +14,11 @@ vlayer-report.*
 *-report.pdf
 vlayer-audit-report.pdf
 
+# Curated sample reports (deliverable artifacts) — keep these despite the
+# generated-report patterns above.
+!samples/sample-report.html
+!samples/sample-report.pdf
+
 # Audit trail data
 .vlayer/
 
@@ -22,3 +27,7 @@ vlayer-audit-report.pdf
 
 # Test projects
 test-nextjs-supabase/
+.vlayer-data
+.vercel
+
+.claude/worktrees/

@@ -1,0 +1,148 @@
+name: 'HIPAA Compliance Scan'
+description: 'Scan your codebase for HIPAA compliance issues with vlayer'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan (default: current directory)'
+    required: false
+    default: '.'
+
+  baseline-file:
+    description: 'Path to baseline file for comparison'
+    required: false
+    default: ''
+
+  min-confidence:
+    description: 'Minimum confidence level (high, medium, low)'
+    required: false
+    default: 'low'
+
+  exclude-patterns:
+    description: 'Comma-separated glob patterns to exclude'
+    required: false
+    default: ''
+
+  fail-on:
+    description: 'Severity levels that cause failure (critical, high, medium, low)'
+    required: false
+    default: 'critical,high'
+
+  output-format:
+    description: 'Report format (json, html, markdown)'
+    required: false
+    default: 'json'
+
+  github-token:
+    description: 'GitHub token for posting PR comments'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  total-findings:
+    description: 'Total number of findings'
+    value: ${{ steps.scan.outputs.total }}
+
+  new-findings:
+    description: 'Number of new findings (not in baseline)'
+    value: ${{ steps.scan.outputs.new }}
+
+  critical-findings:
+    description: 'Number of critical findings'
+    value: ${{ steps.scan.outputs.critical }}
+
+  high-findings:
+    description: 'Number of high severity findings'
+    value: ${{ steps.scan.outputs.high }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install vlayer
+      shell: bash
+      run: |
+        echo "Installing vlayer..."
+        npm install -g verification-layer
+
+    - name: Build scan command
+      id: build-cmd
+      shell: bash
+      run: |
+        CMD="vlayer scan ${{ inputs.path }} -f ${{ inputs.output-format }} -o hipaa-results.json"
+
+        if [ -n "${{ inputs.baseline-file }}" ]; then
+          CMD="$CMD --baseline ${{ inputs.baseline-file }}"
+        fi
+
+        if [ -n "${{ inputs.min-confidence }}" ]; then
+          CMD="$CMD --min-confidence ${{ inputs.min-confidence }}"
+        fi
+
+        if [ -n "${{ inputs.exclude-patterns }}" ]; then
+          CMD="$CMD --exclude \"${{ inputs.exclude-patterns }}\""
+        fi
+
+        echo "command=$CMD" >> $GITHUB_OUTPUT
+
+    - name: Run HIPAA scan
+      id: scan
+      shell: bash
+      continue-on-error: true
+      run: |
+        ${{ steps.build-cmd.outputs.command }}
+
+        # Parse results
+        if [ -f hipaa-results.json ]; then
+          TOTAL=$(jq -r '.summary.total' hipaa-results.json)
+          NEW=$(jq -r '.summary.unacknowledged' hipaa-results.json)
+          CRITICAL=$(jq -r '.summary.critical' hipaa-results.json)
+          HIGH=$(jq -r '.summary.high' hipaa-results.json)
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: hipaa-scan-results
+        path: hipaa-results.json
+
+    - name: Check failure conditions
+      shell: bash
+      run: |
+        if [ ! -f hipaa-results.json ]; then
+          echo "❌ Scan failed - no results file generated"
+          exit 1
+        fi
+
+        CRITICAL=$(jq -r '.summary.critical' hipaa-results.json)
+        HIGH=$(jq -r '.summary.high' hipaa-results.json)
+
+        SHOULD_FAIL=false
+
+        if [[ "${{ inputs.fail-on }}" == *"critical"* ]] && [ "$CRITICAL" -gt 0 ]; then
+          echo "❌ Found $CRITICAL critical findings"
+          SHOULD_FAIL=true
+        fi
+
+        if [[ "${{ inputs.fail-on }}" == *"high"* ]] && [ "$HIGH" -gt 0 ]; then
+          echo "❌ Found $HIGH high severity findings"
+          SHOULD_FAIL=true
+        fi
+
+        if [ "$SHOULD_FAIL" = true ]; then
+          exit 1
+        fi
+
+        echo "✅ HIPAA scan passed"

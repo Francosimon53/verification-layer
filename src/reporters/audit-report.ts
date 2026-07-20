@@ -23,6 +23,14 @@ const STATUS_LABELS: Record<string, string> = {
   accepted_risk: 'Risk Accepted',
 };
 
+const CATEGORY_THREATS: Record<string, string> = {
+  'phi-exposure': 'Unauthorized PHI Disclosure',
+  'encryption': 'Data Breach / Interception',
+  'audit-logging': 'Lack of Accountability',
+  'access-control': 'Unauthorized Access',
+  'data-retention': 'Non-Compliance with Retention',
+};
+
 /**
  * Generate PDF audit report
  */
@@ -60,6 +68,10 @@ export async function generateAuditReport(
     // Executive Summary
     doc.addPage();
     renderExecutiveSummary(doc, trail);
+
+    // Risk Analysis
+    doc.addPage();
+    renderRiskAnalysisSection(doc, trail);
 
     // Auto-Fixed Issues (Evidence)
     if (options.includeEvidence !== false && trail.evidence.length > 0) {
@@ -167,6 +179,224 @@ function renderCoverPage(doc: PDFKit.PDFDocument, trail: AuditTrail, options: Au
       width: pageWidth,
       align: 'center',
     });
+}
+
+function renderRiskAnalysisSection(doc: PDFKit.PDFDocument, trail: AuditTrail) {
+  const pageWidth = doc.page.width - 100;
+
+  doc.fillColor(COLORS.primary)
+    .fontSize(20)
+    .font('Helvetica-Bold')
+    .text('Risk Analysis', 50, 50);
+
+  doc.moveTo(50, 80).lineTo(pageWidth + 50, 80).stroke(COLORS.border);
+
+  doc.fillColor(COLORS.secondary)
+    .fontSize(10)
+    .font('Helvetica')
+    .text(
+      'Comprehensive risk assessment of identified HIPAA compliance findings with threat categorization and remediation tracking.',
+      50, 90, { width: pageWidth }
+    );
+
+  let y = 120;
+
+  // Risk Summary Table
+  doc.fillColor(COLORS.primary)
+    .fontSize(14)
+    .font('Helvetica-Bold')
+    .text('Risk Summary', 50, y);
+
+  y += 25;
+
+  // Count by severity from manual reviews
+  // Note: Evidence items are auto-fixed so they're not in the active risk table
+  const findings = trail.manualReviews.map(r => r.finding);
+
+  const severityCounts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalFindings = findings.length;
+
+  // Summary table header
+  const tableX = 50;
+  const colWidths = [150, 80, 100];
+  const rowHeight = 25;
+
+  // Header
+  doc.rect(tableX, y, colWidths[0] + colWidths[1] + colWidths[2], rowHeight).fill(COLORS.background);
+
+  doc.fillColor('#000000')
+    .fontSize(10)
+    .font('Helvetica-Bold')
+    .text('Risk Level', tableX + 5, y + 8)
+    .text('Count', tableX + colWidths[0] + 5, y + 8)
+    .text('Percentage', tableX + colWidths[0] + colWidths[1] + 5, y + 8);
+
+  y += rowHeight;
+
+  // Summary rows
+  const severityOrder = ['critical', 'high', 'medium', 'low'];
+  const severityLabels: Record<string, string> = {
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+  };
+
+  for (const severity of severityOrder) {
+    const count = severityCounts[severity] || 0;
+    const percentage = totalFindings > 0 ? ((count / totalFindings) * 100).toFixed(0) : '0';
+    const color = COLORS[severity as keyof typeof COLORS] || COLORS.secondary;
+
+    // Row with colored left border
+    doc.rect(tableX, y, 4, rowHeight).fill(color);
+    doc.rect(tableX, y, colWidths[0] + colWidths[1] + colWidths[2], rowHeight).stroke(COLORS.border);
+
+    doc.fillColor('#000000')
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text(severityLabels[severity], tableX + 10, y + 8)
+      .font('Helvetica')
+      .text(count.toString(), tableX + colWidths[0] + 5, y + 8)
+      .text(`${percentage}%`, tableX + colWidths[0] + colWidths[1] + 5, y + 8);
+
+    y += rowHeight;
+  }
+
+  // Total row
+  doc.rect(tableX, y, colWidths[0] + colWidths[1] + colWidths[2], rowHeight).fill('#f3f4f6');
+
+  doc.fillColor('#000000')
+    .fontSize(10)
+    .font('Helvetica-Bold')
+    .text('Total', tableX + 5, y + 8)
+    .text(totalFindings.toString(), tableX + colWidths[0] + 5, y + 8)
+    .text('100%', tableX + colWidths[0] + colWidths[1] + 5, y + 8);
+
+  y += rowHeight + 30;
+
+  // Detailed Risk Assessment
+  doc.fillColor(COLORS.primary)
+    .fontSize(14)
+    .font('Helvetica-Bold')
+    .text('Detailed Risk Assessment', 50, y);
+
+  y += 25;
+
+  // Note about table continuation
+  if (findings.length > 0) {
+    doc.fillColor(COLORS.secondary)
+      .fontSize(8)
+      .font('Helvetica-Oblique')
+      .text('Note: Table shows first 5 open findings requiring manual review. Auto-fixed issues shown in Evidence section.', 50, y);
+
+    y += 20;
+
+    // Detailed table (show first few findings)
+    renderDetailedRiskTable(doc, findings.slice(0, 5), y);
+  } else {
+    doc.fillColor(COLORS.secondary)
+      .fontSize(10)
+      .font('Helvetica')
+      .text('No open risks. All findings were automatically remediated.', 50, y);
+  }
+}
+
+function renderDetailedRiskTable(doc: PDFKit.PDFDocument, findings: any[], startY: number) {
+  const tableX = 50;
+  const pageWidth = doc.page.width - 100;
+  const rowHeight = 50; // Taller rows for detailed content
+  let y = startY;
+
+  // Column widths (adjusted for A4)
+  const colWidths = [85, 100, 50, 85, 110, 65];
+
+  // Header
+  doc.rect(tableX, y, pageWidth, 20).fill(COLORS.background);
+
+  doc.fillColor('#000000')
+    .fontSize(7)
+    .font('Helvetica-Bold');
+
+  const headers = ['Threat', 'Vulnerability', 'Risk', 'Mitigation', 'Remediation', 'HIPAA'];
+  let x = tableX;
+  headers.forEach((header, i) => {
+    doc.text(header, x + 3, y + 6, { width: colWidths[i] - 6 });
+    x += colWidths[i];
+  });
+
+  y += 20;
+
+  // Data rows
+  for (const finding of findings) {
+    if (y > doc.page.height - 100) {
+      doc.addPage();
+      y = 50;
+    }
+
+    const threat = CATEGORY_THREATS[finding.category] || 'Security Vulnerability';
+    const vulnerability = finding.title;
+    const riskLevel = finding.severity.toUpperCase();
+    const status = finding.fixType ? 'Auto-fix' : 'Open';
+    const remediation = truncateCode(finding.recommendation, 60);
+    const hipaa = finding.hipaaReference || 'N/A';
+
+    const color = COLORS[finding.severity as keyof typeof COLORS] || COLORS.secondary;
+
+    // Row with colored left border
+    doc.rect(tableX, y, 3, rowHeight).fill(color);
+    doc.rect(tableX, y, pageWidth, rowHeight).stroke(COLORS.border);
+
+    doc.fillColor('#000000')
+      .fontSize(7)
+      .font('Helvetica');
+
+    x = tableX;
+
+    // Threat
+    doc.text(threat, x + 4, y + 4, { width: colWidths[0] - 8, height: rowHeight - 8 });
+    x += colWidths[0];
+
+    // Vulnerability
+    doc.font('Helvetica-Bold')
+      .text(vulnerability, x + 3, y + 4, { width: colWidths[1] - 6, height: rowHeight - 8 })
+      .font('Helvetica');
+    x += colWidths[1];
+
+    // Risk Level
+    doc.fillColor(color)
+      .fontSize(7)
+      .font('Helvetica-Bold')
+      .text(riskLevel.substring(0, 4).toUpperCase(), x + 3, y + 4, { width: colWidths[2] - 6 })
+      .fillColor('#000000')
+      .font('Helvetica');
+    x += colWidths[2];
+
+    // Mitigation Status
+    const statusColor = finding.fixType ? COLORS.low : COLORS.critical;
+    doc.fillColor(statusColor)
+      .text(status, x + 3, y + 4, { width: colWidths[3] - 6 })
+      .fillColor('#000000');
+    x += colWidths[3];
+
+    // Remediation
+    doc.fontSize(6)
+      .text(remediation, x + 3, y + 4, { width: colWidths[4] - 6, height: rowHeight - 8 })
+      .fontSize(7);
+    x += colWidths[4];
+
+    // HIPAA Reference
+    doc.fontSize(6)
+      .font('Courier')
+      .text(hipaa.substring(0, 20), x + 3, y + 4, { width: colWidths[5] - 6, height: rowHeight - 8 })
+      .font('Helvetica')
+      .fontSize(7);
+
+    y += rowHeight;
+  }
 }
 
 function renderExecutiveSummary(doc: PDFKit.PDFDocument, trail: AuditTrail) {

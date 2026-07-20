@@ -92,6 +92,8 @@ export async function scanWithCustomRules(
               hipaaReference: rule.hipaaReference,
               context: getContextLines(lines, lineNum, contextSize),
               fixType: rule.fix ? (`custom-${rule.id}` as any) : undefined,
+              confidence: rule.confidence,
+              adjustConfidenceByContext: rule.adjustConfidenceByContext,
             });
           }
         }

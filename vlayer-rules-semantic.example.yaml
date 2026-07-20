@@ -1,0 +1,65 @@
+version: "1.0"
+rules:
+  # Rule that only triggers in executable code
+  - id: hardcoded-encryption-key
+    name: Hardcoded encryption key
+    description: Encryption key is hardcoded in source code
+    category: encryption
+    severity: critical
+    pattern: "const\\s+(encryptionKey|secretKey|apiKey)\\s*=\\s*['\"`]"
+    recommendation: Store encryption keys in environment variables or secure key management systems
+    hipaaReference: "§164.312(a)(2)(iv)"
+    # Only flag in actual code, not in strings or comments
+    contexts:
+      - code
+    confidence: high
+    adjustConfidenceByContext: false
+
+  # Rule that should have low confidence when in strings/comments
+  - id: potential-password-pattern
+    name: Potential password in code
+    description: Password-like pattern detected
+    category: encryption
+    severity: high
+    pattern: "(password|passwd|pwd)\\s*=\\s*['\"][^'\"]{8,}['\"]"
+    recommendation: Never hardcode passwords. Use environment variables or secure vaults
+    confidence: medium
+    # Let semantic analysis adjust confidence
+    adjustConfidenceByContext: true
+
+  # Rule for API keys in any context (strings are still bad)
+  - id: api-key-exposure
+    name: Exposed API key
+    description: API key found in source code
+    category: phi-exposure
+    severity: critical
+    pattern: "(api[_-]?key|apikey)\\s*[:=]\\s*['\"][A-Za-z0-9_\\-]{20,}['\"]"
+    recommendation: Store API keys in environment variables
+    confidence: high
+    # Still flag in strings/templates, but with adjusted confidence
+    adjustConfidenceByContext: true
+
+  # Rule that only cares about comments (documentation enforcement)
+  - id: missing-hipaa-annotation
+    name: Missing HIPAA annotation
+    description: Function handling PHI should have HIPAA compliance annotation
+    category: audit-logging
+    severity: low
+    pattern: "function\\s+\\w+.*\\(.*patient|user|record"
+    recommendation: Add @hipaa-compliant annotation to functions handling PHI
+    confidence: medium
+    # This is informational, medium confidence is appropriate
+    adjustConfidenceByContext: true
+
+  # Rule with high confidence regardless of context
+  - id: sql-injection-risk
+    name: SQL injection vulnerability
+    description: Potential SQL injection detected
+    category: phi-exposure
+    severity: critical
+    pattern: "query.*\\+.*req\\.(body|params|query)"
+    recommendation: Use parameterized queries to prevent SQL injection
+    hipaaReference: "§164.312(a)(1)"
+    confidence: high
+    # Don't adjust - even in test code this is bad practice
+    adjustConfidenceByContext: false

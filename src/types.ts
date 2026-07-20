@@ -28,6 +28,8 @@ export type FixType =
   | 'cookie-insecure'
   | 'backup-unencrypted';
 
+export type Confidence = 'high' | 'medium' | 'low';
+
 export interface Finding {
   id: string;
   category: ComplianceCategory;
@@ -41,6 +43,42 @@ export interface Finding {
   hipaaReference?: string;
   context?: ContextLine[];
   fixType?: FixType;
+  confidence?: Confidence;
+  adjustConfidenceByContext?: boolean;
+  acknowledged?: boolean;
+  acknowledgment?: {
+    reason: string;
+    acknowledgedBy: string;
+    acknowledgedAt: string;
+    ticketUrl?: string;
+    expired?: boolean;
+  };
+  suppressed?: boolean;
+  suppression?: {
+    reason: string;
+    comment: string;
+  };
+  isBaseline?: boolean;
+}
+
+export interface Occurrence {
+  file: string;
+  line?: number;
+}
+
+export interface GroupedFinding {
+  id: string;
+  category: ComplianceCategory;
+  severity: Severity;
+  title: string;
+  description: string;
+  recommendation: string;
+  hipaaReference?: string;
+  confidence?: Confidence;
+  occurrenceCount: number;
+  fileCount: number;
+  examples: Occurrence[];       // Top 3-5 occurrences for immediate context
+  occurrences: Occurrence[];    // Full list (used internally / in details)
 }
 
 export interface StackInfo {
@@ -53,11 +91,52 @@ export interface StackInfo {
   recommendations: string[];
 }
 
+export interface ComplianceScore {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  status: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  breakdown: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    acknowledged: number;
+  };
+  penalties: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  };
+  recommendations: string[];
+}
+
+/**
+ * Informational report artifact (e.g. asset inventory, PHI flow map).
+ * These are generated documentation, not compliance violations — they are
+ * surfaced as report metadata and never count toward finding stats.
+ */
+export interface InformationalArtifact {
+  id: string;
+  title: string;
+  description: string;
+  /** Formatted artifact body (inventory table, flow map, etc.) */
+  content: string;
+  hipaaReference?: string;
+}
+
 export interface ScanResult {
   findings: Finding[];
+  groupedFindings: GroupedFinding[];
+  rawFindingsCount: number;
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;
+  complianceScore?: ComplianceScore;
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ScanOptions {
@@ -67,6 +146,15 @@ export interface ScanOptions {
   configFile?: string;
   config?: VlayerConfig;
   fix?: boolean;
+  baselineFile?: string;
+  minConfidence?: Confidence;
+  /** Enable AI-powered triage. The CLI --no-ai flag sets this false. Default: true. */
+  enableAI?: boolean;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false — these are excluded so the scanner never flags its own output.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface Scanner {
@@ -80,21 +168,113 @@ export interface Report {
   targetPath: string;
   summary: {
     total: number;
+    uniqueFindings: number;
+    acknowledged: number;
+    suppressed: number;
+    baseline: number;
+    unacknowledged: number;
     critical: number;
     high: number;
     medium: number;
     low: number;
     info: number;
+    vulnerabilities?: {
+      total: number;
+      critical: number;
+      high: number;
+      moderate: number;
+      low: number;
+    };
   };
   findings: Finding[];
+  groupedFindings: GroupedFinding[];
+  rawFindingsCount: number;
   scannedFiles: number;
   scanDuration: number;
   stack?: StackInfo;
+  vulnerabilities?: DependencyVulnerability[];
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ReportOptions {
-  format: 'json' | 'html' | 'markdown';
+  format: 'json' | 'html' | 'markdown' | 'pdf';
   outputPath?: string;
+  vulnerabilities?: DependencyVulnerability[];
+  scanComparison?: ScanComparison | null;
+  branding?: ResolvedBranding;
+}
+
+/**
+ * White-label branding for reports, as provided by the user via CLI flags
+ * (`--brand-name`, `--brand-logo`) or the `branding` block in config.
+ */
+export interface Branding {
+  /** Name shown as the report author ("Prepared by ..."). */
+  name?: string;
+  /** Path to a logo image (png/jpg/svg) used on the cover and footer. */
+  logo?: string;
+}
+
+/**
+ * Branding after validation: a usable logo (existing file, supported format)
+ * or none, plus any warnings to surface to the user. Reporters consume this.
+ */
+export interface ResolvedBranding {
+  /** Sanitized brand name, or undefined to fall back to default VLayer branding. */
+  name?: string;
+  /** Absolute path to a validated logo file, or undefined if none/invalid. */
+  logoPath?: string;
+  /** Logo format, derived from the file extension. */
+  logoFormat?: 'png' | 'jpg' | 'svg';
+  /** Non-fatal warnings (e.g. missing or unsupported logo) to print to the user. */
+  warnings: string[];
+}
+
+export interface ScanComparison {
+  previousScan?: {
+    timestamp: string;
+    date: string;
+    complianceScore: number;
+    severity: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+    };
+    failedRuleIds: string[];
+    totalFilesScanned: number;
+  };
+  scoreChange: number;
+  severityChanges: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  newIssues: string[];
+  resolvedIssues: string[];
+}
+
+export interface DependencyVulnerability {
+  name: string;
+  severity: 'critical' | 'high' | 'moderate' | 'low' | 'info';
+  via: string;
+  range: string;
+  fixAvailable: boolean | { name: string; version: string };
+  url?: string;
+}
+
+export interface AcknowledgedFinding {
+  pattern: string;
+  id?: string;
+  category?: ComplianceCategory;
+  severity?: Severity;
+  reason: string;
+  acknowledgedBy: string;
+  acknowledgedAt: string;
+  expiresAt?: string;
+  ticketUrl?: string;
 }
 
 export interface VlayerConfig {
@@ -105,6 +285,21 @@ export interface VlayerConfig {
   categories?: ComplianceCategory[];
   customRulesPath?: string;
   disableBuiltinRules?: string[];
+  acknowledgedFindings?: AcknowledgedFinding[];
+  ai?: {
+    enabled?: boolean;
+    enableTriage?: boolean;
+    enableLLMRules?: boolean;
+    filterFalsePositives?: boolean;
+    budgetCents?: number;
+  };
+  /** White-label branding applied to HTML and PDF reports. */
+  branding?: Branding;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false. The CLI flag `--include-own-artifacts` sets this to true.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface FixResult {
@@ -214,4 +409,8 @@ export interface CompiledCustomRule {
   fix?: CustomRuleFix;
   compiledPattern: RegExp;
   compiledMustNotContain?: RegExp;
+  // Semantic awareness fields
+  confidence?: Confidence;
+  contexts?: Array<'code' | 'string' | 'comment' | 'template'>;
+  adjustConfidenceByContext?: boolean;
 }
