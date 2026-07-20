@@ -5,13 +5,14 @@
 
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_OPERATIONAL_PATTERNS, DATABASE_WITHOUT_BACKUP } from './patterns.js';
+import { isImportLine } from '../utils.js';
 import * as fs from 'fs/promises';
 
 export const operationalScanner: Scanner = {
   name: 'Operational Security Scanner',
   category: 'data-retention',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Handle BACKUP-001 separately (requires project-wide scan)
@@ -109,7 +110,7 @@ export const operationalScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
         continue;
       }
@@ -124,11 +125,15 @@ export const operationalScanner: Scanner = {
  * Returns a finding if database is used but no backup configuration is found
  */
 async function scanForBackupConfiguration(files: string[]): Promise<Finding | null> {
-  let hasDatabaseUsage = false;
   let hasBackupConfig = false;
-  let firstDbFile: string | null = null;
-  let firstDbLine = 0;
-  let firstDbCode = '';
+
+  // Prefer anchoring the finding to real DB *usage* (client init / query) so it
+  // never points at a bare `import ... from '@supabase/...'` line. But some DB
+  // libraries (e.g. drizzle, knex) are only detectable via their import, so we
+  // keep the import as a fallback anchor rather than losing detection entirely.
+  type Anchor = { file: string; line: number; code: string };
+  let usageAnchor: Anchor | null = null;
+  let importAnchor: Anchor | null = null;
 
   // Scan all files to detect database usage and backup configuration
   for (const file of files) {
@@ -140,19 +145,15 @@ async function scanForBackupConfiguration(files: string[]): Promise<Finding | nu
       const content = await fs.readFile(file, 'utf-8');
       const lines = content.split('\n');
 
-      // Check for database usage
-      if (!hasDatabaseUsage) {
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const matched = DATABASE_WITHOUT_BACKUP.patterns.some(p => p.test(line));
-          if (matched) {
-            hasDatabaseUsage = true;
-            if (!firstDbFile) {
-              firstDbFile = file;
-              firstDbLine = i + 1;
-              firstDbCode = line.trim();
-            }
-          }
+      for (let i = 0; i < lines.length; i++) {
+        if (usageAnchor) break; // best anchor already found
+        const line = lines[i];
+        if (!DATABASE_WITHOUT_BACKUP.patterns.some(p => p.test(line))) continue;
+        const anchor: Anchor = { file, line: i + 1, code: line.trim() };
+        if (isImportLine(line)) {
+          importAnchor = importAnchor ?? anchor;
+        } else {
+          usageAnchor = anchor;
         }
       }
 
@@ -166,26 +167,28 @@ async function scanForBackupConfiguration(files: string[]): Promise<Finding | nu
         }
       }
 
-      // If we found both, we can stop early
-      if (hasDatabaseUsage && hasBackupConfig) {
+      // If we found real usage and backup config, we can stop early
+      if (usageAnchor && hasBackupConfig) {
         break;
       }
-    } catch (error) {
+    } catch {
       // Skip files that can't be read
       continue;
     }
   }
 
-  // If database is used but no backup config found, create a finding
-  if (hasDatabaseUsage && !hasBackupConfig && firstDbFile) {
+  // If a database is used but no backup config found, create a finding,
+  // anchored to real usage when available, otherwise the import.
+  const anchor = usageAnchor ?? importAnchor;
+  if (anchor && !hasBackupConfig) {
     return {
       id: DATABASE_WITHOUT_BACKUP.id,
       title: DATABASE_WITHOUT_BACKUP.name,
-      description: `${DATABASE_WITHOUT_BACKUP.description}\n\nCode: ${firstDbCode}`,
+      description: `${DATABASE_WITHOUT_BACKUP.description}\n\nCode: ${anchor.code}`,
       severity: DATABASE_WITHOUT_BACKUP.severity,
       category: 'data-retention',
-      file: firstDbFile,
-      line: firstDbLine,
+      file: anchor.file,
+      line: anchor.line,
       recommendation: DATABASE_WITHOUT_BACKUP.recommendation,
       hipaaReference: DATABASE_WITHOUT_BACKUP.hipaaReference,
       confidence: 'low', // Low confidence since this is advisory

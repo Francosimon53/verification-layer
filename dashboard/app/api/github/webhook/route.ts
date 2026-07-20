@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
 import { verifyWebhookSignature } from '@/lib/github/verify';
+import { jsonError } from '@/lib/api-errors';
 import { getInstallationToken } from '@/lib/github/auth';
 import { generateApiKey } from '@/lib/github/api-keys';
 import { injectRepoSecret } from '@/lib/github/secrets';
@@ -37,9 +38,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, event, action: payload.action ?? 'none' });
     }
   } catch (err: any) {
-    console.error('[webhook] Unhandled error:', err);
     // Always return 200 to GitHub to prevent retries on our bugs
-    return NextResponse.json({ ok: false, error: err.message }, { status: 200 });
+    return jsonError(err, 'Webhook processing failed', 200, { ok: false });
   }
 }
 

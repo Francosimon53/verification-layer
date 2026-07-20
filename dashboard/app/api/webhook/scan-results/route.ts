@@ -4,6 +4,7 @@ import { getInstallationToken } from '@/lib/github/auth';
 import { postPRComment } from '@/lib/github/comments';
 import { createCheckRun } from '@/lib/github/checks';
 import { createAdminClient } from '@/lib/supabase/server';
+import { jsonError } from '@/lib/api-errors';
 
 export const maxDuration = 30;
 
@@ -117,8 +118,7 @@ export async function POST(req: NextRequest) {
       check_run_id: checkRunId,
     });
   } catch (err: any) {
-    console.error('[scan-results] Error:', err);
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
+    return jsonError(err, 'Internal error', 500);
   }
 }
 

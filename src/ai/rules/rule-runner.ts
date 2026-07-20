@@ -9,7 +9,6 @@ import { CostTracker } from '../cost-tracker.js';
 import { AICache } from '../cache.js';
 import { RateLimiter } from '../rate-limiter.js';
 import type { AIFinding, LLMRuleResponse } from './types.js';
-import type { Finding } from '../../types.js';
 
 export interface LLMRule {
   id: string;

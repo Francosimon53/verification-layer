@@ -113,6 +113,20 @@ export interface ComplianceScore {
   recommendations: string[];
 }
 
+/**
+ * Informational report artifact (e.g. asset inventory, PHI flow map).
+ * These are generated documentation, not compliance violations — they are
+ * surfaced as report metadata and never count toward finding stats.
+ */
+export interface InformationalArtifact {
+  id: string;
+  title: string;
+  description: string;
+  /** Formatted artifact body (inventory table, flow map, etc.) */
+  content: string;
+  hipaaReference?: string;
+}
+
 export interface ScanResult {
   findings: Finding[];
   groupedFindings: GroupedFinding[];
@@ -121,6 +135,8 @@ export interface ScanResult {
   scanDuration: number;
   stack?: StackInfo;
   complianceScore?: ComplianceScore;
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ScanOptions {
@@ -132,6 +148,13 @@ export interface ScanOptions {
   fix?: boolean;
   baselineFile?: string;
   minConfidence?: Confidence;
+  /** Enable AI-powered triage. The CLI --no-ai flag sets this false. Default: true. */
+  enableAI?: boolean;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false — these are excluded so the scanner never flags its own output.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface Scanner {
@@ -170,13 +193,42 @@ export interface Report {
   scanDuration: number;
   stack?: StackInfo;
   vulnerabilities?: DependencyVulnerability[];
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ReportOptions {
-  format: 'json' | 'html' | 'markdown';
+  format: 'json' | 'html' | 'markdown' | 'pdf';
   outputPath?: string;
   vulnerabilities?: DependencyVulnerability[];
   scanComparison?: ScanComparison | null;
+  branding?: ResolvedBranding;
+}
+
+/**
+ * White-label branding for reports, as provided by the user via CLI flags
+ * (`--brand-name`, `--brand-logo`) or the `branding` block in config.
+ */
+export interface Branding {
+  /** Name shown as the report author ("Prepared by ..."). */
+  name?: string;
+  /** Path to a logo image (png/jpg/svg) used on the cover and footer. */
+  logo?: string;
+}
+
+/**
+ * Branding after validation: a usable logo (existing file, supported format)
+ * or none, plus any warnings to surface to the user. Reporters consume this.
+ */
+export interface ResolvedBranding {
+  /** Sanitized brand name, or undefined to fall back to default VLayer branding. */
+  name?: string;
+  /** Absolute path to a validated logo file, or undefined if none/invalid. */
+  logoPath?: string;
+  /** Logo format, derived from the file extension. */
+  logoFormat?: 'png' | 'jpg' | 'svg';
+  /** Non-fatal warnings (e.g. missing or unsupported logo) to print to the user. */
+  warnings: string[];
 }
 
 export interface ScanComparison {
@@ -241,6 +293,13 @@ export interface VlayerConfig {
     filterFalsePositives?: boolean;
     budgetCents?: number;
   };
+  /** White-label branding applied to HTML and PDF reports. */
+  branding?: Branding;
+  /**
+   * Scan vlayer's own generated output artifacts (reports, baseline, samples/).
+   * Default false. The CLI flag `--include-own-artifacts` sets this to true.
+   */
+  includeOwnArtifacts?: boolean;
 }
 
 export interface FixResult {

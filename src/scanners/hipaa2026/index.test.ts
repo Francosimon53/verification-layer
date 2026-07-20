@@ -323,7 +323,7 @@ axios.get('https://api.external.com/patient-data');
       const assetFindings = findings.filter((f) => f.id === 'HIPAA-ASSET-001');
 
       expect(assetFindings.length).toBe(1);
-      expect(assetFindings[0].severity).toBe('high');
+      expect(assetFindings[0].severity).toBe('info');
       expect(assetFindings[0].file).toBe('ASSET-INVENTORY');
       expect(assetFindings[0].recommendation).toContain('DATABASE');
     });
@@ -347,7 +347,7 @@ app.post('/api/patient', async (req, res) => {
       const flowFindings = findings.filter((f) => f.id === 'HIPAA-FLOW-001');
 
       expect(flowFindings.length).toBe(1);
-      expect(flowFindings[0].severity).toBe('high');
+      expect(flowFindings[0].severity).toBe('info');
       expect(flowFindings[0].file).toBe('PHI-FLOW-MAP');
       expect(flowFindings[0].recommendation).toContain('INPUT');
       expect(flowFindings[0].recommendation).toContain('PROCESSING');

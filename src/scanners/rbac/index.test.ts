@@ -39,6 +39,9 @@ describe('RBAC Scanner', () => {
     content: string
   ): Promise<string> {
     const filePath = path.join(tempDir, filename);
+    // Filenames may include a subdirectory (e.g. components/Foo.tsx) that the
+    // path-based client/server detection relies on — create it before writing.
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, 'utf-8');
     testFiles.push(filePath);
     return filePath;

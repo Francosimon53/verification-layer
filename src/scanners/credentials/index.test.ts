@@ -212,7 +212,7 @@ const config = {
       const file = await createTestFile(
         'api.ts',
         `
-const apiKey = 'fake_key_ABCDEFGH1234567890XXXXXX';
+const apiKey = 'k7Jp2Qx9Lm4Rt6Wz0Bn3Vc8Df1Hs5Ya';
         `
       );
 
@@ -226,7 +226,7 @@ const apiKey = 'fake_key_ABCDEFGH1234567890XXXXXX';
       const file = await createTestFile(
         'secrets.ts',
         `
-export const JWT_SECRET = 'my-super-secret-jwt-key-12345';
+export const JWT_SECRET = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
         `
       );
 
@@ -268,7 +268,7 @@ const connectionString = 'postgresql://user:password@localhost:5432/mydb';
       const file = await createTestFile(
         'bearer.ts',
         `
-const token = 'Bearer fake_test_1234567890abcdefghijklmnop';
+const token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwIn0';
         `
       );
 

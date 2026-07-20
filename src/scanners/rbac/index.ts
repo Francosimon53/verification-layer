@@ -11,7 +11,7 @@ export const rbacScanner: Scanner = {
   name: 'Role-Based Access Control Scanner',
   category: 'access-control',
 
-  async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
+  async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
     // Filter to code files
@@ -85,7 +85,7 @@ export const rbacScanner: Scanner = {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Skip files that can't be read
       }
     }

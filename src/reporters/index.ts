@@ -1,9 +1,11 @@
 import { writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
-import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison, GroupedFinding } from '../types.js';
+import type { ScanResult, Report, ReportOptions, Finding, ContextLine, StackInfo, DependencyVulnerability, ScanComparison } from '../types.js';
 import { getRemediationGuide, type RemediationGuide } from './remediation-guides.js';
 import { getStackSpecificGuides, type StackGuide } from '../stack-detector/stack-guides.js';
+import { brandFooterText, brandPreparedBy, logoDataUri } from './branding.js';
+import { generateScanPdf } from './scan-pdf-report.js';
 
 interface ComplianceScore {
   overall: number;
@@ -198,25 +200,6 @@ async function generateAssetInventory(targetPath: string): Promise<AssetInventor
     detectedAt: new Date().toISOString(),
     totalAssets: assets.length,
   };
-}
-
-function generateAssetInventoryCsv(inventory: AssetInventory): string {
-  const header = 'ID,Name,Version,Type,Category,Provider,Responsible Person,Location\n';
-
-  const rows = inventory.assets.map(asset => {
-    return [
-      asset.id,
-      `"${asset.name}"`,
-      `"${asset.version}"`,
-      asset.type,
-      asset.category,
-      `"${asset.provider}"`,
-      `"${asset.responsiblePerson}"`,
-      `"${asset.location}"`,
-    ].join(',');
-  }).join('\n');
-
-  return header + rows;
 }
 
 async function analyzeDataFlow(targetPath: string, findings: Finding[]): Promise<DataFlowMap> {
@@ -734,7 +717,7 @@ async function getScoreTrending(targetPath: string, currentScore: number): Promi
     }
 
     return { direction, previousScore, change };
-  } catch (error) {
+  } catch {
     // No history available
     return null;
   }
@@ -790,6 +773,7 @@ function buildReport(
     scanDuration: result.scanDuration,
     stack: result.stack,
     vulnerabilities,
+    informationalArtifacts: result.informationalArtifacts,
   };
 }
 
@@ -830,6 +814,8 @@ function generateJson(report: Report, complianceScore?: import('../types.js').Co
     stack: report.stack,
     complianceScore,
     vulnerabilities: report.vulnerabilities,
+    // Generated documentation (asset inventory, PHI flow map) — metadata, not findings
+    informationalArtifacts: report.informationalArtifacts,
   };
   return JSON.stringify(output, null, 2);
 }
@@ -1085,6 +1071,12 @@ async function generateHtml(report: Report, targetPath: string, options: ReportO
   const complianceScoreHtml = await renderComplianceScoreHtml(report, targetPath);
   const assetInventoryHtml = await renderAssetInventoryHtml(targetPath);
   const dataFlowMapHtml = await renderDataFlowMapHtml(targetPath, report.findings);
+
+  // White-label branding (no-op when no brand is supplied → output unchanged).
+  const brandLogo = logoDataUri(options.branding);
+  const hasBrand = Boolean(options.branding?.name || brandLogo);
+  const brandPreparedByLabel = brandPreparedBy(options.branding);
+  const brandFooterLine = brandFooterText(options.branding);
   const severityColors = {
     critical: '#dc2626',
     high: '#ea580c',
@@ -1115,6 +1107,17 @@ async function generateHtml(report: Report, targetPath: string, options: ReportO
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; padding: 2rem; }
     .container { max-width: 1400px; margin: 0 auto; }
+
+    /* White-label branding */
+    .brand-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb; }
+    .brand-header img.brand-logo { max-height: 64px; max-width: 220px; object-fit: contain; }
+    .brand-header .brand-prepared-by { color: #6b7280; font-size: 0.95rem; }
+    .brand-header .brand-prepared-by strong { color: #111827; }
+    .brand-page-footer { display: none; }
+    @media print {
+      .brand-page-footer { display: block; position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 0.7rem; color: #6b7280; padding: 0.4rem 0; }
+      @page { margin-bottom: 2.2cm; }
+    }
 
     /* Executive Summary Styles */
     .executive-summary-section { margin: 0 0 3rem 0; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); }
@@ -1501,6 +1504,12 @@ async function generateHtml(report: Report, targetPath: string, options: ReportO
 </head>
 <body>
   <div class="container">
+    ${hasBrand ? `
+    <div class="brand-header">
+      ${brandLogo ? `<img src="${brandLogo}" alt="${escapeHtml(brandPreparedByLabel)} logo" class="brand-logo">` : ''}
+      <div class="brand-prepared-by">Prepared by <strong>${escapeHtml(brandPreparedByLabel)}</strong></div>
+    </div>` : ''}
+
     ${renderExecutiveSummaryHtml(report)}
 
     <h1>HIPAA Compliance Report</h1>
@@ -1578,10 +1587,12 @@ async function generateHtml(report: Report, targetPath: string, options: ReportO
     </div>
 
     <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
+      ${hasBrand ? `<p><strong>${escapeHtml(brandFooterLine)}</strong></p>` : ''}
       <p>Generated by <strong>vlayer</strong> v0.2.0 - HIPAA Compliance Scanner for Healthcare Applications</p>
       <p>Run with <code>--fix</code> flag to automatically fix issues marked as "Auto-fixable"</p>
     </footer>
   </div>
+  ${hasBrand ? `<div class="brand-page-footer">${escapeHtml(brandFooterLine)}</div>` : ''}
 </body>
 </html>`;
 }
@@ -2004,14 +2015,11 @@ function renderExecutiveSummaryHtml(report: Report): string {
 
 function renderBackupRecoveryGuideHtml(stack: StackInfo): string {
   let guideContent = '';
-  let dbType = 'unknown';
-  let dbDisplay = stack?.databaseDisplay || 'Unknown';
 
   // Detect database type from stack
   const database = stack?.database || 'unknown';
 
   if (database.includes('supabase')) {
-    dbType = 'supabase';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2062,10 +2070,10 @@ function renderBackupRecoveryGuideHtml(stack: StackInfo): string {
               <strong>Additional Manual Backup (Optional)</strong>
               <div class="backup-code-block">
                 <pre><code># Using pg_dump for additional backup
-pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup_\$(date +%Y%m%d).sql
+pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup_$(date +%Y%m%d).sql
 
 # Upload to secure offsite storage
-aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
+aws s3 cp backup_$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
               </div>
             </div>
           </div>
@@ -2073,7 +2081,6 @@ aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
       </div>
     `;
   } else if (database.includes('prisma') || database.includes('postgres')) {
-    dbType = 'postgresql';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2091,23 +2098,23 @@ aws s3 cp backup_\$(date +%Y%m%d).sql s3://your-backup-bucket/</code></pre>
 # PostgreSQL Backup Script for HIPAA Compliance
 
 BACKUP_DIR="/path/to/backups"
-TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="\${BACKUP_DIR}/backup_\${TIMESTAMP}.sql"
 
 # Create backup directory if not exists
-mkdir -p \$BACKUP_DIR
+mkdir -p $BACKUP_DIR
 
 # Perform backup
-pg_dump \$DATABASE_URL > \$BACKUP_FILE
+pg_dump $DATABASE_URL > $BACKUP_FILE
 
 # Compress backup
-gzip \$BACKUP_FILE
+gzip $BACKUP_FILE
 
 # Upload to offsite storage (S3 example)
 aws s3 cp \${BACKUP_FILE}.gz s3://your-backup-bucket/postgresql/
 
 # Keep only last 30 days of local backups
-find \$BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
 
 echo "Backup completed: \${BACKUP_FILE}.gz"</code></pre>
               </div>
@@ -2137,10 +2144,10 @@ aws s3 cp s3://your-backup-bucket/postgresql/backup_YYYYMMDD.sql.gz .
 gunzip backup_YYYYMMDD.sql.gz
 
 # Restore to test database
-psql \$TEST_DATABASE_URL < backup_YYYYMMDD.sql
+psql $TEST_DATABASE_URL < backup_YYYYMMDD.sql
 
 # Verify data integrity
-psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
+psql $TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
               </div>
             </div>
           </div>
@@ -2161,7 +2168,6 @@ psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
       </div>
     `;
   } else if (database.includes('mongo')) {
-    dbType = 'mongodb';
     guideContent = `
       <div class="backup-guide-card">
         <div class="backup-guide-header">
@@ -2193,12 +2199,12 @@ psql \$TEST_DATABASE_URL -c "SELECT COUNT(*) FROM patients;"</code></pre>
                 <pre><code>#!/bin/bash
 # MongoDB Backup Script
 
-TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/path/to/backups"
 BACKUP_NAME="mongodb_backup_\${TIMESTAMP}"
 
 # Perform backup
-mongodump --uri="\$MONGODB_URI" --out=\${BACKUP_DIR}/\${BACKUP_NAME}
+mongodump --uri="$MONGODB_URI" --out=\${BACKUP_DIR}/\${BACKUP_NAME}
 
 # Compress
 tar -czf \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz -C \${BACKUP_DIR} \${BACKUP_NAME}
@@ -2208,7 +2214,7 @@ rm -rf \${BACKUP_DIR}/\${BACKUP_NAME}
 aws s3 cp \${BACKUP_DIR}/\${BACKUP_NAME}.tar.gz s3://your-backup-bucket/mongodb/
 
 # Cleanup old local backups (keep 7 days)
-find \$BACKUP_DIR -name "mongodb_backup_*.tar.gz" -mtime +7 -delete</code></pre>
+find $BACKUP_DIR -name "mongodb_backup_*.tar.gz" -mtime +7 -delete</code></pre>
               </div>
             </div>
           </div>
@@ -2223,10 +2229,10 @@ aws s3 cp s3://your-backup-bucket/mongodb/mongodb_backup_YYYYMMDD.tar.gz .
 tar -xzf mongodb_backup_YYYYMMDD.tar.gz
 
 # Restore to test database
-mongorestore --uri="\$TEST_MONGODB_URI" mongodb_backup_YYYYMMDD/
+mongorestore --uri="$TEST_MONGODB_URI" mongodb_backup_YYYYMMDD/
 
 # Verify collections
-mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
+mongo $TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
               </div>
             </div>
           </div>
@@ -2234,7 +2240,6 @@ mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
       </div>
     `;
   } else {
-    dbType = 'none';
     guideContent = `
       <div class="backup-guide-card backup-guide-warning">
         <div class="backup-guide-header">
@@ -2379,9 +2384,8 @@ mongo \$TEST_MONGODB_URI --eval "db.getCollectionNames()"</code></pre>
   `;
 }
 
-function renderIncidentResponsePlanHtml(criticalFindings: number, highFindings: number): string {
+function renderIncidentResponsePlanHtml(criticalFindings: number, _highFindings: number): string {
   const hasActiveIncident = criticalFindings > 0;
-  const riskLevel = criticalFindings > 0 ? 'HIGH' : highFindings > 0 ? 'MEDIUM' : 'LOW';
 
   return `
     <div class="incident-response-section">
@@ -2813,7 +2817,6 @@ function renderScanComparisonHtml(comparison: ScanComparison | null | undefined)
   const criticalChange = formatChange(severityChanges.critical, true);
   const highChange = formatChange(severityChanges.high, true);
   const mediumChange = formatChange(severityChanges.medium, true);
-  const lowChange = formatChange(severityChanges.low, true);
 
   // Format previous scan date
   const prevDate = new Date(previousScan.timestamp);
@@ -3288,6 +3291,15 @@ export async function generateReport(
   options: ReportOptions
 ): Promise<void> {
   const report = buildReport(result, targetPath, options.vulnerabilities);
+
+  // PDF is binary: generate the buffer and write it directly.
+  if (options.format === 'pdf') {
+    const { buffer } = await generateScanPdf(result, targetPath, { branding: options.branding });
+    const pdfPath = options.outputPath || 'vlayer-report.pdf';
+    await writeFile(pdfPath, buffer);
+    console.log(chalk.green(`\nReport saved to: ${pdfPath}`));
+    return;
+  }
 
   let content: string;
   let extension: string;
