@@ -22,8 +22,11 @@ export function checkAcknowledgment(
   }
 
   for (const ack of config.acknowledgedFindings) {
-    // Check if file path matches the pattern
-    if (!minimatch(finding.file, ack.pattern)) {
+    // Check if file path matches the pattern. `dot: true` lets `**` traverse
+    // dot-directories — finding.file is an absolute path, and a checkout under
+    // e.g. `.claude/worktrees/<branch>/` would otherwise match no pattern,
+    // silently disabling every acknowledgment.
+    if (!minimatch(finding.file, ack.pattern, { dot: true })) {
       continue;
     }
 
