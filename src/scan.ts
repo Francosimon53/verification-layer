@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, InformationalArtifact } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -72,6 +72,13 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     '**/build/**',
     '**/.git/**',
     '**/coverage/**',
+    // Dependency lockfiles: machine-generated, not code — integrity hashes
+    // routinely contain substrings that trip content-pattern rules
+    '**/package-lock.json',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/bun.lock',
+    '**/bun.lockb',
   ];
 
   // Exclude vlayer's own generated outputs by default so the scanner never
@@ -188,6 +195,24 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   // Replace findings with deduplicated version
   findings.length = 0;
   findings.push(...deduplicatedFindings);
+
+  // Informational artifacts (asset inventory, PHI flow map) are generated
+  // documentation, not violations — lift them out of the findings list into
+  // report metadata so they never count toward stats or the unacknowledged
+  // total.
+  const informationalArtifactIds = new Set(['HIPAA-ASSET-001', 'HIPAA-FLOW-001']);
+  const informationalArtifacts: InformationalArtifact[] = findings
+    .filter(f => informationalArtifactIds.has(f.id))
+    .map(f => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      content: f.recommendation,
+      hipaaReference: f.hipaaReference,
+    }));
+  const nonArtifactFindings = findings.filter(f => !informationalArtifactIds.has(f.id));
+  findings.length = 0;
+  findings.push(...nonArtifactFindings);
 
   // Sort findings by severity
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -310,6 +335,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     scannedFiles: normalFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
+    informationalArtifacts,
   };
 
   const complianceScore = calculateComplianceScore(result);

@@ -193,6 +193,20 @@
       "acknowledgedBy": "Self-audit reconciliation (PR)",
       "acknowledgedAt": "2026-06-19T00:00:00Z",
       "expiresAt": "2026-12-19T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/exclusions.ts",
+      "id": "enc-des",
+      "reason": "False positive: a doc comment quotes the literal finding title as an example of the self-scan noise this file exists to prevent. No cryptography is used in this file.",
+      "acknowledgedBy": "Simon Franco (triage 2026-07-20)",
+      "acknowledgedAt": "2026-07-20T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/scan.ts",
+      "id": "HIPAA-MFA-001",
+      "reason": "False positive: the MFA heuristic matched the scanner registry map (the line registering authenticationScanner and related scanners). vlayer is a local CLI with no endpoints, no login flow, and no PHI access to gate behind MFA. Scanner confidence was 'low'.",
+      "acknowledgedBy": "Simon Franco (triage 2026-07-20)",
+      "acknowledgedAt": "2026-07-20T00:00:00Z"
     }
   ]
 }
