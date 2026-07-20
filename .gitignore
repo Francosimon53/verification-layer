@@ -29,3 +29,5 @@ vlayer-audit-report.pdf
 test-nextjs-supabase/
 .vlayer-data
 .vercel
+
+.claude/worktrees/
