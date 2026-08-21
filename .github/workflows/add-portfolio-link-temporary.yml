@@ -1,0 +1,47 @@
+name: Add AI evaluation portfolio link (temporary)
+
+on:
+  push:
+    branches:
+      - docs/link-ai-evaluation-portfolio
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: docs/link-ai-evaluation-portfolio
+          fetch-depth: 0
+
+      - name: Add portfolio link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('README.md')
+          text = path.read_text()
+          anchor = '**[Start Here in 2 Minutes](docs/start-here.md)** — Get your first scan running with zero setup.\n'
+          addition = '\n**[AI Evaluation & Verification Portfolio](AI-EVALUATION-PORTFOLIO.md)** — LLM triage, false-positive analysis, bounded model use, adversarial testing, and deterministic safeguards.\n'
+          if 'AI Evaluation & Verification Portfolio' not in text:
+              if anchor not in text:
+                  raise SystemExit('README anchor not found')
+              text = text.replace(anchor, anchor + addition, 1)
+              path.write_text(text)
+          PY
+
+      - name: Commit README change
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "No README change needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: link AI evaluation portfolio from README"
+          git push origin HEAD:docs/link-ai-evaluation-portfolio
