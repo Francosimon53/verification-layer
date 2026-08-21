@@ -12,6 +12,8 @@
 
 **[Start Here in 2 Minutes](docs/start-here.md)** — Get your first scan running with zero setup.
 
+**[AI Evaluation & Verification Portfolio](AI-EVALUATION-PORTFOLIO.md)** — LLM triage, false-positive analysis, bounded model use, adversarial testing, and deterministic safeguards.
+
 ## Quick Start
 
 ```bash
