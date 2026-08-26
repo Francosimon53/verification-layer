@@ -37,6 +37,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The published rule counts are GENERATED from rule-catalog.json into
+      # marker-delimited blocks. This fails if a block was hand-edited, or if the
+      # catalog changed without the docs being regenerated — the drift that let
+      # README claim 131 rules while the engine held 143.
+      - name: Rule counts are not stale
+        run: npm run check:rule-counts
+
       - name: Run tests
         run: npm run test:run
 

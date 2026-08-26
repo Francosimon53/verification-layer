@@ -21,7 +21,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node scripts/build-catalog.mjs",
+    "build": "tsc && node scripts/build-catalog.mjs && node scripts/sync-rule-counts.mjs",
+    "check:rule-counts": "node scripts/sync-rule-counts.mjs --check",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest",
