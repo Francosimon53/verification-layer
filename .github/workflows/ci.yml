@@ -44,6 +44,14 @@ jobs:
       - name: Rule counts are not stale
         run: npm run check:rule-counts
 
+      # A retracted claim needs a guard, not just a deletion. The retracted
+      # coverage line lived in a GENERATED block, so removing it from README.md
+      # alone would have let the generator rewrite it on the next build with no
+      # diff a reviewer would notice. See scripts/check-claims.mjs for the list
+      # and the reason each was withdrawn.
+      - name: No retracted marketing claims
+        run: npm run check:claims
+
       - name: Run tests
         run: npm run test:run
 

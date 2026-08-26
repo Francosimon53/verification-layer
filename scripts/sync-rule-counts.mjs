@@ -65,7 +65,7 @@ const categoryTable = [
 /** Each block: file, marker id, comment syntax, and the generated body. */
 const BLOCKS = [
   { file: 'README.md', id: 'rule-count-lead', style: 'md',
-    body: `**Automated security scanning for healthcare applications.** ${total} detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.` },
+    body: `**Automated security scanning for healthcare applications.** ${total} detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. Technical-safeguard checks aligned to the HIPAA Security Rule.` },
   { file: 'README.md', id: 'rule-count-features', style: 'md',
     body: `- **${total} detection rules** (${pattern} pattern-based + ${ai} AI-powered) across 5 HIPAA categories (PHI exposure, encryption, access control, audit logging, data retention)` },
   { file: 'README.md', id: 'rule-count-pricing', style: 'md',
