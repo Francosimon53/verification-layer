@@ -829,7 +829,7 @@ export class MarketplaceRegistry {
         id: 'hipaa-2026-security-rule',
         name: 'HIPAA 2026 Complete Security Rule Pack',
         description:
-          'Complete set of HIPAA 2026 Security Rule requirements (15/15 technical safeguards now required)',
+          'Technical-safeguard rules aligned to the 2025 HIPAA Security Rule NPRM (90 FR 898)',
         author: {
           name: 'Simon Franco',
           organization: 'verification-layer (vlayer)',
