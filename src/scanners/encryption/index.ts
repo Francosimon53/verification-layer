@@ -46,16 +46,22 @@ function isCommentOrNonFunctional(line: string): boolean {
   return false;
 }
 
+/** Files the encryption scanner is eligible to inspect. Also used as execution evidence. */
+export function selectEncryptionFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.env', '.yaml', '.yml', '.json', '.xml'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+}
+
 export const encryptionScanner: Scanner = {
   name: 'Encryption Scanner',
   category: 'encryption',
+  selectFiles: selectEncryptionFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const config = options.config ?? DEFAULT_CONFIG;
     const contextSize = config.contextLines ?? 2;
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.env', '.yaml', '.yml', '.json', '.xml'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectEncryptionFiles(files);
 
     for (const filePath of codeFiles) {
       try {
@@ -69,6 +75,7 @@ export const encryptionScanner: Scanner = {
             if (pattern.regex.test(line)) {
               findings.push({
                 id: `${pattern.id}-${lineNum}`,
+                canonicalRuleId: pattern.id,
                 category: 'encryption',
                 severity: pattern.severity,
                 title: `Weak cryptography: ${pattern.issue}`,
@@ -100,6 +107,7 @@ export const encryptionScanner: Scanner = {
 
               findings.push({
                 id: `${pattern.id}-${lineNum}`,
+                canonicalRuleId: pattern.id,
                 category: 'encryption',
                 severity: pattern.severity,
                 title: `Encryption issue: ${pattern.issue}`,

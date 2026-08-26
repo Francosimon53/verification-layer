@@ -7,17 +7,22 @@ import * as fs from 'fs/promises';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_RBAC_PATTERNS, type RBACPattern } from './patterns.js';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectRbacFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(js|ts|jsx|tsx|sql|prisma)$/i.test(f)
+  );
+}
+
 export const rbacScanner: Scanner = {
   name: 'Role-Based Access Control Scanner',
   category: 'access-control',
+  selectFiles: selectRbacFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    // Filter to code files
-    const codeFiles = files.filter((f) =>
-      /\.(js|ts|jsx|tsx|sql|prisma)$/i.test(f)
-    );
+    const codeFiles = selectRbacFiles(files);
 
     for (const file of codeFiles) {
       try {
@@ -73,6 +78,7 @@ export const rbacScanner: Scanner = {
             // Create finding
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               category: 'access-control',
               severity: pattern.severity,
               title: pattern.name,
@@ -167,6 +173,7 @@ async function scanPHIAccessWithoutAuthz(
     // Create finding
     findings.push({
       id: pattern.id,
+      canonicalRuleId: pattern.id,
       category: 'access-control',
       severity: pattern.severity,
       title: pattern.name,

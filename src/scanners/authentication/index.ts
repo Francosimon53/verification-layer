@@ -8,17 +8,22 @@ import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_MFA_PATTERNS, type MFAPattern } from './patterns.js';
 import { isImportLine, findWindowedViolations } from '../utils.js';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectAuthenticationFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(js|ts|jsx|tsx|json|yaml|yml|env)$/i.test(f)
+  );
+}
+
 export const authenticationScanner: Scanner = {
   name: 'Multi-Factor Authentication Scanner',
   category: 'access-control', // Map to existing category for now
+  selectFiles: selectAuthenticationFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    // Filter to code and config files
-    const relevantFiles = files.filter((f) =>
-      /\.(js|ts|jsx|tsx|json|yaml|yml|env)$/i.test(f)
-    );
+    const relevantFiles = selectAuthenticationFiles(files);
 
     for (const file of relevantFiles) {
       try {
@@ -64,6 +69,7 @@ export const authenticationScanner: Scanner = {
             }
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               category: 'access-control',
               severity: pattern.severity,
               title: pattern.name,
@@ -128,6 +134,7 @@ async function scanAuthConfig(
   // Create finding for auth config without MFA
   findings.push({
     id: pattern.id,
+    canonicalRuleId: pattern.id,
     category: 'access-control',
     severity: pattern.severity,
     title: pattern.name,

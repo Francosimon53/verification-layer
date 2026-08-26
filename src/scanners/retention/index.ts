@@ -54,16 +54,22 @@ export const RETENTION_ISSUES = [
   },
 ];
 
+/** Files the retention scanner is eligible to inspect. Also used as execution evidence. */
+export function selectRetentionFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.sql', '.yaml', '.yml'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+}
+
 export const retentionScanner: Scanner = {
   name: 'Data Retention Scanner',
   category: 'data-retention',
+  selectFiles: selectRetentionFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const config = options.config ?? DEFAULT_CONFIG;
     const contextSize = config.contextLines ?? 2;
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.sql', '.yaml', '.yml'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectRetentionFiles(files);
 
     for (const filePath of codeFiles) {
       try {
@@ -83,6 +89,7 @@ export const retentionScanner: Scanner = {
 
               findings.push({
                 id: `retention-${issue.id}-${lineNum}`,
+                canonicalRuleId: issue.id,
                 category: 'data-retention',
                 severity: issue.severity,
                 title: issue.title,

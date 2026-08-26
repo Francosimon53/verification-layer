@@ -4,18 +4,23 @@ import { DEFAULT_CONFIG } from '../../config.js';
 import { getContextLines } from '../../utils/context.js';
 import { PHI_PATTERNS } from './patterns.js';
 
+/** Files the PHI scanner is eligible to inspect. Also used as execution evidence. */
+export function selectPhiFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+}
+
 export const phiScanner: Scanner = {
   name: 'PHI Exposure Scanner',
   category: 'phi-exposure',
+  selectFiles: selectPhiFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const config = options.config ?? DEFAULT_CONFIG;
     const contextSize = config.contextLines ?? 2;
 
-    // Filter to code files
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectPhiFiles(files);
 
     for (const filePath of codeFiles) {
       try {
@@ -29,6 +34,7 @@ export const phiScanner: Scanner = {
             if (pattern.regex.test(line)) {
               findings.push({
                 id: `phi-${pattern.id}-${lineNum}`,
+                canonicalRuleId: pattern.id,
                 category: 'phi-exposure',
                 severity: pattern.severity,
                 title: pattern.title,

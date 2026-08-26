@@ -7,17 +7,22 @@ import * as fs from 'fs/promises';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_SANITIZATION_PATTERNS } from './patterns.js';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectSanitizationFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(ts|tsx|js|jsx)$/.test(f)
+  );
+}
+
 export const sanitizationScanner: Scanner = {
   name: 'Input Sanitization Security Scanner',
   category: 'access-control',
+  selectFiles: selectSanitizationFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    // Filter to code files
-    const codeFiles = files.filter((f) =>
-      /\.(ts|tsx|js|jsx)$/.test(f)
-    );
+    const codeFiles = selectSanitizationFiles(files);
 
     for (const file of codeFiles) {
       try {
@@ -94,6 +99,7 @@ export const sanitizationScanner: Scanner = {
             // Create finding
             const finding: Finding = {
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               category: pattern.category as any,
               severity: pattern.severity,
               title: pattern.name,

@@ -16,6 +16,12 @@ import { formatScore, getScoreColor } from './compliance-score.js';
 import { generateAuditorReport } from './reporters/auditor-report.js';
 import { generateScanPdf } from './reporters/scan-pdf-report.js';
 import { loadConfig } from './config.js';
+import { getVersion } from './version.js';
+import { buildAttestation } from './attestation/build.js';
+import { signAttestation } from './attestation/sign.js';
+import { verifyAttestation, verifyExitCode } from './attestation/verify.js';
+import { mkdir } from 'fs/promises';
+import { dirname as pathDirname } from 'path';
 import { resolveBranding } from './reporters/branding.js';
 import { writeFile } from 'fs/promises';
 import type { ComplianceCategory, ReportOptions, AuditReportOptions, ResolvedBranding } from './types.js';
@@ -48,7 +54,7 @@ const program = new Command();
 program
   .name('vlayer')
   .description('HIPAA compliance scanner for healthcare applications')
-  .version('0.2.0');
+  .version(getVersion());
 
 program
   .command('scan')
@@ -259,6 +265,206 @@ program
       }
     } catch (error) {
       spinner.fail('Scan failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+/**
+ * `vlayer attest` — produce a VLayer Attestation V1 for the current commit.
+ *
+ * The CLI is orchestration only: git identity, scanning, adjudication, control
+ * evaluation, policy and serialization all live in src/attestation/.
+ */
+program
+  .command('attest')
+  .description('Generate a VLayer technical-compliance attestation for a Git commit')
+  .argument('[path]', 'Path to the repository to attest', '.')
+  .option('-o, --output <path>', 'Attestation output path', '.vlayer/attestation.json')
+  .option('--sign', 'Cryptographically sign the attestation with Sigstore (keyless)')
+  .option('--bundle-output <path>', 'Sigstore bundle output path', '.vlayer/attestation.sigstore.json')
+  .option('--allow-dirty', 'Allow a dirty working tree (local evaluation only; cannot be signed)')
+  .option('--no-ai', 'Disable AI triage — the strongest reproducibility mode')
+  .option('-c, --categories <categories...>', 'Compliance categories to evaluate')
+  .option('-e, --exclude <patterns>', 'Glob patterns to exclude (comma-separated)')
+  .option('--config <path>', 'Path to configuration file')
+  .option('--baseline <path>', 'Path to baseline file')
+  .option('--min-confidence <level>', 'Minimum confidence level (high, medium, low)')
+  .option('--repository <value>', 'Publish this repository identity instead of the git remote')
+  .option('--no-repository', 'Omit repository identity (a correlation digest is still recorded)')
+  .action(async (path: string, options) => {
+    const spinner = ora('Building attestation...').start();
+    try {
+      // Refuse dirty + --sign before doing any work: a signature asserts an
+      // identity over an immutable snapshot, and a dirty tree has none.
+      if (options.sign && options.allowDirty) {
+        spinner.fail('Refusing to sign a dirty attestation');
+        console.error(
+          chalk.red('--sign cannot be combined with --allow-dirty.') +
+            '\nA signature binds an identity to an immutable source snapshot. Commit first.'
+        );
+        process.exit(1);
+      }
+
+      const excludePatterns = typeof options.exclude === 'string'
+        ? options.exclude.split(',').map((p: string) => p.trim()).filter(Boolean)
+        : undefined;
+
+      const { statement, bytes } = await buildAttestation({
+        path,
+        allowDirty: options.allowDirty === true,
+        repositoryOverride: typeof options.repository === 'string' ? options.repository : undefined,
+        omitRepository: options.repository === false,
+        categories: options.categories as ComplianceCategory[] | undefined,
+        exclude: excludePatterns,
+        configFile: options.config,
+        baselineFile: options.baseline,
+        minConfidence: options.minConfidence as 'high' | 'medium' | 'low' | undefined,
+        enableAI: options.ai !== false,
+      });
+
+      const outputPath = resolve(options.output);
+      await mkdir(pathDirname(outputPath), { recursive: true });
+      // Write the CANONICAL bytes verbatim — this file is the signed payload.
+      await writeFile(outputPath, bytes);
+      spinner.succeed(`Attestation written to ${options.output}`);
+
+      const p = statement.predicate;
+      console.log('');
+      console.log(chalk.bold('VLayer Attestation V1'));
+      console.log(`  Commit:          ${p.target.commit}`);
+      console.log(`  Tree:            ${p.target.tree}`);
+      console.log(`  Branch:          ${p.target.branch ?? '(detached)'}`);
+      console.log(`  Repository:      ${p.target.repository ?? chalk.gray(`(redacted — ${p.target.repositoryHostClass})`)}`);
+      if (p.target.dirty) {
+        console.log(chalk.yellow('  Dirty:           true (local evaluation; not signable)'));
+      }
+      console.log(`  Rule catalog:    ${p.verifier.ruleCatalogDigest.slice(0, 16)}… (${p.verifier.ruleCatalogRuleCount} rules)`);
+      console.log(`  Reproducibility: ${p.scope.reproducibility}`);
+      if (p.verifier.aiTriage.applied) {
+        console.log(chalk.yellow('    AI triage was applied — adjudications are not independently reproducible.'));
+        if (p.verifier.aiTriage.findingsCapped > 0) {
+          console.log(chalk.yellow(`    ${p.verifier.aiTriage.findingsCapped} finding(s) exceeded the triage cap and were NOT AI-verified.`));
+        }
+      }
+      console.log('');
+      console.log(chalk.bold('  Findings'));
+      console.log(
+        `    Detected: ${p.summary.detected}   Blocking: ${p.summary.blocking}   ` +
+        `Review required: ${p.summary.reviewRequired}`
+      );
+      console.log(
+        `    active ${p.summary.active} · false-positive ${p.summary.falsePositives} · ` +
+        `acknowledged ${p.summary.acknowledged} · suppressed ${p.summary.suppressed} · ` +
+        `baseline ${p.summary.baseline} · low-confidence ${p.summary.lowConfidence} · ` +
+        `exception ${p.summary.exceptions}`
+      );
+      if (p.summary.lapsed > 0) {
+        console.log(chalk.yellow(`    ${p.summary.lapsed} expired acknowledgment(s) have lapsed and no longer suppress findings.`));
+      }
+      console.log('');
+      console.log(chalk.bold('  Controls'));
+      console.log(`    Evaluated: ${p.scope.coverage.controlsEvaluated}   Not evaluated: ${p.scope.coverage.controlsNotEvaluated.length}`);
+      console.log(`    Rules executed: ${p.scope.coverage.rulesExecuted}/${p.scope.coverage.rulesInCatalog}   Unmapped rules: ${p.scope.coverage.rulesWithoutControlMapping}`);
+      console.log('');
+
+      const conclusionColor = p.policy.conclusion === 'pass'
+        ? chalk.green
+        : p.policy.conclusion === 'fail'
+          ? chalk.red
+          : chalk.yellow;
+      console.log(chalk.bold('  VLayer policy conclusion: ') + conclusionColor(p.policy.conclusion.toUpperCase()));
+      console.log(chalk.gray(`    ${p.policy.reasons.join(', ')}`));
+      console.log(chalk.gray('    A policy pass means the evaluated release satisfies the configured VLayer'));
+      console.log(chalk.gray('    technical policy within the evidence scope evaluated. It is not a statement'));
+      console.log(chalk.gray('    of HIPAA compliance.'));
+
+      if (options.sign) {
+        const signSpinner = ora('Signing attestation with Sigstore...').start();
+        try {
+          const bundle = await signAttestation(bytes, { dirty: p.target.dirty });
+          const bundlePath = resolve(options.bundleOutput);
+          await mkdir(pathDirname(bundlePath), { recursive: true });
+          await writeFile(bundlePath, JSON.stringify(bundle, null, 2));
+          signSpinner.succeed(`Sigstore bundle written to ${options.bundleOutput}`);
+          console.log(chalk.gray(`    The bundle signs the exact ${bytes.length} bytes of ${options.output}.`));
+        } catch (error) {
+          signSpinner.fail('Signing failed');
+          console.error(chalk.red(error instanceof Error ? error.message : 'Unknown signing error'));
+          process.exit(1);
+        }
+      }
+    } catch (error) {
+      spinner.fail('Attestation failed');
+      console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+      process.exit(1);
+    }
+  });
+
+/**
+ * `vlayer verify` — verify an attestation, reporting four INDEPENDENT verdicts.
+ * "Cryptographically verified" is printed only when a signature actually verified.
+ */
+program
+  .command('verify')
+  .description('Verify a VLayer attestation (schema, subject, signature, policy)')
+  .argument('<attestation>', 'Path to the attestation JSON')
+  .option('--bundle <path>', 'Path to the Sigstore bundle')
+  .option('--path <repositoryPath>', 'Repository to check the attestation subject against')
+  .option('--print', 'Pretty-print the attestation (the file itself is not modified)')
+  .action(async (attestation: string, options) => {
+    try {
+      const outcome = await verifyAttestation({
+        attestationPath: resolve(attestation),
+        bundlePath: options.bundle ? resolve(options.bundle) : undefined,
+        repositoryPath: options.path ? resolve(options.path) : undefined,
+      });
+
+      const mark = (ok: boolean) => (ok ? chalk.green('✔') : chalk.red('✘'));
+
+      console.log(chalk.bold('\nVLayer attestation verification'));
+      console.log(`  ${mark(outcome.schema === 'valid')} Schema:    ${outcome.schema}`);
+      for (const err of outcome.schemaErrors.slice(0, 10)) {
+        console.log(chalk.red(`      ${err}`));
+      }
+
+      const subjectOk = outcome.subject === 'valid';
+      const subjectIcon = outcome.subject === 'not_checked' ? chalk.gray('–') : mark(subjectOk);
+      console.log(`  ${subjectIcon} Subject:   ${outcome.subject}${outcome.subjectDetail ? chalk.gray(` (${outcome.subjectDetail})`) : ''}`);
+      if (outcome.subject === 'not_checked') {
+        console.log(chalk.gray('      Pass --path <repo> to bind this attestation to a working tree.'));
+      }
+
+      switch (outcome.signature) {
+        case 'valid':
+          console.log(`  ${chalk.green('✔')} Signature: valid` + chalk.gray(` (${outcome.signatureDetail})`));
+          break;
+        case 'not_provided':
+          console.log(`  ${chalk.gray('–')} Signature: not provided`);
+          console.log(chalk.gray('      This attestation is unsigned. Its integrity is NOT cryptographically'));
+          console.log(chalk.gray('      established. Pass --bundle <path> to verify a Sigstore signature.'));
+          break;
+        case 'not_verifiable':
+          console.log(`  ${chalk.red('✘')} Signature: not verifiable` + chalk.gray(` (${outcome.signatureDetail})`));
+          break;
+        default:
+          console.log(`  ${chalk.red('✘')} Signature: invalid` + chalk.gray(` (${outcome.signatureDetail})`));
+      }
+
+      if (outcome.policy) {
+        const color = outcome.policy === 'pass' ? chalk.green : outcome.policy === 'fail' ? chalk.red : chalk.yellow;
+        console.log(`  ${chalk.gray('·')} Policy:    ${color(outcome.policy)}` + chalk.gray(` (${outcome.policyReasons.join(', ')})`));
+        console.log(chalk.gray('      A VLayer policy conclusion is a technical-control statement about the'));
+        console.log(chalk.gray('      evaluated scope. It is not a HIPAA compliance determination.'));
+      }
+      console.log('');
+
+      if (options.print && outcome.statement) {
+        console.log(JSON.stringify(outcome.statement, null, 2));
+      }
+
+      process.exit(verifyExitCode(outcome));
+    } catch (error) {
       console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
       process.exit(1);
     }

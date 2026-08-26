@@ -14,12 +14,16 @@ export {
   RuleRunner,
   triageFinding,
   triageFindings,
+  summarizeTriage,
+  triageFailureReason,
+  TRIAGE_REASONS,
   AI_RULES,
 } from './rules/index.js';
 export type {
   LLMRule,
   AIFinding,
   TriagedFinding,
+  TriageOutcome,
   TriageClassification,
   LLMRuleResponse,
   TriageResponse,

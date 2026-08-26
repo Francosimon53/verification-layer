@@ -62,16 +62,22 @@ export const ACCESS_CONTROL_ISSUES = [
   },
 ];
 
+/** Files the access-control scanner is eligible to inspect. Also used as execution evidence. */
+export function selectAccessFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.sql'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+}
+
 export const accessScanner: Scanner = {
   name: 'Access Control Scanner',
   category: 'access-control',
+  selectFiles: selectAccessFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const config = options.config ?? DEFAULT_CONFIG;
     const contextSize = config.contextLines ?? 2;
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.sql'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectAccessFiles(files);
 
     for (const filePath of codeFiles) {
       try {
@@ -85,6 +91,7 @@ export const accessScanner: Scanner = {
             if (issue.regex.test(line)) {
               findings.push({
                 id: `access-${issue.id}-${lineNum}`,
+                canonicalRuleId: issue.id,
                 category: 'access-control',
                 severity: issue.severity,
                 title: issue.title,

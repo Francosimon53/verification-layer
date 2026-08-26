@@ -16,17 +16,23 @@ import { dirname, resolve } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
-const { RULE_CATALOG, getCategoryCounts } = await import(
+const { RULE_CATALOG, getCategoryCounts, ruleCatalogDigest } = await import(
   resolve(repoRoot, 'dist', 'index.js')
 );
 
 const pkg = JSON.parse(await readFile(resolve(repoRoot, 'package.json'), 'utf-8'));
 const counts = getCategoryCounts();
 
+// The digest an attestation records as `verifier.ruleCatalogDigest`. Emitting
+// it here lets a reviewer confirm which logical catalog a build shipped without
+// diffing 143 rules by hand.
+const digest = ruleCatalogDigest();
+
 const payload = {
   package: pkg.name,
   version: pkg.version,
   total: RULE_CATALOG.length,
+  digest,
   counts,
   rules: RULE_CATALOG,
 };
@@ -43,4 +49,5 @@ for (const [category, n] of Object.entries(counts)) {
   console.log(`  ${category.padEnd(16)} ${n}`);
 }
 console.log('  ' + '-'.repeat(20));
-console.log(`  ${'TOTAL'.padEnd(16)} ${RULE_CATALOG.length}  (${patternCount} pattern + ${aiCount} AI)\n`);
+console.log(`  ${'TOTAL'.padEnd(16)} ${RULE_CATALOG.length}  (${patternCount} pattern + ${aiCount} AI)`);
+console.log(`  ${'DIGEST'.padEnd(16)} ${digest}\n`);

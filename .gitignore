@@ -31,3 +31,7 @@ test-nextjs-supabase/
 .vercel
 
 .claude/worktrees/
+
+# Stale local artifacts from an earlier session — not part of the repo
+.playwright-mcp/
+vlayer-app-home.png

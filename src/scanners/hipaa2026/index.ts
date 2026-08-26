@@ -282,19 +282,24 @@ function formatPHIFlowMap(flows: PHIFlowNode[]): string {
   return report;
 }
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectHipaa2026Files(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs)$/i.test(f)
+  );
+}
+
 export const hipaa2026Scanner: Scanner = {
   name: 'HIPAA 2026 Security Rule Scanner',
   category: 'access-control',
+  selectFiles: selectHipaa2026Files,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const assetInventory: AssetInventoryItem[] = [];
     const phiFlowMap: PHIFlowNode[] = [];
 
-    // Filter to code files only
-    const codeFiles = files.filter((f) =>
-      /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs)$/i.test(f)
-    );
+    const codeFiles = selectHipaa2026Files(files);
 
     for (const file of codeFiles) {
       try {
@@ -333,6 +338,7 @@ export const hipaa2026Scanner: Scanner = {
           for (const v of violations) {
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               category: pattern.category as any,
               severity: pattern.severity,
               title: pattern.name,
@@ -359,6 +365,7 @@ export const hipaa2026Scanner: Scanner = {
       if (!hasVulnScanning) {
         findings.push({
           id: pentestPattern.id,
+          canonicalRuleId: pentestPattern.id,
           category: pentestPattern.category as any,
           severity: pentestPattern.severity,
           title: pentestPattern.name,
@@ -376,6 +383,7 @@ export const hipaa2026Scanner: Scanner = {
     if (assetInventory.length > 0) {
       findings.push({
         id: 'HIPAA-ASSET-001',
+        canonicalRuleId: 'HIPAA-ASSET-001',
         category: 'data-retention',
         severity: 'info',
         title: 'ePHI Technology Asset Inventory Generated',
@@ -393,6 +401,7 @@ export const hipaa2026Scanner: Scanner = {
     if (phiFlowMap.length > 0) {
       findings.push({
         id: 'HIPAA-FLOW-001',
+        canonicalRuleId: 'HIPAA-FLOW-001',
         category: 'data-retention',
         severity: 'info',
         title: 'ePHI Flow Map Generated',

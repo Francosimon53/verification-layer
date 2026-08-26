@@ -2,7 +2,7 @@
  * Types for AI-powered rules
  */
 
-import type { Finding, Confidence } from '../../types.js';
+import type { Finding, Confidence, TriageOutcome } from '../../types.js';
 
 export type TriageClassification =
   | 'confirmed'
@@ -15,10 +15,23 @@ export interface AIFinding extends Finding {
   confidence: Confidence;
 }
 
+/**
+ * Re-exported for consumers of the AI module. The canonical declaration lives in
+ * `src/types.ts` so that a plain `Finding` can carry triage state too — the
+ * attestation's `filtered` collection holds `Finding`s that were triaged.
+ */
+export type { TriageOutcome };
+
 export interface TriagedFinding extends Finding {
   aiClassification: TriageClassification;
   aiConfidence: number;
+  /** Human-readable explanation. NEVER parse this — switch on `triageOutcome`. */
   aiReasoning: string;
+  /**
+   * Explicit triage state, REQUIRED here (narrowed from the optional field on
+   * `Finding`): anything that has been through triage always has an outcome.
+   */
+  triageOutcome: TriageOutcome;
   source: 'static' | 'ast';
 }
 

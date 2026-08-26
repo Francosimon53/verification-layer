@@ -246,16 +246,22 @@ export const SECURITY_PATTERNS: Array<{
   },
 ];
 
+/** Files the security scanner is eligible to inspect. Also used as execution evidence. */
+export function selectSecurityFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.env', '.sql'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+}
+
 export const securityScanner: Scanner = {
   name: 'Security Scanner',
   category: 'access-control', // Using access-control category for now
+  selectFiles: selectSecurityFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
     const config = options.config ?? DEFAULT_CONFIG;
     const contextSize = config.contextLines ?? 2;
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rb', '.php', '.env', '.sql'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectSecurityFiles(files);
 
     for (const filePath of codeFiles) {
       // Skip test files for some patterns to reduce noise
@@ -277,6 +283,7 @@ export const securityScanner: Scanner = {
 
               findings.push({
                 id: `security-${pattern.id}-${lineNum}`,
+                canonicalRuleId: pattern.id,
                 category: 'access-control',
                 severity: pattern.severity,
                 title: pattern.title,

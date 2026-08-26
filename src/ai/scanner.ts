@@ -10,7 +10,7 @@ import { CostTracker } from './cost-tracker.js';
 import { AICache } from './cache.js';
 import { RateLimiter } from './rate-limiter.js';
 import { RuleRunner, AI_RULES } from './rules/index.js';
-import { triageFindings } from './rules/triage.js';
+import { TRIAGE_REASONS, summarizeTriage, triageFindings } from './rules/triage.js';
 import type { AIFinding, TriagedFinding } from './rules/types.js';
 import type { Finding } from '../types.js';
 
@@ -132,7 +132,8 @@ export async function triageExistingFindings(
       ...f,
       aiClassification: 'likely' as const,
       aiConfidence: 0.5,
-      aiReasoning: 'AI not available',
+      aiReasoning: TRIAGE_REASONS.unavailable,
+      triageOutcome: 'unavailable' as const,
       source: 'static' as const,
     }));
   }
@@ -140,9 +141,8 @@ export async function triageExistingFindings(
   console.log(`🔍 Triaging ${findings.length} findings...`);
   const triaged = await triageFindings(findings, fileContents);
 
-  const cappedCount = triaged.filter(
-    (f) => f.aiReasoning === 'Not AI-verified (triage cap reached) — regex-flagged only'
-  ).length;
+  // Counted from explicit state, not from the reason prose.
+  const cappedCount = summarizeTriage(triaged).capped;
   if (cappedCount > 0) {
     console.warn(
       `⚠️  Triage cap reached: ${cappedCount} of ${findings.length} findings were not ` +

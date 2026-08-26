@@ -41,9 +41,16 @@ export const AUDIT_RULES = [
   },
 ];
 
+/** Files the audit scanner is eligible to inspect. Also used as execution evidence. */
+export function selectAuditFiles(files: string[]): string[] {
+  const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go'];
+  return files.filter(f => codeExtensions.some(ext => f.endsWith(ext)) || f.endsWith('package.json'));
+}
+
 export const auditScanner: Scanner = {
   name: 'Audit Logging Scanner',
   category: 'audit-logging',
+  selectFiles: selectAuditFiles,
 
   async scan(files: string[], options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
@@ -69,6 +76,7 @@ export const auditScanner: Scanner = {
     if (!hasLoggingFramework && packageJsonFiles.length > 0) {
       findings.push({
         id: 'audit-no-framework',
+        canonicalRuleId: 'audit-no-framework',
         category: 'audit-logging',
         severity: 'high',
         title: 'No audit logging framework detected',
@@ -80,8 +88,7 @@ export const auditScanner: Scanner = {
     }
 
     // Check code files for unlogged operations
-    const codeExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go'];
-    const codeFiles = files.filter(f => codeExtensions.some(ext => f.endsWith(ext)));
+    const codeFiles = selectAuditFiles(files).filter(f => !f.endsWith('package.json'));
 
     for (const filePath of codeFiles) {
       // Skip test files
@@ -106,6 +113,7 @@ export const auditScanner: Scanner = {
               if (pattern.test(line) && !hasLogging) {
                 findings.push({
                   id: `audit-unlogged-${action}-${lineNum}`,
+                  canonicalRuleId: 'audit-unlogged-action',
                   category: 'audit-logging',
                   severity: 'medium',
                   title: `PHI ${action} operation may lack audit logging`,

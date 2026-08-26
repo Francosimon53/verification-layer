@@ -7,18 +7,22 @@ import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_API_SECURITY_PATTERNS } from './patterns.js';
 import * as fs from 'fs/promises';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectApiSecurityFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)
+  );
+}
+
 export const apiSecurityScanner: Scanner = {
   name: 'API Security Scanner',
   category: 'access-control',
+  selectFiles: selectApiSecurityFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    for (const file of files) {
-      // Skip non-code files
-      if (!file.match(/\.(ts|tsx|js|jsx|mjs|cjs)$/)) {
-        continue;
-      }
+    for (const file of selectApiSecurityFiles(files)) {
 
       try {
         const content = await fs.readFile(file, 'utf-8');
@@ -73,6 +77,7 @@ export const apiSecurityScanner: Scanner = {
 
               findings.push({
                 id: pattern.id,
+                canonicalRuleId: pattern.id,
                 title: pattern.name,
                 description: `${pattern.description}\n\nCode: ${line.trim()}`,
                 severity: pattern.severity,
@@ -138,6 +143,7 @@ export const apiSecurityScanner: Scanner = {
 
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               title: pattern.name,
               description: `${pattern.description}\n\nCode: ${line.trim()}`,
               severity: pattern.severity,

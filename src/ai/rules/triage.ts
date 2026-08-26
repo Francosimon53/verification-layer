@@ -6,7 +6,50 @@ import { getAIClient } from '../client.js';
 import { AI_CONFIG } from '../config.js';
 import { sanitizeCodeForLLM } from '../sanitizer.js';
 import type { Finding } from '../../types.js';
-import type { TriageResponse, TriagedFinding } from './types.js';
+import type { TriageOutcome, TriageResponse, TriagedFinding } from './types.js';
+
+/**
+ * Canonical user-facing reason strings for each non-verified triage outcome.
+ *
+ * These are PROSE. They exist so the wording is defined in exactly one place —
+ * they are NOT machine-readable state. Anything that needs to know what happened
+ * reads `TriagedFinding.triageOutcome`; see `summarizeTriage`.
+ */
+export const TRIAGE_REASONS = {
+  cap_reached: 'Not AI-verified (triage cap reached) — regex-flagged only',
+  no_content: 'File content not available for triage',
+  unavailable: 'AI not available',
+} as const;
+
+/** Canonical prose for a failed triage call. */
+export function triageFailureReason(error: unknown): string {
+  return `Triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+}
+
+/**
+ * Count triage outcomes from EXPLICIT STATE, never from `aiReasoning` prose.
+ *
+ * Previously the capped count was derived by string-matching the cap message in
+ * two separate places, so rewording user-facing copy would have silently changed
+ * the metric — and the attestation reports that metric as evidence.
+ */
+export function summarizeTriage(triaged: readonly TriagedFinding[]): {
+  submitted: number;
+  capped: number;
+  failed: number;
+  verified: number;
+  noContent: number;
+} {
+  const count = (outcome: TriageOutcome): number =>
+    triaged.filter((f) => f.triageOutcome === outcome).length;
+  return {
+    submitted: triaged.length,
+    capped: count('cap_reached'),
+    failed: count('error'),
+    verified: count('ai_verified'),
+    noContent: count('no_content'),
+  };
+}
 
 const TRIAGE_SYSTEM_PROMPT = `You are a HIPAA compliance expert analyzing potential security findings.
 Your job is to classify findings as:
@@ -86,6 +129,7 @@ Is this a real security issue or a false positive? Respond in JSON:
       aiClassification: triageResult.classification,
       aiConfidence: triageResult.confidence,
       aiReasoning: triageResult.reasoning,
+      triageOutcome: 'ai_verified',
       source: 'static',
     };
   } catch (error) {
@@ -94,7 +138,8 @@ Is this a real security issue or a false positive? Respond in JSON:
       ...finding,
       aiClassification: 'likely',
       aiConfidence: 0.5,
-      aiReasoning: `Triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      aiReasoning: triageFailureReason(error),
+      triageOutcome: 'error',
       source: 'static',
     };
   }
@@ -112,11 +157,15 @@ export async function triageFindings(
 
   // Honest fallback: a finding we did not AI-verify is returned regex-flagged,
   // never dropped, so the report stays complete.
-  const notVerified = (f: Finding, reason: string): TriagedFinding => ({
+  const notVerified = (
+    f: Finding,
+    outcome: Extract<TriageOutcome, 'cap_reached' | 'no_content'>,
+  ): TriagedFinding => ({
     ...f,
     aiClassification: 'likely',
     aiConfidence: 0.5,
-    aiReasoning: reason,
+    aiReasoning: TRIAGE_REASONS[outcome],
+    triageOutcome: outcome,
     source: 'static',
   });
 
@@ -128,12 +177,12 @@ export async function triageFindings(
 
   findings.forEach((finding, i) => {
     if (scheduled >= cap) {
-      out[i] = notVerified(finding, 'Not AI-verified (triage cap reached) — regex-flagged only');
+      out[i] = notVerified(finding, 'cap_reached');
       return;
     }
     const content = fileContents.get(finding.file);
     if (!content) {
-      out[i] = notVerified(finding, 'File content not available for triage');
+      out[i] = notVerified(finding, 'no_content');
       return;
     }
     toTriage.push({ index: i, finding, content });

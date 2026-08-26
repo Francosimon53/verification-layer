@@ -10,9 +10,19 @@ import {
   type CredentialPattern,
 } from './patterns.js';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectCredentialsFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs|yml|yaml|json)$/i.test(f) ||
+    /(?:^|[\\/])\.env(?:\.[\w-]+)*$/i.test(f) || // .env, .env.local, .env.production
+    /\.env$/i.test(f)                            // foo.env
+  );
+}
+
 export const credentialsScanner: Scanner = {
   name: 'Credential Security Scanner',
   category: 'encryption',
+  selectFiles: selectCredentialsFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
@@ -20,11 +30,7 @@ export const credentialsScanner: Scanner = {
     // Filter to code and config files. `.env` plus its variants
     // (.env.local, .env.production, …) are where secrets actually live, so
     // match them explicitly — a plain `env$` extension test misses them.
-    const codeFiles = files.filter((f) =>
-      /\.(js|ts|jsx|tsx|py|java|go|rb|php|cs|yml|yaml|json)$/i.test(f) ||
-      /(?:^|[\\/])\.env(?:\.[\w-]+)*$/i.test(f) || // .env, .env.local, .env.production
-      /\.env$/i.test(f)                            // foo.env
-    );
+    const codeFiles = selectCredentialsFiles(files);
 
     for (const file of codeFiles) {
       try {
@@ -93,6 +99,7 @@ export const credentialsScanner: Scanner = {
             // Create finding
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               category: 'encryption',
               severity: pattern.severity,
               title: pattern.name,
@@ -162,6 +169,7 @@ async function scanWeakPasswordHashing(
     if (isPasswordRelated) {
       findings.push({
         id: pattern.id,
+        canonicalRuleId: pattern.id,
         category: 'encryption',
         severity: pattern.severity,
         title: pattern.name,
