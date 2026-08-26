@@ -19,16 +19,42 @@
  *
  * Signing is OPTIONAL. An unsigned attestation is complete and meaningful; it
  * simply reports `signature: not_provided`.
+ *
+ * IDENTITY: sigstore-js 5.x resolves an OIDC identity through `CIContextProvider`
+ * ONLY. That provider reads GitHub Actions' `ACTIONS_ID_TOKEN_REQUEST_URL` /
+ * `ACTIONS_ID_TOKEN_REQUEST_TOKEN`, or a pre-obtained `SIGSTORE_ID_TOKEN`. There
+ * is no interactive browser or device-code flow in this library — that lives in
+ * cosign and sigstore-python. Verified against sigstore@5.0.0.
+ *
+ * REQUESTED-BUT-FAILED IS NOT UNSIGNED. If a caller asks for a signature and one
+ * cannot be produced, `vlayer attest` writes NOTHING and exits with
+ * SIGNING_FAILED_EXIT_CODE. See that constant for why.
  */
 
 import type { Bundle } from './types-sigstore.js';
+
+/**
+ * Exit code for "a signature was requested and could not be produced".
+ *
+ * Distinct from 1 (general failure) so a script can tell the two apart without
+ * parsing prose: `--sign` that exits 3 means the attestation was built but is
+ * unsigned and was NOT written. Unsigned-BY-REQUEST is exit 0 with an
+ * attestation present and no bundle; signing-FAILED is exit 3 with neither file.
+ */
+export const SIGNING_FAILED_EXIT_CODE = 3;
+
+/** Stable machine-readable marker printed on stderr when signing fails. */
+export const SIGNING_FAILED_MARKER = 'vlayer:signing-failed';
 
 export class SigningUnavailableError extends Error {
   constructor(cause: string) {
     super(
       `[vlayer] Cryptographic signing is unavailable: ${cause}\n` +
-      `Signing uses Sigstore keyless signing and needs an OIDC identity — ` +
-      `an interactive browser locally, or 'permissions: { id-token: write }' in GitHub Actions.`,
+      `Sigstore keyless signing needs an AMBIENT OIDC identity. sigstore-js ships only a\n` +
+      `CI identity provider — there is NO local interactive browser flow (that exists in\n` +
+      `cosign and sigstore-python, not in this library).\n` +
+      `  Supported:  GitHub Actions with 'permissions: { id-token: write }'.\n` +
+      `  Advanced:   export SIGSTORE_ID_TOKEN=<a Sigstore-acceptable OIDC token> and re-run.`,
     );
     this.name = 'SigningUnavailableError';
   }

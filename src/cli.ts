@@ -18,7 +18,7 @@ import { generateScanPdf } from './reporters/scan-pdf-report.js';
 import { loadConfig } from './config.js';
 import { getVersion } from './version.js';
 import { buildAttestation } from './attestation/build.js';
-import { signAttestation } from './attestation/sign.js';
+import { signAttestation, SIGNING_FAILED_EXIT_CODE, SIGNING_FAILED_MARKER } from './attestation/sign.js';
 import { verifyAttestation, verifyExitCode } from './attestation/verify.js';
 import { mkdir } from 'fs/promises';
 import { dirname as pathDirname } from 'path';
@@ -324,10 +324,54 @@ program
       });
 
       const outputPath = resolve(options.output);
+
+      // ATOMICITY: when a signature is requested, sign BEFORE writing anything.
+      //
+      // Writing first and signing second leaves an unsigned attestation at the
+      // exact path downstream steps read. A pipeline whose signing step failed
+      // then finds a well-formed artifact and ships it believing it is signed —
+      // and because `$?` after a pipe reports the last stage, a `| tee`-style
+      // invocation hides the non-zero exit. So on signing failure we write
+      // NOTHING: either both files land, or neither does.
+      //
+      // Chosen over quarantining the file under a `.failed` name because a
+      // second artifact is still discoverable by a glob (`.vlayer/*.json`) and
+      // invites a "just rename it" workaround. Absence cannot be misread.
+      // The cost is recomputing the scan on retry (~1s); the failure is a
+      // configuration error the user fixes once.
+      let signedBundle: Awaited<ReturnType<typeof signAttestation>> | null = null;
+      if (options.sign) {
+        spinner.text = 'Signing attestation with Sigstore...';
+        try {
+          signedBundle = await signAttestation(bytes, { dirty: statement.predicate.target.dirty });
+        } catch (error) {
+          spinner.fail('Signing failed — no attestation written');
+          console.error(chalk.red(error instanceof Error ? error.message : 'Unknown signing error'));
+          console.error(
+            chalk.yellow(
+              `\n${SIGNING_FAILED_MARKER}: a signature was requested and could not be produced.\n` +
+              `Nothing was written to ${options.output}, so no unsigned artifact can be mistaken\n` +
+              `for a signed one. Exit code ${SIGNING_FAILED_EXIT_CODE} distinguishes this from an\n` +
+              `unsigned-by-request run (exit 0, attestation present, no bundle).`
+            )
+          );
+          process.exit(SIGNING_FAILED_EXIT_CODE);
+        }
+      }
+
       await mkdir(pathDirname(outputPath), { recursive: true });
       // Write the CANONICAL bytes verbatim — this file is the signed payload.
       await writeFile(outputPath, bytes);
-      spinner.succeed(`Attestation written to ${options.output}`);
+      if (signedBundle) {
+        const bundlePath = resolve(options.bundleOutput);
+        await mkdir(pathDirname(bundlePath), { recursive: true });
+        await writeFile(bundlePath, JSON.stringify(signedBundle, null, 2));
+        spinner.succeed(
+          `Attestation written to ${options.output}; Sigstore bundle to ${options.bundleOutput}`
+        );
+      } else {
+        spinner.succeed(`Attestation written to ${options.output}`);
+      }
 
       const p = statement.predicate;
       console.log('');
@@ -379,20 +423,11 @@ program
       console.log(chalk.gray('    technical policy within the evidence scope evaluated. It is not a statement'));
       console.log(chalk.gray('    of HIPAA compliance.'));
 
-      if (options.sign) {
-        const signSpinner = ora('Signing attestation with Sigstore...').start();
-        try {
-          const bundle = await signAttestation(bytes, { dirty: p.target.dirty });
-          const bundlePath = resolve(options.bundleOutput);
-          await mkdir(pathDirname(bundlePath), { recursive: true });
-          await writeFile(bundlePath, JSON.stringify(bundle, null, 2));
-          signSpinner.succeed(`Sigstore bundle written to ${options.bundleOutput}`);
-          console.log(chalk.gray(`    The bundle signs the exact ${bytes.length} bytes of ${options.output}.`));
-        } catch (error) {
-          signSpinner.fail('Signing failed');
-          console.error(chalk.red(error instanceof Error ? error.message : 'Unknown signing error'));
-          process.exit(1);
-        }
+      if (signedBundle) {
+        console.log('');
+        console.log(
+          chalk.gray(`  The Sigstore bundle signs the exact ${bytes.length} bytes of ${options.output}.`)
+        );
       }
     } catch (error) {
       spinner.fail('Attestation failed');

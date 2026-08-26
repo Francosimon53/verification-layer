@@ -526,8 +526,49 @@ Signing is **optional**. Existing SHA-256 audit hashes elsewhere in VLayer are
 integrity primitives, **not** authenticated signatures, and are never described
 as "signed".
 
-Signing needs a Sigstore keyless OIDC identity: an interactive browser locally,
-or `permissions: { id-token: write }` in GitHub Actions.
+### Identity: CI only
+
+Keyless signing needs an **ambient OIDC identity**. `sigstore-js` 5.x ships
+exactly one identity provider — `CIContextProvider` — which reads either
+GitHub Actions' `ACTIONS_ID_TOKEN_REQUEST_URL` / `ACTIONS_ID_TOKEN_REQUEST_TOKEN`,
+or a pre-obtained `SIGSTORE_ID_TOKEN`.
+
+**There is no local interactive browser flow.** The browser-based OAuth flow
+people associate with Sigstore lives in `cosign` and `sigstore-python`, not in
+this library. Running `vlayer attest . --sign` on a laptop with no OIDC identity
+will fail, by design and unavoidably.
+
+| Path | How | Status |
+| --- | --- | --- |
+| **GitHub Actions** | `permissions: { id-token: write }` | **Supported.** The intended and tested route. |
+| **`SIGSTORE_ID_TOKEN`** | Obtain a Sigstore-acceptable OIDC token by other means (e.g. `sigstore get-identity-token` from sigstore-python) and export it | Advanced. Tokens are short-lived; this is an escape hatch, not the normal path. |
+| Local interactive browser | — | **Does not exist.** |
+
+### When a signature is requested and cannot be produced
+
+Requesting a signature and silently getting an unsigned artifact is the most
+dangerous shape this command can take: the next pipeline step ships something it
+believes is signed. Note that `$?` after a pipe reports the *last* stage, so
+`vlayer attest . --sign | tee log` hides a non-zero exit.
+
+So `--sign` is **atomic**:
+
+- On success, `attestation.json` **and** the bundle are written together.
+- On failure, **nothing is written** — not to the output path, and not to any
+  nearby quarantine name. A second artifact would still be found by a glob such
+  as `.vlayer/*.json` and invites a "just rename it" workaround; absence cannot
+  be misread.
+- The exit code is **`3`**, distinct from `1` (general failure), and stderr
+  carries the stable marker `vlayer:signing-failed`.
+
+| Outcome | Exit | `attestation.json` | Bundle |
+| --- | --- | --- | --- |
+| Unsigned **by request** (no `--sign`) | `0` | present | absent |
+| Signed successfully | `0` | present | present |
+| Signature **requested and failed** | `3` | **absent** | absent |
+
+A script therefore never has to parse prose to tell "deliberately unsigned" from
+"signing broke".
 
 Files:
 
