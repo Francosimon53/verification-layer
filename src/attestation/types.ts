@@ -110,15 +110,26 @@ export interface AiTriageRecord {
 }
 
 /**
- * A human adjudication. Free-text fields written by users (`reason`,
- * suppression `comment`) can quote code or patient context, so only their
- * digests are recorded.
+ * A human adjudication.
+ *
+ * `by` is published VERBATIM. It is professional attribution — the same category
+ * as a git author line, which this repository already publishes — and recording
+ * who accepted a risk is the entire evidential point of an adjudication. It was
+ * previously digested, which protected nothing (unsalted SHA-256 over a handful
+ * of guessable team names is trivially reversible) while answering no question
+ * an auditor asks. A schema rule rejects values that look like email addresses;
+ * see `AdjudicationRecord.by` in schema.ts.
+ *
+ * Free-text `reason` fields are still digest-only: unlike attribution, a reason
+ * is prose the user writes about a specific finding and can legitimately quote
+ * source or patient context.
  */
 export type AdjudicationRecord =
   | { kind: 'suppressed'; reasonDigest: string }
   | {
       kind: 'exception';
-      byDigest: string;
+      /** Who accepted the risk. Published verbatim; never an email address. */
+      by: string;
       at: string;
       expiresAt: string;
       ticketUrl?: string;
@@ -126,7 +137,8 @@ export type AdjudicationRecord =
     }
   | {
       kind: 'acknowledged';
-      byDigest: string;
+      /** Who accepted the risk. Published verbatim; never an email address. */
+      by: string;
       at: string;
       ticketUrl?: string;
       reasonDigest: string;
@@ -147,7 +159,8 @@ export type AdjudicationRecord =
 export interface LapsedRecord {
   kind: 'acknowledgment';
   expiredAt: string;
-  byDigest: string;
+  /** Who had accepted the risk. Published verbatim; never an email address. */
+  by: string;
   ticketUrl?: string;
 }
 

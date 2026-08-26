@@ -138,7 +138,9 @@ describe('expired acknowledgments are a lapse, not a disposition', () => {
   it('records WHY it re-armed', () => {
     const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), null);
     expect(r.lapsed).toMatchObject({ kind: 'acknowledgment', expiredAt: PAST });
-    expect(r.lapsed!.byDigest).toMatch(/^[0-9a-f]{64}$/);
+    // Attribution is published verbatim — a digest here protected nothing and
+    // told an auditor nothing about who accepted the risk.
+    expect(r.lapsed!.by).toBe('security@example.com');
   });
 
   it('does not confer exception or acknowledged', () => {
@@ -185,7 +187,7 @@ describe('free text never leaves the adjudication as prose', () => {
     expect((r.adjudication as { reasonDigest: string }).reasonDigest).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('digests acknowledgment reasons and acknowledger identity', () => {
+  it('digests the acknowledgment reason but publishes the acknowledger verbatim', () => {
     const r = adjudicate(
       finding({
         acknowledged: true,
@@ -199,7 +201,9 @@ describe('free text never leaves the adjudication as prose', () => {
       null,
     );
     const serialized = JSON.stringify(r);
+    // The REASON is free prose about a specific finding and can quote source.
     expect(serialized).not.toContain('123-45-6789');
-    expect(serialized).not.toContain('alice@oncology.internal');
+    // Attribution is the evidential point of an adjudication, so it is in clear.
+    expect(serialized).toContain('alice@oncology.internal');
   });
 });

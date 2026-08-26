@@ -70,7 +70,7 @@ describe('policy REVIEW_REQUIRED', () => {
         makeFinding({
           disposition: 'baseline',
           policyEffect: 'none',
-          lapsed: { kind: 'acknowledgment', expiredAt: '2020-01-01', byDigest: 'a'.repeat(64) },
+          lapsed: { kind: 'acknowledgment', expiredAt: '2020-01-01', by: 'Security Team' },
         }),
       ],
       controls: [okControl],

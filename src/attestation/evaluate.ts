@@ -194,7 +194,7 @@ export function adjudicate(
       ? {
           kind: 'acknowledgment',
           expiredAt: ack.expiresAt ?? ack.acknowledgedAt,
-          byDigest: digestText(ack.acknowledgedBy),
+          by: ack.acknowledgedBy,
           ...(ack.ticketUrl ? { ticketUrl: ack.ticketUrl } : {}),
         }
       : undefined;
@@ -207,7 +207,7 @@ export function adjudicate(
         dispositionReason: 'acknowledgment-with-expiry',
         adjudication: {
           kind: 'exception',
-          byDigest: digestText(ack.acknowledgedBy),
+          by: ack.acknowledgedBy,
           at: ack.acknowledgedAt,
           expiresAt: expiryOf(ack)!,
           ...(ack.ticketUrl ? { ticketUrl: ack.ticketUrl } : {}),
@@ -221,7 +221,7 @@ export function adjudicate(
       dispositionReason: 'acknowledgment-open-ended',
       adjudication: {
         kind: 'acknowledged',
-        byDigest: digestText(ack.acknowledgedBy),
+        by: ack.acknowledgedBy,
         at: ack.acknowledgedAt,
         ...(ack.ticketUrl ? { ticketUrl: ack.ticketUrl } : {}),
         reasonDigest: digestText(ack.reason),

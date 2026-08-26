@@ -35,6 +35,34 @@ const ISO_DATETIME = z.string().datetime({ offset: true });
 
 const NON_NEG_INT = z.int().min(0);
 
+/**
+ * Attribution for an adjudication, published VERBATIM.
+ *
+ * Digesting this protected nothing — unsalted SHA-256 over a handful of
+ * guessable team names is reversible by anyone who cares — while answering no
+ * question an auditor asks. Attribution is the point of recording an exception,
+ * so it is published in clear.
+ *
+ * Email addresses are REJECTED rather than warned about. `vlayer attest` runs in
+ * CI, where a warning lands in logs nobody reads and the address publishes
+ * anyway; a warning is not a control. Attestations are shareable by design, so a
+ * personal contact detail in one travels further than the config file it came
+ * from. Rejecting costs nothing today because `attest` is unreleased, so no
+ * existing configuration can break — this is the moment to close it.
+ *
+ * Use a name or a team ("Security Team", "Simon Franco (triage 2026-08-26)").
+ */
+const ATTRIBUTION = z
+  .string()
+  .min(1)
+  .refine((v) => !/[^\s@]+@[^\s@]+\.[^\s@]+/.test(v), {
+    message:
+      'contains an email address. `acknowledgedBy` is published VERBATIM in the ' +
+      'attestation, which is meant to be shared, so personal contact details must not ' +
+      'go in it. Edit the matching `acknowledgedFindings[].acknowledgedBy` entry in ' +
+      '.vlayerrc.json to a name or team, e.g. "Security Team".',
+  });
+
 export const DispositionSchema = z.enum([
   'active',
   'false_positive',
@@ -89,7 +117,7 @@ const AdjudicationRecordSchema = z.discriminatedUnion('kind', [
   z
     .object({
       kind: z.literal('exception'),
-      byDigest: SHA256_HEX,
+      by: ATTRIBUTION,
       at: z.string().min(1),
       expiresAt: z.string().min(1),
       ticketUrl: z.string().optional(),
@@ -99,7 +127,7 @@ const AdjudicationRecordSchema = z.discriminatedUnion('kind', [
   z
     .object({
       kind: z.literal('acknowledged'),
-      byDigest: SHA256_HEX,
+      by: ATTRIBUTION,
       at: z.string().min(1),
       ticketUrl: z.string().optional(),
       reasonDigest: SHA256_HEX,
@@ -111,7 +139,7 @@ const LapsedRecordSchema = z
   .object({
     kind: z.literal('acknowledgment'),
     expiredAt: z.string().min(1),
-    byDigest: SHA256_HEX,
+    by: ATTRIBUTION,
     ticketUrl: z.string().optional(),
   })
   .strict();

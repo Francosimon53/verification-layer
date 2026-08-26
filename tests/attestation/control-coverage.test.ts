@@ -123,7 +123,7 @@ describe('control state decision table', () => {
       controls: [{ framework: 'hipaa', controlId: '164.312(b)', rawReference: '§164.312(b)', proposed: false }],
       disposition: 'baseline',
       policyEffect: 'none',
-      lapsed: { kind: 'acknowledgment', expiredAt: '2020-01-01', byDigest: 'a'.repeat(64) },
+      lapsed: { kind: 'acknowledgment', expiredAt: '2020-01-01', by: 'Security Team' },
     });
     const c = evaluate([f], executed).find((x) => x.control.controlId === '164.312(b)')!;
     expect(c.state).toBe('review_required');

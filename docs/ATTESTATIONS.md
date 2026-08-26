@@ -431,14 +431,39 @@ no `title`, `description`, `recommendation`, `context`, `snippet` or `code`
 field, and every schema object is `.strict()`. An accidental object spread fails
 validation *before* anything is written.
 
-User-authored free text is digested, never published:
+User-authored free **prose** is digested, never published:
 
 | Field | In the attestation |
 | --- | --- |
 | AI reasoning prose | `aiTriage.reasoningDigest` (SHA-256) |
-| Acknowledgment reason | `reasonDigest` |
-| Acknowledger identity | `byDigest` |
-| Suppression reason | `reasonDigest` |
+| Acknowledgment reason | `reasonDigest` (SHA-256) |
+| Suppression reason | `reasonDigest` (SHA-256) |
+
+### `acknowledgedBy` is published verbatim
+
+`acknowledgment.acknowledgedBy` appears in the attestation **in clear**, as
+`adjudication.by` and `lapsed.by`. It is **not** digested and **not** protected.
+
+This is deliberate. Attribution is the evidential point of an adjudication: an
+auditor reviewing an accepted risk needs to know *who accepted it*. The field was
+previously digested, which achieved neither goal — an unsalted SHA-256 over a
+handful of guessable team names is reversible by anyone who cares, while
+answering no question an auditor asks. A protection that is claimed but not
+delivered is worse than none, so the claim was removed rather than the field.
+
+Treat `acknowledgedBy` as professional attribution, the same category as a git
+author line: a name or a team.
+
+> **Do not put PHI, patient identifiers, or personal contact details in
+> `acknowledgedBy`.** It is published verbatim in a document designed to be
+> shared with external reviewers.
+
+**Email addresses are rejected, not warned about.** An `acknowledgedBy`
+containing something shaped like an email address fails schema validation, so
+`vlayer attest` writes nothing and exits non-zero with a message naming the
+offending `.vlayerrc.json` entry. A warning was considered and rejected:
+`vlayer attest` runs in CI, where a warning lands in logs nobody reads and the
+address publishes anyway — a warning is not a control.
 
 Local audit evidence (`.vlayer/audit-trail.json`) remains richer and is **not**
 shareable.
