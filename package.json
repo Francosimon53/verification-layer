@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "build": "tsc && node scripts/build-catalog.mjs",
+    "audit:published": "node scripts/audit-published.mjs",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest",
