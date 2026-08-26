@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, FilteredFinding, ScanExecution } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, FilteredFinding, ScanExecution, InformationalArtifact } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -30,6 +30,7 @@ import { triageExistingFindings } from './ai/scanner.js';
 import { summarizeTriage } from './ai/rules/triage.js';
 import { isAIAvailable } from './ai/client.js';
 import { DEFAULT_VLAYER_OUTPUT_EXCLUDES } from './exclusions.js';
+import { isInformationalArtifactRule } from './informational-artifacts.js';
 import * as fs from 'fs/promises';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
@@ -104,6 +105,13 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     '**/build/**',
     '**/.git/**',
     '**/coverage/**',
+    // Dependency lockfiles: machine-generated, not code — integrity hashes
+    // routinely contain substrings that trip content-pattern rules
+    '**/package-lock.json',
+    '**/pnpm-lock.yaml',
+    '**/yarn.lock',
+    '**/bun.lock',
+    '**/bun.lockb',
   ];
 
   // Exclude vlayer's own generated outputs by default so the scanner never
@@ -251,6 +259,47 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   findings.length = 0;
   findings.push(...deduplicatedFindings);
 
+  // Findings detected and then removed from the active collection. Never lost:
+  // every removal is recorded here so the evidence model can account for it.
+  const filtered: FilteredFinding[] = [];
+
+  // Informational artifacts (asset inventory, PHI flow map) are generated
+  // documentation, not violations — lift them out of the findings list into
+  // report metadata so they never count toward stats or the unacknowledged
+  // total.
+  //
+  // Matched on `canonicalRuleId`, NOT on `id`. Several scanners interpolate the
+  // line number into `id` (`phi-<pattern>-42`), so it is a display value: these
+  // two rules happen to emit static ids today, but a future change to how
+  // hipaa2026 builds ids would silently stop this filter matching and let the
+  // artifacts flow back into findings with no error. `canonicalRuleId` is
+  // declared at the emission point and its coverage is enforced by
+  // tests/attestation/rule-identity-coverage.test.ts.
+  const isInformationalArtifact = (f: Finding): boolean =>
+    isInformationalArtifactRule(f.canonicalRuleId);
+
+  const informationalArtifacts: InformationalArtifact[] = findings
+    .filter(isInformationalArtifact)
+    .map(f => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      content: f.recommendation,
+      hipaaReference: f.hipaaReference,
+    }));
+
+  // The artifacts leave `findings` exactly as before — stats and the
+  // unacknowledged total are unchanged — but each lifted finding is ALSO
+  // recorded in `filtered`, so the attestation can represent it with an
+  // explicit `informational` disposition instead of losing it entirely.
+  for (const f of findings.filter(isInformationalArtifact)) {
+    filtered.push({ finding: f, reason: 'informational-artifact' });
+  }
+
+  const nonArtifactFindings = findings.filter(f => !isInformationalArtifact(f));
+  findings.length = 0;
+  findings.push(...nonArtifactFindings);
+
   // Sort findings by severity
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   findings.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
@@ -296,9 +345,6 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     }
     return finding;
   });
-
-  // Findings detected and then removed from the active collection. Never lost.
-  const filtered: FilteredFinding[] = [];
 
   // AI triage provenance. AI triage is NOT reproducible, so an attestation must
   // record whether it actually ran, on how many findings, and how many were left
@@ -438,6 +484,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       capped: aiFindingsCapped,
       failed: aiFindingsFailed,
     },
+    informationalArtifacts,
   };
 
   const complianceScore = calculateComplianceScore(result);

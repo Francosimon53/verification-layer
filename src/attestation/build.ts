@@ -164,6 +164,7 @@ export async function buildAttestation(
     lowConfidence: count((e) => e.disposition === 'low_confidence'),
     exceptions: count((e) => e.disposition === 'exception'),
     lapsed: count((e) => e.lapsed !== undefined),
+    informational: count((e) => e.disposition === 'informational'),
     blocking: count((e) => e.policyEffect === 'blocking'),
     reviewRequired: count((e) => e.policyEffect === 'review_required'),
     unknownRules: count((e) => !e.ruleKnown),

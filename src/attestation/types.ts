@@ -44,6 +44,19 @@ import type { ComplianceCategory, Confidence, Severity } from '../types.js';
  * `isBaseline: true` for both) destroys that distinction. The evidence model
  * must not repeat it.
  *
+ * `informational` covers generated documentation the scanner emits as a finding
+ * — the asset inventory and PHI flow map. `scan()` lifts these out of
+ * `findings` so they never count toward stats; recording them here keeps the
+ * "nothing detected disappears" invariant true. They are inert by construction:
+ * `policyEffect` is always `none`, and `evidenceScope` is always `repository`.
+ *
+ * Crucially, an informational finding must NEVER be able to move a control to
+ * `no_blocking_findings`. `HIPAA-ASSET-001` and `HIPAA-FLOW-001` are the ONLY
+ * two catalog rules mapping to §164.308(a)(1)(ii)(A) (Risk Analysis), so if
+ * they counted as coverage that control would report "evaluated, nothing
+ * blocking" when all that happened is that an inventory was generated. See
+ * `control-mapping.ts`.
+ *
  * `remediated` is RESERVED for M2 cross-release diffing and is never emitted
  * in M1 — M1 evaluates a single release and cannot prove remediation.
  */
@@ -55,6 +68,7 @@ export type FindingDisposition =
   | 'acknowledged'
   | 'baseline'
   | 'low_confidence'
+  | 'informational'
   | 'remediated';
 
 /** Where a canonical rule id came from, or why there isn't one. */
@@ -248,9 +262,20 @@ export type ControlState =
 export interface ControlEvidence {
   /** Catalog rules that map to this control. */
   rulesInUniverse: number;
-  /** Of those, how many actually executed. ZERO forces `not_evaluated`. */
+  /**
+   * Of those, how many actually executed and produced adjudicable evidence.
+   * ZERO forces `not_evaluated`. Rules that only ever emit informational
+   * artifacts do NOT count here — generating an inventory is not evaluating a
+   * control.
+   */
   rulesExecuted: number;
   executedRuleIds: string[];
+  /**
+   * Executed rules whose only output was informational documentation. Reported
+   * so a reviewer can see that something ran without it being mistaken for
+   * control coverage.
+   */
+  informationalOnlyRuleIds: string[];
   /**
    * Evidence classes contributing to this control. M1 is code/repository
    * evidence only; cloud/identity/runtime collectors attach here in M4+.
@@ -270,6 +295,7 @@ export interface ControlEvaluation {
     exceptions: number;
     lowConfidence: number;
     lapsed: number;
+    informational: number;
   };
   fingerprints: string[];
 }
@@ -409,6 +435,7 @@ export interface AttestationSummary {
   lowConfidence: number;
   exceptions: number;
   lapsed: number;
+  informational: number;
   blocking: number;
   reviewRequired: number;
   unknownRules: number;

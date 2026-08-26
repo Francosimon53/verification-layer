@@ -773,6 +773,7 @@ function buildReport(
     scanDuration: result.scanDuration,
     stack: result.stack,
     vulnerabilities,
+    informationalArtifacts: result.informationalArtifacts,
   };
 }
 
@@ -813,6 +814,8 @@ function generateJson(report: Report, complianceScore?: import('../types.js').Co
     stack: report.stack,
     complianceScore,
     vulnerabilities: report.vulnerabilities,
+    // Generated documentation (asset inventory, PHI flow map) — metadata, not findings
+    informationalArtifacts: report.informationalArtifacts,
   };
   return JSON.stringify(output, null, 2);
 }

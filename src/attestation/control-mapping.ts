@@ -22,6 +22,7 @@
  */
 
 import { RULE_CATALOG } from '../rules/catalog.js';
+import { isInformationalArtifactRule } from '../informational-artifacts.js';
 import type { ControlEvaluation, ControlRef, ControlState, FindingEvaluation } from './types.js';
 
 /**
@@ -127,6 +128,23 @@ export interface ControlEvaluationInput {
 }
 
 /**
+ * Rules whose ONLY output in this scan was informational documentation.
+ *
+ * Generating an asset inventory is not evaluating a control. If these counted
+ * as coverage, a control whose entire rule universe is informational would
+ * report `no_blocking_findings` — "evaluated, nothing blocking" — when nothing
+ * was evaluated at all. §164.308(a)(1)(ii)(A) (Risk Analysis) is exactly that
+ * case: HIPAA-ASSET-001 and HIPAA-FLOW-001 are the only two catalog rules that
+ * map to it, and both are informational.
+ *
+ * This is the same invariant as `rulesExecuted === 0` → `not_evaluated`, applied
+ * one level deeper: evidence that cannot be adjudicated is not evidence.
+ */
+function informationalOnlyRules(ruleIds: Iterable<string>): string[] {
+  return [...ruleIds].filter(isInformationalArtifactRule).sort();
+}
+
+/**
  * THE DECISION TABLE. Evaluated in order; the first matching row wins.
  *
  *   1. zero executed rules            → not_evaluated       (checked FIRST)
@@ -193,7 +211,11 @@ export function evaluateControls(input: ControlEvaluationInput): ControlEvaluati
 
   for (const controlId of [...controlIds].sort()) {
     const universe = index.ruleUniverse.get(controlId) ?? new Set<string>();
-    const executed = [...universe].filter((id) => executedRuleIds.has(id)).sort();
+    const allExecuted = [...universe].filter((id) => executedRuleIds.has(id)).sort();
+    // Rules that only produced documentation are reported, but do NOT count as
+    // evaluation evidence — see `informationalOnlyRules`.
+    const informationalRuleIds = informationalOnlyRules(allExecuted);
+    const executed = allExecuted.filter((id) => !isInformationalArtifactRule(id)).sort();
     const findings = byControl.get(controlId) ?? [];
 
     const counts = {
@@ -204,6 +226,7 @@ export function evaluateControls(input: ControlEvaluationInput): ControlEvaluati
       exceptions: findings.filter((f) => f.disposition === 'exception').length,
       lowConfidence: findings.filter((f) => f.disposition === 'low_confidence').length,
       lapsed: findings.filter((f) => f.lapsed !== undefined).length,
+      informational: findings.filter((f) => f.disposition === 'informational').length,
     };
 
     const ref = refByControl.get(controlId) ?? {
@@ -220,6 +243,7 @@ export function evaluateControls(input: ControlEvaluationInput): ControlEvaluati
         rulesInUniverse: universe.size,
         rulesExecuted: executed.length,
         executedRuleIds: executed,
+        informationalOnlyRuleIds: informationalRuleIds,
         // M1 evidence is automated static analysis of a repository. Cloud,
         // identity and runtime collectors attach additional sources here in M4+.
         sources: executed.length > 0
@@ -242,6 +266,7 @@ export function evaluateControls(input: ControlEvaluationInput): ControlEvaluati
       exceptions: unmapped.filter((f) => f.disposition === 'exception').length,
       lowConfidence: unmapped.filter((f) => f.disposition === 'low_confidence').length,
       lapsed: unmapped.filter((f) => f.lapsed !== undefined).length,
+      informational: unmapped.filter((f) => f.disposition === 'informational').length,
     };
     const state: ControlState =
       counts.blocking > 0
@@ -260,6 +285,7 @@ export function evaluateControls(input: ControlEvaluationInput): ControlEvaluati
         rulesInUniverse: 0,
         rulesExecuted: 0,
         executedRuleIds: [],
+        informationalOnlyRuleIds: [],
         sources: [],
       },
       findings: counts,

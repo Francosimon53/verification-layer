@@ -183,8 +183,16 @@ export interface ComplianceScore {
   recommendations: string[];
 }
 
-/** Why a finding was removed from `ScanResult.findings`. */
-export type FilterReason = 'ai-false-positive';
+/**
+ * Why a finding was removed from `ScanResult.findings`.
+ *
+ * `informational-artifact` covers the asset inventory and PHI flow map, which
+ * are generated documentation rather than violations. They are lifted out of
+ * `findings` so they never count toward stats or the unacknowledged total — but
+ * they are still RECORDED here, because a value silently deleted upstream of
+ * the evidence model is a value the attestation can never account for.
+ */
+export type FilterReason = 'ai-false-positive' | 'informational-artifact';
 
 /**
  * A finding that was detected and then removed from the active `findings`
@@ -237,6 +245,20 @@ export interface ScanExecution {
   filesScanned: number;
 }
 
+/**
+ * Informational report artifact (e.g. asset inventory, PHI flow map).
+ * These are generated documentation, not compliance violations — they are
+ * surfaced as report metadata and never count toward finding stats.
+ */
+export interface InformationalArtifact {
+  id: string;
+  title: string;
+  description: string;
+  /** Formatted artifact body (inventory table, flow map, etc.) */
+  content: string;
+  hipaaReference?: string;
+}
+
 export interface ScanResult {
   findings: Finding[];
   groupedFindings: GroupedFinding[];
@@ -251,6 +273,8 @@ export interface ScanResult {
   execution?: ScanExecution;
   /** Whether AI triage was permitted, whether it ran, and what it left unverified. */
   aiTriage?: ScanAiTriage;
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ScanOptions {
@@ -324,6 +348,8 @@ export interface Report {
   scanDuration: number;
   stack?: StackInfo;
   vulnerabilities?: DependencyVulnerability[];
+  /** Generated documentation artifacts (asset inventory, PHI flow map) */
+  informationalArtifacts?: InformationalArtifact[];
 }
 
 export interface ReportOptions {

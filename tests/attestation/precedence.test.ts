@@ -46,20 +46,20 @@ function allConditions(): Finding {
 
 describe('precedence ladder', () => {
   it('1. false_positive wins over everything, including a suppression', () => {
-    const r = adjudicate(allConditions(), true);
+    const r = adjudicate(allConditions(), 'ai-false-positive');
     expect(r.disposition).toBe('false_positive');
     expect(r.dispositionReason).toBe('ai-triage-false-positive');
   });
 
   it('2. suppressed wins once false_positive is removed', () => {
-    expect(adjudicate(allConditions(), false).disposition).toBe('suppressed');
+    expect(adjudicate(allConditions(), null).disposition).toBe('suppressed');
   });
 
   it('3. exception wins once suppression is removed', () => {
     const f = allConditions();
     delete f.suppressed;
     delete f.suppression;
-    const r = adjudicate(f, false);
+    const r = adjudicate(f, null);
     expect(r.disposition).toBe('exception');
     expect(r.adjudication).toMatchObject({ kind: 'exception', expiresAt: FUTURE });
   });
@@ -69,7 +69,7 @@ describe('precedence ladder', () => {
     delete f.suppressed;
     delete f.suppression;
     delete f.acknowledgment!.expiresAt;
-    const r = adjudicate(f, false);
+    const r = adjudicate(f, null);
     expect(r.disposition).toBe('acknowledged');
     expect(r.adjudication).toMatchObject({ kind: 'acknowledged' });
   });
@@ -81,7 +81,7 @@ describe('precedence ladder', () => {
     delete f.acknowledged;
     delete f.acknowledgment;
     delete f.belowMinConfidence;
-    expect(adjudicate(f, false).disposition).toBe('baseline');
+    expect(adjudicate(f, null).disposition).toBe('baseline');
   });
 
   it('6. low_confidence wins once baseline provenance is removed', () => {
@@ -90,13 +90,13 @@ describe('precedence ladder', () => {
     delete f.suppression;
     delete f.acknowledged;
     delete f.acknowledgment;
-    const r = adjudicate(f, false);
+    const r = adjudicate(f, null);
     expect(r.disposition).toBe('low_confidence');
     expect(r.dispositionReason).toBe('below-min-confidence-threshold');
   });
 
   it('7. active is the default once every condition is removed', () => {
-    const r = adjudicate(finding(), false);
+    const r = adjudicate(finding(), null);
     expect(r.disposition).toBe('active');
     expect(r.dispositionReason).toBe('no-adjudication');
   });
@@ -104,10 +104,10 @@ describe('precedence ladder', () => {
 
 describe('low_confidence is NOT baseline', () => {
   it('distinguishes a baseline match from a below-threshold finding', () => {
-    const baseline = adjudicate(finding({ isBaseline: true }), false);
+    const baseline = adjudicate(finding({ isBaseline: true }), null);
     const lowConf = adjudicate(
       finding({ isBaseline: true, belowMinConfidence: true, minConfidenceThreshold: 'high' }),
-      false,
+      null,
     );
     expect(baseline.disposition).toBe('baseline');
     expect(lowConf.disposition).toBe('low_confidence');
@@ -115,7 +115,7 @@ describe('low_confidence is NOT baseline', () => {
   });
 
   it('never reports low_confidence as a baseline sub-kind', () => {
-    const r = adjudicate(finding({ isBaseline: true, belowMinConfidence: true }), false);
+    const r = adjudicate(finding({ isBaseline: true, belowMinConfidence: true }), null);
     expect(r.dispositionReason).not.toContain('baseline');
   });
 });
@@ -130,19 +130,19 @@ describe('expired acknowledgments are a lapse, not a disposition', () => {
   };
 
   it('re-arms the finding as active and blocking', () => {
-    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), false);
+    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), null);
     expect(r.disposition).toBe('active');
     expect(r.dispositionReason).toBe('acknowledgment-expired');
   });
 
   it('records WHY it re-armed', () => {
-    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), false);
+    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), null);
     expect(r.lapsed).toMatchObject({ kind: 'acknowledgment', expiredAt: PAST });
     expect(r.lapsed!.byDigest).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('does not confer exception or acknowledged', () => {
-    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), false);
+    const r = adjudicate(finding({ acknowledged: true, acknowledgment: expiredAck }), null);
     expect(r.disposition).not.toBe('exception');
     expect(r.disposition).not.toBe('acknowledged');
     expect(r.adjudication).toBeUndefined();
@@ -151,7 +151,7 @@ describe('expired acknowledgments are a lapse, not a disposition', () => {
   it('still falls through to baseline when one applies, carrying the lapse', () => {
     const r = adjudicate(
       finding({ acknowledged: true, acknowledgment: expiredAck, isBaseline: true }),
-      false,
+      null,
     );
     expect(r.disposition).toBe('baseline');
     expect(r.lapsed).toBeDefined();
@@ -165,7 +165,7 @@ describe('expired acknowledgments are a lapse, not a disposition', () => {
         suppressed: true,
         suppression: { reason: 'r', comment: 'c' },
       }),
-      false,
+      null,
     );
     expect(r.disposition).toBe('suppressed');
   });
@@ -178,7 +178,7 @@ describe('free text never leaves the adjudication as prose', () => {
         suppressed: true,
         suppression: { reason: 'patient MRN 4451237 is synthetic', comment: 'c' },
       }),
-      false,
+      null,
     );
     expect(JSON.stringify(r)).not.toContain('4451237');
     expect(r.adjudication).toMatchObject({ kind: 'suppressed' });
@@ -196,7 +196,7 @@ describe('free text never leaves the adjudication as prose', () => {
           expired: false,
         },
       }),
-      false,
+      null,
     );
     const serialized = JSON.stringify(r);
     expect(serialized).not.toContain('123-45-6789');

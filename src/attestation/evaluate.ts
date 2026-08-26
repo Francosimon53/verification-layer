@@ -16,7 +16,7 @@
 
 import { relative, isAbsolute, sep } from 'path';
 import { createHash } from 'crypto';
-import type { Confidence, Finding, ScanResult } from '../types.js';
+import type { Confidence, FilterReason, Finding, ScanResult } from '../types.js';
 import { RULE_CATALOG } from '../rules/catalog.js';
 import { computeFindingIdentity, baselineHashRelative } from './fingerprint.js';
 import type {
@@ -157,11 +157,22 @@ interface Adjudicated {
  * suppress a finding forever. That legacy behavior is preserved for backwards
  * compatibility and is not reproduced here.
  */
-export function adjudicate(finding: Finding, wasFilteredAsFalsePositive: boolean): Adjudicated {
+export function adjudicate(
+  finding: Finding,
+  filterReason: FilterReason | null,
+): Adjudicated {
   const ai = finding as Finding & AiFields;
 
+  // 0 — informational artifact. Generated documentation, not a detection at
+  // all, so there is nothing to adjudicate and nothing it can affect. Ranked
+  // above false_positive because it is a statement about what the finding IS,
+  // not a verdict on whether a real detection was correct.
+  if (filterReason === 'informational-artifact') {
+    return { disposition: 'informational', dispositionReason: 'informational-artifact' };
+  }
+
   // 1 — false positive
-  if (wasFilteredAsFalsePositive || ai.aiClassification === 'false_positive') {
+  if (filterReason === 'ai-false-positive' || ai.aiClassification === 'false_positive') {
     return { disposition: 'false_positive', dispositionReason: 'ai-triage-false-positive' };
   }
 
@@ -317,9 +328,9 @@ export function derivePolicyEffect(
   scope: EvidenceScope,
   severity: Finding['severity'],
 ): PolicyEffect {
-  // Anything adjudicated (false positive, suppressed, acknowledged, exception,
-  // baseline, below threshold) has no release effect. `exception` still drives
-  // review through its own policy rule, not through this one.
+  // Anything adjudicated (informational, false positive, suppressed,
+  // acknowledged, exception, baseline, below threshold) has no release effect.
+  // `exception` still drives review through its own policy rule, not this one.
   if (disposition !== 'active') return 'none';
 
   if (scope === 'repository') return 'review_required';
@@ -369,7 +380,7 @@ export interface EvaluateOptions {
 export function evaluateFindings(result: ScanResult, options: EvaluateOptions): FindingEvaluation[] {
   const evaluations: FindingEvaluation[] = [];
 
-  const consider = (finding: Finding, wasFiltered: boolean): void => {
+  const consider = (finding: Finding, filterReason: FilterReason | null): void => {
     const ai = finding as Finding & AiFields;
     const rule = resolveRuleIdentity(finding);
     const isAggregate = AGGREGATE_FILES.has(finding.file);
@@ -388,11 +399,15 @@ export function evaluateFindings(result: ScanResult, options: EvaluateOptions): 
       line,
     );
 
-    const adjudicated = adjudicate(finding, wasFiltered);
+    const adjudicated = adjudicate(finding, filterReason);
     const hasAiVerdict = typeof ai.aiClassification === 'string';
 
     const location: FindingLocation = { path, line, kind };
-    const evidenceScope = classifyEvidenceScope(location);
+
+    const evidenceScope =
+      adjudicated.disposition === 'informational'
+        ? 'repository'
+        : classifyEvidenceScope(location);
     const policyEffect = derivePolicyEffect(
       adjudicated.disposition,
       evidenceScope,
@@ -438,8 +453,8 @@ export function evaluateFindings(result: ScanResult, options: EvaluateOptions): 
     evaluations.push(evaluation);
   };
 
-  for (const finding of result.findings) consider(finding, false);
-  for (const entry of result.filtered ?? []) consider(entry.finding, true);
+  for (const finding of result.findings) consider(finding, null);
+  for (const entry of result.filtered ?? []) consider(entry.finding, entry.reason);
 
   // Deterministic order, independent of scanner execution order.
   evaluations.sort((a, b) => {

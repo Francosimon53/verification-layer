@@ -43,6 +43,7 @@ export const DispositionSchema = z.enum([
   'acknowledged',
   'baseline',
   'low_confidence',
+  'informational',
   'remediated',
 ]);
 
@@ -184,6 +185,14 @@ export const FindingEvaluationSchema = z
   // classified repository-scope.
   .refine((f) => !(f.evidenceScope === 'code' && f.location.line === null), {
     message: 'a code-scope finding must carry a line number',
+  })
+  // Informational artifacts are generated documentation. They are inert by
+  // construction and must never carry a release effect or a code scope.
+  .refine((f) => !(f.disposition === 'informational' && f.policyEffect !== 'none'), {
+    message: 'an informational finding must have policyEffect "none"',
+  })
+  .refine((f) => !(f.disposition === 'informational' && f.evidenceScope !== 'repository'), {
+    message: 'an informational finding must have evidenceScope "repository"',
   });
 
 export const ControlEvaluationSchema = z
@@ -205,6 +214,7 @@ export const ControlEvaluationSchema = z
         rulesInUniverse: NON_NEG_INT,
         rulesExecuted: NON_NEG_INT,
         executedRuleIds: z.array(z.string().min(1)),
+        informationalOnlyRuleIds: z.array(z.string().min(1)),
         sources: z.array(
           z
             .object({
@@ -224,6 +234,7 @@ export const ControlEvaluationSchema = z
         exceptions: NON_NEG_INT,
         lowConfidence: NON_NEG_INT,
         lapsed: NON_NEG_INT,
+        informational: NON_NEG_INT,
       })
       .strict(),
     fingerprints: z.array(SHA256_HEX),
@@ -237,6 +248,23 @@ export const ControlEvaluationSchema = z
   .refine(
     (c) => !(c.control.controlId === 'UNMAPPED' && c.state === 'no_blocking_findings'),
     { message: 'the UNMAPPED pseudo-control can never be "no_blocking_findings"' },
+  )
+  // Generating documentation is not evaluating a control. A control whose only
+  // executed rules were informational must report `not_evaluated`, never
+  // "evaluated and clean" — otherwise §164.308(a)(1)(ii)(A), whose entire rule
+  // universe is HIPAA-ASSET-001 and HIPAA-FLOW-001, would claim Risk Analysis
+  // came back clean on the strength of an inventory having been printed.
+  .refine(
+    (c) =>
+      !(
+        c.evidence.rulesExecuted === 0 &&
+        c.evidence.informationalOnlyRuleIds.length > 0 &&
+        c.state !== 'not_evaluated'
+      ),
+    {
+      message:
+        'a control whose only executed rules are informational must be "not_evaluated"',
+    },
   );
 
 const TargetSchema = z
@@ -339,6 +367,7 @@ const SummarySchema = z
     lowConfidence: NON_NEG_INT,
     exceptions: NON_NEG_INT,
     lapsed: NON_NEG_INT,
+    informational: NON_NEG_INT,
     blocking: NON_NEG_INT,
     reviewRequired: NON_NEG_INT,
     unknownRules: NON_NEG_INT,
