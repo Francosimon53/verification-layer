@@ -245,9 +245,9 @@ export class MarketplaceRegistry {
         description:
           'Ensures parental consent before collecting data from minors under 13 (California CIPA compliance)',
         author: {
-          name: 'Healthcare Compliance Team',
-          organization: 'CA Department of Health',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.2.0',
         framework: 'state-law',
@@ -291,9 +291,9 @@ export class MarketplaceRegistry {
         description:
           'Validates that prior authorization is obtained before high-cost procedures (BCBS requirement)',
         author: {
-          name: 'John Smith',
-          organization: 'Blue Cross Blue Shield',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '2.0.1',
         framework: 'payer-specific',
@@ -337,9 +337,9 @@ export class MarketplaceRegistry {
         description:
           'Validates FHIR R4 resources have required fields before transmission',
         author: {
-          name: 'HL7 Community',
-          organization: 'HL7 International',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.5',
         framework: 'framework-specific',
@@ -379,9 +379,9 @@ export class MarketplaceRegistry {
         description:
           'Ensures PHI is encrypted at rest per NY SHIELD Act requirements',
         author: {
-          name: 'NY State Health Dept',
-          organization: 'New York Department of Health',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.1.0',
         framework: 'state-law',
@@ -414,9 +414,9 @@ export class MarketplaceRegistry {
         description:
           'Ensures all Medicare claims modifications are logged per CMS requirements',
         author: {
-          name: 'CMS Compliance',
-          organization: 'Centers for Medicare & Medicaid Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.3.2',
         framework: 'payer-specific',
@@ -451,9 +451,9 @@ export class MarketplaceRegistry {
         description:
           'Endpoints accessing PHI must enforce MFA per new HIPAA 2026 Security Rule',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -495,9 +495,9 @@ export class MarketplaceRegistry {
         description:
           'All ePHI must be encrypted at rest using AES-256 or stronger per HIPAA 2026',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -531,9 +531,9 @@ export class MarketplaceRegistry {
         description:
           'PHI access sessions must auto-expire within 15 minutes of inactivity',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -567,9 +567,9 @@ export class MarketplaceRegistry {
         description:
           'User deactivation must immediately invalidate all sessions and tokens',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -603,9 +603,9 @@ export class MarketplaceRegistry {
         description:
           'Must have automated breach detection and notification within 24 hours',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -639,9 +639,9 @@ export class MarketplaceRegistry {
         description:
           'PHI services must be network-segmented with restricted CORS and firewall rules',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -675,9 +675,9 @@ export class MarketplaceRegistry {
         description:
           'Automatic inventory of all systems processing, storing, or transmitting ePHI',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -711,9 +711,9 @@ export class MarketplaceRegistry {
         description:
           'Automatic mapping of PHI data flow through system (input → processing → storage → output)',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -746,9 +746,9 @@ export class MarketplaceRegistry {
         description:
           'Must have automated vulnerability scanning (Dependabot, Snyk, Trivy) in CI/CD',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
-          verified: true,
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
+          verified: false,
         },
         version: '1.0.0',
         framework: 'hipaa',
@@ -788,8 +788,8 @@ export class MarketplaceRegistry {
         description:
           'Complete set of California-specific healthcare compliance rules (CIPA, CMIA, CCPA)',
         author: {
-          name: 'CA Health Dept',
-          organization: 'California Department of Public Health',
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
         },
         version: '2.1.0',
         rules: ['ca-cipa-minors-consent', 'ca-cmia-disclosure', 'ca-ccpa-deletion'],
@@ -802,7 +802,8 @@ export class MarketplaceRegistry {
         name: 'BCBS Complete Compliance',
         description: 'All Blue Cross Blue Shield payer-specific requirements',
         author: {
-          name: 'BCBS Network',
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
         },
         version: '1.5.0',
         rules: ['bcbs-prior-auth', 'bcbs-network-verification', 'bcbs-timely-filing'],
@@ -815,8 +816,8 @@ export class MarketplaceRegistry {
         name: 'FHIR Implementation Starter Pack',
         description: 'Essential FHIR R4 validation and compliance rules',
         author: {
-          name: 'HL7 Community',
-          organization: 'HL7 International',
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
         },
         version: '3.0.0',
         rules: ['fhir-r4-validation', 'fhir-resource-references', 'fhir-security-labels'],
@@ -830,8 +831,8 @@ export class MarketplaceRegistry {
         description:
           'Complete set of HIPAA 2026 Security Rule requirements (15/15 technical safeguards now required)',
         author: {
-          name: 'HHS Office for Civil Rights',
-          organization: 'U.S. Department of Health & Human Services',
+          name: 'Simon Franco',
+          organization: 'verification-layer (vlayer)',
         },
         version: '1.0.0',
         rules: [

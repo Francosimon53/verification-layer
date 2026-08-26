@@ -1,6 +1,6 @@
 # vlayer - HIPAA Compliance on Every Commit
 
-**Automated security scanning for healthcare applications.** 131 detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.
+**Automated security scanning for healthcare applications.** 143 detection rules that catch PHI exposures, missing encryption, and access control gaps before they reach production. HIPAA 2026 ready - 15/15 requirements covered.
 
 [![CI](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/Francosimon53/verification-layer/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/verification-layer)](https://www.npmjs.com/package/verification-layer)
@@ -42,7 +42,7 @@ npx @francosimon/vlayer scan ./src --fix
 vlayer is a CLI tool and platform that scans your codebase for HIPAA compliance issues. Built for healthcare startups and developers building applications that handle Protected Health Information (PHI).
 
 **🎯 Key Features:**
-- **131 detection rules** (125 pattern-based + 6 AI-powered) across 5 HIPAA categories (PHI exposure, encryption, access control, audit logging, data retention)
+- **143 detection rules** (137 pattern-based + 6 AI-powered) across 5 HIPAA categories (PHI exposure, encryption, access control, audit logging, data retention)
 - **HIPAA 2026 NPRM ready** - Covers all 15 new cybersecurity requirements
 - **10 training modules** with 45+ questions and SHA-256 verifiable certificates
 - **5 HIPAA templates** - IRP, BAA, NPP, Security Officer role, Physical Safeguards
@@ -68,7 +68,7 @@ vlayer is a CLI tool and platform that scans your codebase for HIPAA compliance 
 
 | Plan | Price | Features |
 |------|-------|----------|
-| **Open Source** | **$0/forever** | Full scanner, CLI, 131 rules, compliance scoring, training module, community support |
+| **Open Source** | **$0/forever** | Full scanner, CLI, 143 rules, compliance scoring, training module, community support |
 | **Pro** | **$49/month** ($490/year) | Everything in OSS + GitHub App with PR comments, pre-commit hooks, historical scan dashboard, HIPAA document templates, team tracking (10 users), PDF audit reports, email support (48h SLA). **14-day free trial** |
 | **Enterprise** | **Custom** | Everything in Pro + custom detection rules, self-hosted deployment, SSO/RBAC integration, dedicated compliance consultant, custom training modules, audit preparation support, priority support (4h SLA). Contact: [sales@vlayer.app](mailto:sales@vlayer.app) |
 
@@ -106,7 +106,7 @@ The new HIPAA Security Rule (NPRM 2026) adds 15 cybersecurity requirements. vlay
 
 ## 📊 Detection Categories
 
-vlayer scans for **131 rules (125 pattern-based + 6 AI-powered)** across 5 HIPAA compliance categories:
+vlayer scans for **143 rules (137 pattern-based + 6 AI-powered)** across 5 HIPAA compliance categories:
 
 | Category | Rules | What it detects |
 |----------|-------|-----------------|
@@ -123,7 +123,7 @@ vlayer scans for **131 rules (125 pattern-based + 6 AI-powered)** across 5 HIPAA
 | **Session Management** | 8 | Weak session configs, missing timeouts, insecure cookies |
 | **Third-Party Risk** | 6 | Unsafe vendor integrations, missing BAAs, unvetted third-party code |
 
-**Total: 131 rules (125 pattern-based + 6 AI-powered)**
+**Total: 143 rules (137 pattern-based + 6 AI-powered)**
 
 ---
 
