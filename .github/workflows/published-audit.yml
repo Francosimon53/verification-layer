@@ -1,0 +1,106 @@
+name: Published artifact audit
+
+# Reads what is actually on the npm registry and compares it with this
+# repository. False authorship metadata shipped in 21 published versions over
+# six and a half months because nothing was watching the published artifact.
+#
+# This is the check that would have caught it. A synced package.json version
+# would not have: semantic-release computes releases from the git tag, so that
+# field never affected what shipped.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'      # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write               # to open/update the tracking issue
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # tags are required for the comparison
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit the published artifact
+        id: audit
+        run: |
+          set +e
+          node scripts/audit-published.mjs --json > /tmp/audit.json
+          echo "exit=$?" >> $GITHUB_OUTPUT
+          set -e
+          node scripts/audit-published.mjs || true
+
+      - name: Open or update the tracking issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const result = JSON.parse(fs.readFileSync('/tmp/audit.json', 'utf8'));
+            const TITLE = 'Published artifact does not match the repository';
+            const LABEL = 'published-audit';
+
+            const existing = (await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: LABEL,
+            })).data.find(i => i.title === TITLE);
+
+            if (result.ok) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `Resolved — the published artifact now matches the repository.\n\n` +
+                        result.context.map(c => `- ${c}`).join('\n') +
+                        `\n\n_Closed automatically by the published-artifact audit._`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+              }
+              core.info('Published artifact matches the repository.');
+              return;
+            }
+
+            const body = [
+              `The audit compares what is on the npm registry against this repository.`,
+              `It found ${result.findings.length} problem(s) in the currently published package.`,
+              ``,
+              `### Findings`,
+              ...result.findings.map(f => `\n**${f.title}**\n\n${f.detail}`),
+              ``,
+              `### Context`,
+              ...result.context.map(c => `- ${c}`),
+              ``,
+              `---`,
+              `Each published artifact is compared against the git tag it claims to come`,
+              `from, not against \`main\` — the repository legitimately moves ahead of the`,
+              `registry between releases.`,
+              ``,
+              `\`package.json\`'s version drifts from npm by design and is reported as`,
+              `context only, never as a failure.`,
+              ``,
+              `_Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}_`,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+              core.setFailed(`Updated issue #${existing.number}: ${result.findings.length} finding(s).`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: TITLE, body, labels: [LABEL],
+              });
+              core.setFailed(`Opened issue #${created.data.number}: ${result.findings.length} finding(s).`);
+            }
