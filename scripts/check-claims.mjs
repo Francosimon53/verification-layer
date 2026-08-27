@@ -57,6 +57,11 @@ function trackedFiles() {
     f !== 'rule-catalog.json' &&
     // this file necessarily contains the strings it forbids
     f !== 'scripts/check-claims.mjs' &&
+    // so does the published-artifact auditor: it carries the same RETRACTED
+    // list to check the tarball on the registry. It arrived on main in PR #85,
+    // after this exclusion list was written, so the two guards flagged
+    // each other on the first merge.
+    f !== 'scripts/audit-published.mjs' &&
     // the test that proves the guard works must be able to name them too
     f !== 'tests/claims.test.ts'
   );
