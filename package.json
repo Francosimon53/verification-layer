@@ -24,6 +24,7 @@
     "build": "tsc && node scripts/build-catalog.mjs && node scripts/sync-rule-counts.mjs",
     "check:rule-counts": "node scripts/sync-rule-counts.mjs --check",
     "check:claims": "node scripts/check-claims.mjs",
+    "audit:published": "node scripts/audit-published.mjs",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest",
