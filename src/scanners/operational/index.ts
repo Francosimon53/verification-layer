@@ -8,9 +8,17 @@ import { ALL_OPERATIONAL_PATTERNS, DATABASE_WITHOUT_BACKUP } from './patterns.js
 import { isImportLine } from '../utils.js';
 import * as fs from 'fs/promises';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectOperationalFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)
+  );
+}
+
 export const operationalScanner: Scanner = {
   name: 'Operational Security Scanner',
   category: 'data-retention',
+  selectFiles: selectOperationalFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
@@ -22,11 +30,7 @@ export const operationalScanner: Scanner = {
     }
 
     // Handle other patterns with line-by-line scanning
-    for (const file of files) {
-      // Skip non-code files
-      if (!file.match(/\.(ts|tsx|js|jsx|mjs|cjs)$/)) {
-        continue;
-      }
+    for (const file of selectOperationalFiles(files)) {
 
       try {
         const content = await fs.readFile(file, 'utf-8');
@@ -97,6 +101,7 @@ export const operationalScanner: Scanner = {
 
             findings.push({
               id: pattern.id,
+              canonicalRuleId: pattern.id,
               title: pattern.name,
               description: `${pattern.description}\n\nCode: ${line.trim()}`,
               severity: pattern.severity,
@@ -183,6 +188,7 @@ async function scanForBackupConfiguration(files: string[]): Promise<Finding | nu
   if (anchor && !hasBackupConfig) {
     return {
       id: DATABASE_WITHOUT_BACKUP.id,
+      canonicalRuleId: DATABASE_WITHOUT_BACKUP.id,
       title: DATABASE_WITHOUT_BACKUP.name,
       description: `${DATABASE_WITHOUT_BACKUP.description}\n\nCode: ${anchor.code}`,
       severity: DATABASE_WITHOUT_BACKUP.severity,

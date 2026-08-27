@@ -7,22 +7,26 @@ import { readFile } from 'fs/promises';
 import type { Scanner, Finding, ScanOptions } from '../../types.js';
 import { ALL_SKILL_PATTERNS } from './patterns.js';
 
+/** Files this scanner is eligible to inspect. Also used as execution evidence. */
+export function selectSkillFiles(files: string[]): string[] {
+  return files.filter((f) =>
+    f.endsWith('SKILL.md') ||
+    f.endsWith('skill.md') ||
+    f.endsWith('.skill.md') ||
+    f.includes('/skills/') ||
+    f.includes('/.clawrc/')
+  );
+}
+
 export const skillsScanner: Scanner = {
   name: 'AI Agent Skills Scanner',
   category: 'access-control',
+  selectFiles: selectSkillFiles,
 
   async scan(files: string[], _options: ScanOptions): Promise<Finding[]> {
     const findings: Finding[] = [];
 
-    // Filter to only SKILL.md files
-    const skillFiles = files.filter(
-      (f) =>
-        f.endsWith('SKILL.md') ||
-        f.endsWith('skill.md') ||
-        f.endsWith('.skill.md') ||
-        f.includes('/skills/') ||
-        f.includes('/.clawrc/')
-    );
+    const skillFiles = selectSkillFiles(files);
 
     if (skillFiles.length === 0) {
       return findings;
@@ -55,6 +59,7 @@ export const skillsScanner: Scanner = {
 
               findings.push({
                 id: pattern.id,
+                canonicalRuleId: pattern.id,
                 category: mapCategoryToCompliance(pattern.category),
                 severity: pattern.severity,
                 title: pattern.name,
@@ -77,6 +82,7 @@ export const skillsScanner: Scanner = {
         if (metadata.permissions?.includes('*') || metadata.permissions?.includes('all')) {
           findings.push({
             id: 'skill-excessive-permissions',
+            canonicalRuleId: 'skill-excessive-permissions',
             category: 'access-control',
             severity: 'high',
             title: 'Skill requests excessive permissions',
@@ -93,6 +99,7 @@ export const skillsScanner: Scanner = {
         if (!metadata.author && !metadata.source) {
           findings.push({
             id: 'skill-unknown-author',
+            canonicalRuleId: 'skill-unknown-author',
             category: 'access-control',
             severity: 'medium',
             title: 'Skill from unknown/unverified source',
@@ -108,6 +115,7 @@ export const skillsScanner: Scanner = {
         if (/(?:rm|mv|chmod|chown)\s+-rf?\s+\//.test(content)) {
           findings.push({
             id: 'skill-system-modification',
+            canonicalRuleId: 'skill-system-modification',
             category: 'access-control',
             severity: 'critical',
             title: 'Skill attempts to modify system files',

@@ -8,6 +8,11 @@ export {
   getCategoryCounts,
 } from './rules/catalog.js';
 export type { CatalogRule, CatalogSeverity, Category } from './rules/catalog.js';
+
+// === Attestation / Evidence / Adjudication (M1) ===
+// Attestation is a core architectural primitive, not a report format: the
+// evidence model is the system of record and reports are views over it.
+export * from './attestation/index.js';
 export { loadBaseline, saveBaseline, applyBaseline, generateFindingHash } from './baseline.js';
 export { checkInlineSuppression, applyInlineSuppressions } from './suppression.js';
 export { checkAcknowledgment, applyAcknowledgments } from './acknowledgments.js';
@@ -22,6 +27,7 @@ export type {
   Severity,
   ComplianceCategory,
   Confidence,
+  TriageOutcome,
   VlayerConfig,
   AcknowledgedFinding,
   ContextLine,

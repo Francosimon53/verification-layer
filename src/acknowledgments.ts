@@ -6,6 +6,8 @@ export interface AcknowledgmentMatch {
   reason?: string;
   acknowledgedBy?: string;
   acknowledgedAt?: string;
+  /** The configured expiry, when the acknowledgment is time-bounded. */
+  expiresAt?: string;
   ticketUrl?: string;
   expired?: boolean;
 }
@@ -57,6 +59,7 @@ export function checkAcknowledgment(
       reason: ack.reason,
       acknowledgedBy: ack.acknowledgedBy,
       acknowledgedAt: ack.acknowledgedAt,
+      expiresAt: ack.expiresAt,
       ticketUrl: ack.ticketUrl,
       expired,
     };
@@ -83,6 +86,7 @@ export function applyAcknowledgments(
           reason: ack.reason!,
           acknowledgedBy: ack.acknowledgedBy!,
           acknowledgedAt: ack.acknowledgedAt!,
+          expiresAt: ack.expiresAt,
           ticketUrl: ack.ticketUrl,
           expired: ack.expired,
         },

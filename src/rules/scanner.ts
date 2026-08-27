@@ -82,6 +82,7 @@ export async function scanWithCustomRules(
 
             findings.push({
               id: `custom-${rule.id}-${filePath}-${lineNum}`,
+              canonicalRuleId: `custom:${rule.id}`,
               category: rule.category,
               severity: rule.severity,
               title: rule.name,

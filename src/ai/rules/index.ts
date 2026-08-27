@@ -75,11 +75,18 @@ export const AI_RULES: LLMRule[] = [
 ];
 
 export { RuleRunner } from './rule-runner.js';
-export { triageFinding, triageFindings } from './triage.js';
+export {
+  triageFinding,
+  triageFindings,
+  summarizeTriage,
+  triageFailureReason,
+  TRIAGE_REASONS,
+} from './triage.js';
 export type { LLMRule } from './rule-runner.js';
 export type {
   AIFinding,
   TriagedFinding,
+  TriageOutcome,
   TriageClassification,
   LLMRuleResponse,
   TriageResponse,

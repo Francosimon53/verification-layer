@@ -40,6 +40,22 @@ inputs:
     required: false
     default: ${{ github.token }}
 
+  generate-attestation:
+    description: >-
+      Also generate a VLayer technical-compliance attestation
+      (.vlayer/attestation.json) for the checked-out commit. Optional; existing
+      scan behavior is unchanged when this is false.
+    required: false
+    default: 'false'
+
+  sign-attestation:
+    description: >-
+      Cryptographically sign the attestation with Sigstore (keyless). Requires
+      generate-attestation, a clean working tree, and the calling workflow to
+      grant `permissions: { id-token: write }` for OIDC.
+    required: false
+    default: 'false'
+
 outputs:
   total-findings:
     description: 'Total number of findings'
@@ -56,6 +72,18 @@ outputs:
   high-findings:
     description: 'Number of high severity findings'
     value: ${{ steps.scan.outputs.high }}
+
+  attestation-path:
+    description: 'Path to the generated attestation (empty when not generated)'
+    value: ${{ steps.attest.outputs.attestation-path }}
+
+  policy-conclusion:
+    description: >-
+      VLayer technical policy conclusion for the attested commit
+      (pass | fail | review_required). Empty when no attestation was generated.
+      NOTE: this is a technical-control conclusion within the evaluated scope,
+      not a HIPAA compliance determination.
+    value: ${{ steps.attest.outputs.policy-conclusion }}
 
 runs:
   using: 'composite'
@@ -110,6 +138,52 @@ runs:
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high=$HIGH" >> $GITHUB_OUTPUT
         fi
+
+    - name: Generate VLayer attestation
+      id: attest
+      if: inputs.generate-attestation == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        ATTEST_CMD="vlayer attest ${{ inputs.path }} -o .vlayer/attestation.json"
+
+        # Signing requires OIDC and an immutable (clean) snapshot. The calling
+        # workflow must grant `permissions: { id-token: write }`.
+        if [ "${{ inputs.sign-attestation }}" = "true" ]; then
+          ATTEST_CMD="$ATTEST_CMD --sign"
+        fi
+
+        # `vlayer attest` exits non-zero on a real failure (not a repo, dirty
+        # tree, signing error). Do not let a policy FAIL be confused with a
+        # tooling error: capture the conclusion from the document itself.
+        $ATTEST_CMD || echo "::warning::vlayer attest exited non-zero"
+
+        if [ -f .vlayer/attestation.json ]; then
+          CONCLUSION=$(jq -r '.predicate.policy.conclusion' .vlayer/attestation.json)
+          echo "attestation-path=.vlayer/attestation.json" >> $GITHUB_OUTPUT
+          echo "policy-conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
+          echo "### VLayer attestation" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`$(jq -r '.predicate.target.commit' .vlayer/attestation.json)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Policy conclusion: **$CONCLUSION**" >> $GITHUB_STEP_SUMMARY
+          echo "- Controls evaluated: $(jq -r '.predicate.scope.coverage.controlsEvaluated' .vlayer/attestation.json)" >> $GITHUB_STEP_SUMMARY
+          echo "- Controls not evaluated: $(jq -r '.predicate.scope.coverage.controlsNotEvaluated | length' .vlayer/attestation.json)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_A VLayer policy conclusion is a technical-control statement about the evaluated scope. It is not a HIPAA compliance determination._" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "attestation-path=" >> $GITHUB_OUTPUT
+          echo "policy-conclusion=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload attestation
+      if: inputs.generate-attestation == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: vlayer-attestation
+        path: |
+          .vlayer/attestation.json
+          .vlayer/attestation.sigstore.json
+        if-no-files-found: ignore
 
     - name: Upload results
       if: always()

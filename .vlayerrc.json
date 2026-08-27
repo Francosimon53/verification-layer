@@ -207,6 +207,48 @@
       "reason": "False positive: the MFA heuristic matched the scanner registry map (the line registering authenticationScanner and related scanners). vlayer is a local CLI with no endpoints, no login flow, and no PHI access to gate behind MFA. Scanner confidence was 'low'.",
       "acknowledgedBy": "Simon Franco (triage 2026-07-20)",
       "acknowledgedAt": "2026-07-20T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/fingerprint.ts",
+      "id": "phi-ssn-hardcoded",
+      "reason": "False positive: a doc comment quotes `const ssn = \"123-45-6789\"` as the worked example of why hashing a raw source line is not a privacy control. The value is the canonical placeholder SSN, it is inside a comment, and no SSN is read, stored or emitted by this module — its entire purpose is to REDACT such values before they are hashed.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/fingerprint.ts",
+      "id": "enc-des",
+      "reason": "False positive: 'des' appears as a string in ALLOWED_IDENTIFIERS, the allowlist of well-known API names that may survive structural redaction. It is an identifier name being matched against, not an algorithm being used. No cryptography beyond SHA-256 is performed in this file.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/fingerprint.ts",
+      "id": "enc-rc4",
+      "reason": "False positive: 'rc4' appears as a string in ALLOWED_IDENTIFIERS, the allowlist of well-known API names that may survive structural redaction. It is an identifier name being matched against, not an algorithm being used.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/fingerprint.ts",
+      "id": "HIPAA-SESSION-001",
+      "reason": "False positive: 'sessionStorage' and 'session' appear as strings in ALLOWED_IDENTIFIERS, the redaction allowlist. The rule's fifth pattern is a bare /session/ test, so any occurrence of the word matches. vlayer is a local CLI with no sessions to time out.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/evaluate.ts",
+      "id": "CRED-001",
+      "reason": "False positive: the CRED-001 password-context guard tests the surrounding 5 lines for /password|passwd|pwd|credential|auth/i, and matched 'auth' inside the doc comment phrase 'user-authored free-text field'. The flagged createHash('sha256') digests an acknowledgment reason for provenance, not a password; there is no password, credential or secret anywhere in this file, and SHA-256 is the correct primitive for a content digest.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
+    },
+    {
+      "pattern": "**/src/attestation/sign.ts",
+      "id": "HIPAA-MFA-001",
+      "reason": "False positive: the MFA heuristic matched the substring 'signin' inside the class name 'SigningUnavailableError' and the substring 'phi' inside the word 'Cryptographic' in its message. Neither is an authentication flow. vlayer is a local CLI with no endpoints and no PHI access to gate; this file performs Sigstore keyless signing, which itself requires an OIDC identity.",
+      "acknowledgedBy": "Simon Franco (triage 2026-08-26)",
+      "acknowledgedAt": "2026-08-26T00:00:00Z"
     }
   ]
 }

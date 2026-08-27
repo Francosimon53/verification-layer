@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, InformationalArtifact } from './types.js';
+import type { ScanOptions, ScanResult, Finding, ComplianceCategory, Scanner, StackInfo, GroupedFinding, FilteredFinding, ScanExecution, InformationalArtifact } from './types.js';
 import { loadConfig, isPathIgnored } from './config.js';
 import { phiScanner } from './scanners/phi/index.js';
 import { encryptionScanner } from './scanners/encryption/index.js';
@@ -27,8 +27,10 @@ import { loadBaseline, applyBaseline } from './baseline.js';
 import { batchAnalyzeSemanticContext } from './semantic-analysis.js';
 import { calculateComplianceScore } from './compliance-score.js';
 import { triageExistingFindings } from './ai/scanner.js';
+import { summarizeTriage } from './ai/rules/triage.js';
 import { isAIAvailable } from './ai/client.js';
 import { DEFAULT_VLAYER_OUTPUT_EXCLUDES } from './exclusions.js';
+import { isInformationalArtifactRule } from './informational-artifacts.js';
 import * as fs from 'fs/promises';
 
 const ALL_CATEGORIES: ComplianceCategory[] = [
@@ -46,6 +48,37 @@ const scanners: Record<ComplianceCategory, Scanner> = {
   'access-control': accessScanner,
   'data-retention': retentionScanner,
 };
+
+/**
+ * Maps each Scanner instance to its key in `RULE_CATALOG.scanner`.
+ *
+ * This is what lets execution evidence be joined to the rule catalog: knowing
+ * that the `phi` scanner ran on N eligible files is what proves the 29 catalog
+ * rules owned by `phi` actually executed. Keys MUST match `CatalogRule.scanner`
+ * exactly; `tests/attestation/control-coverage.test.ts` asserts that they do.
+ */
+const SCANNER_KEYS = new Map<Scanner, string>([
+  [phiScanner, 'phi'],
+  [encryptionScanner, 'encryption'],
+  [auditScanner, 'audit'],
+  [accessScanner, 'access'],
+  [retentionScanner, 'retention'],
+  [securityScanner, 'security'],
+  [skillsScanner, 'skills'],
+  [hipaa2026Scanner, 'hipaa2026'],
+  [authenticationScanner, 'authentication'],
+  [rbacScanner, 'rbac'],
+  [credentialsScanner, 'credentials'],
+  [errorsScanner, 'errors'],
+  [sanitizationScanner, 'sanitization'],
+  [revocationScanner, 'revocation'],
+  [configurationScanner, 'configuration'],
+  [apiSecurityScanner, 'api-security'],
+  [operationalScanner, 'operational'],
+]);
+
+/** The catalog scanner keys vlayer can execute. Exported for coverage tests. */
+export const KNOWN_SCANNER_KEYS: readonly string[] = [...SCANNER_KEYS.values()];
 
 // Additional scanners that run with specific categories
 const additionalScanners: Partial<Record<ComplianceCategory, Scanner[]>> = {
@@ -144,6 +177,32 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const findings: Finding[] = [];
   const totalBatches = Math.ceil(normalFiles.length / BATCH_SIZE) || 1;
 
+  // EXECUTION EVIDENCE. Records, per scanner, whether it was dispatched and how
+  // many files it was actually eligible to inspect. A scanner can be invoked and
+  // still evaluate nothing (it filters by extension), so "invoked" alone cannot
+  // justify reporting a control as `no_blocking_findings`. `selectFiles` is the
+  // same predicate the scanner uses internally, so the two cannot drift.
+  const executionByScanner = new Map<string, { key: string; category: ComplianceCategory; invoked: boolean; filesConsidered: number | null }>();
+
+  const recordExecution = (key: string, scanner: Scanner, batchFiles: string[]): void => {
+    const existing = executionByScanner.get(key);
+    const considered = scanner.selectFiles ? scanner.selectFiles(batchFiles).length : null;
+    if (!existing) {
+      executionByScanner.set(key, {
+        key,
+        category: scanner.category,
+        invoked: true,
+        filesConsidered: considered,
+      });
+      return;
+    }
+    existing.invoked = true;
+    // A scanner without selectFiles reports null forever — never silently 0.
+    if (considered !== null) {
+      existing.filesConsidered = (existing.filesConsidered ?? 0) + considered;
+    }
+  };
+
   for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
     const batchStart = batchIdx * BATCH_SIZE;
     const batchFiles = normalFiles.slice(batchStart, batchStart + BATCH_SIZE);
@@ -155,6 +214,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     for (const category of categories) {
       const scanner = scanners[category];
       if (scanner) {
+        recordExecution(SCANNER_KEYS.get(scanner) ?? category, scanner, batchFiles);
         const categoryFindings = await scanner.scan(batchFiles, optionsWithConfig);
         findings.push(...categoryFindings);
       }
@@ -162,6 +222,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       const additional = additionalScanners[category];
       if (additional) {
         for (const extraScanner of additional) {
+          // A scanner registered under two categories is recorded ONCE, keyed by
+          // its catalog key, so file counts are not double-attributed.
+          recordExecution(SCANNER_KEYS.get(extraScanner) ?? extraScanner.name, extraScanner, batchFiles);
           const extraFindings = await extraScanner.scan(batchFiles, optionsWithConfig);
           findings.push(...extraFindings);
         }
@@ -196,13 +259,27 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   findings.length = 0;
   findings.push(...deduplicatedFindings);
 
+  // Findings detected and then removed from the active collection. Never lost:
+  // every removal is recorded here so the evidence model can account for it.
+  const filtered: FilteredFinding[] = [];
+
   // Informational artifacts (asset inventory, PHI flow map) are generated
   // documentation, not violations — lift them out of the findings list into
   // report metadata so they never count toward stats or the unacknowledged
   // total.
-  const informationalArtifactIds = new Set(['HIPAA-ASSET-001', 'HIPAA-FLOW-001']);
+  //
+  // Matched on `canonicalRuleId`, NOT on `id`. Several scanners interpolate the
+  // line number into `id` (`phi-<pattern>-42`), so it is a display value: these
+  // two rules happen to emit static ids today, but a future change to how
+  // hipaa2026 builds ids would silently stop this filter matching and let the
+  // artifacts flow back into findings with no error. `canonicalRuleId` is
+  // declared at the emission point and its coverage is enforced by
+  // tests/attestation/rule-identity-coverage.test.ts.
+  const isInformationalArtifact = (f: Finding): boolean =>
+    isInformationalArtifactRule(f.canonicalRuleId);
+
   const informationalArtifacts: InformationalArtifact[] = findings
-    .filter(f => informationalArtifactIds.has(f.id))
+    .filter(isInformationalArtifact)
     .map(f => ({
       id: f.id,
       title: f.title,
@@ -210,7 +287,16 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       content: f.recommendation,
       hipaaReference: f.hipaaReference,
     }));
-  const nonArtifactFindings = findings.filter(f => !informationalArtifactIds.has(f.id));
+
+  // The artifacts leave `findings` exactly as before — stats and the
+  // unacknowledged total are unchanged — but each lifted finding is ALSO
+  // recorded in `filtered`, so the attestation can represent it with an
+  // explicit `informational` disposition instead of losing it entirely.
+  for (const f of findings.filter(isInformationalArtifact)) {
+    filtered.push({ finding: f, reason: 'informational-artifact' });
+  }
+
+  const nonArtifactFindings = findings.filter(f => !isInformationalArtifact(f));
   findings.length = 0;
   findings.push(...nonArtifactFindings);
 
@@ -260,8 +346,17 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     return finding;
   });
 
+  // AI triage provenance. AI triage is NOT reproducible, so an attestation must
+  // record whether it actually ran, on how many findings, and how many were left
+  // un-verified by the per-scan cap or by a call failure.
+  const aiEnabled = options.enableAI !== false && config.ai?.enableTriage !== false;
+  let aiTriageApplied = false;
+  let aiFindingsSubmitted = 0;
+  let aiFindingsCapped = 0;
+  let aiFindingsFailed = 0;
+
   // Apply AI triage if enabled and available
-  if (options.enableAI !== false && config.ai?.enableTriage !== false && isAIAvailable()) {
+  if (aiEnabled && isAIAvailable()) {
     try {
       // Load file contents for triage (skip special/virtual files)
       const fileContents = new Map<string, string>();
@@ -280,12 +375,30 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       }
 
       const triagedFindings = await triageExistingFindings(processedFindings, fileContents);
+      aiTriageApplied = true;
+
+      // Counted from EXPLICIT triage state, never from `aiReasoning` prose:
+      // these numbers are published in the attestation as evidence, and matching
+      // on a user-facing string would let a copy edit silently change them.
+      const triageStats = summarizeTriage(triagedFindings);
+      aiFindingsSubmitted = triageStats.submitted;
+      aiFindingsCapped = triageStats.capped;
+      aiFindingsFailed = triageStats.failed;
 
       // Filter out false positives (optional, based on config)
       if (config.ai?.filterFalsePositives !== false) {
-        processedFindings = triagedFindings.filter(
-          f => f.aiClassification !== 'false_positive'
-        );
+        // NOTHING DETECTED MAY SILENTLY DISAPPEAR. `findings` keeps its legacy
+        // behavior — false positives are still absent from it, so every existing
+        // report and consumer is unaffected — but each removed finding is
+        // recorded in `filtered` so the evidence model can preserve it with an
+        // explicit `false_positive` disposition instead of losing it.
+        processedFindings = triagedFindings.filter(f => {
+          if (f.aiClassification === 'false_positive') {
+            filtered.push({ finding: f, reason: 'ai-false-positive' });
+            return false;
+          }
+          return true;
+        });
       } else {
         // Keep all but add AI metadata
         processedFindings = triagedFindings;
@@ -310,9 +423,18 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     const minLevel = confidenceOrder[options.minConfidence];
     processedFindings = processedFindings.map(f => {
       const fLevel = confidenceOrder[f.confidence || 'high'];
-      // If finding doesn't meet min confidence, mark it as baseline (don't fail on it)
+      // If finding doesn't meet min confidence, mark it as baseline (don't fail on it).
+      // `isBaseline` is kept for backwards compatibility — reporters and the
+      // compliance score rely on it — but it OVERLOADS two different meanings.
+      // `belowMinConfidence` records the real reason so the evidence model can
+      // distinguish accepted historical debt from a confidence threshold.
       if (fLevel < minLevel) {
-        return { ...f, isBaseline: true };
+        return {
+          ...f,
+          isBaseline: true,
+          belowMinConfidence: true,
+          minConfidenceThreshold: options.minConfidence,
+        };
       }
       return f;
     });
@@ -327,6 +449,24 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   // Group findings by rule ID + severity
   const groupedFindings = groupFindings(processedFindings);
 
+  // Deduplicate the preserved false positives on the SAME key as active
+  // findings, so counts in the two collections are comparable.
+  const dedupedFiltered: FilteredFinding[] = [];
+  const filteredSeen = new Set<string>();
+  for (const entry of filtered) {
+    const key = `${entry.finding.id}||${entry.finding.file}||${entry.finding.line ?? ''}`;
+    if (filteredSeen.has(key)) continue;
+    filteredSeen.add(key);
+    dedupedFiltered.push(entry);
+  }
+
+  const execution: ScanExecution = {
+    categoriesRequested: [...categories],
+    scanners: [...executionByScanner.values()].sort((a, b) => a.key.localeCompare(b.key)),
+    customRuleIds: customRules.map(r => r.id).sort(),
+    filesScanned: normalFiles.length,
+  };
+
   // Calculate compliance score
   const result = {
     findings: processedFindings,
@@ -335,6 +475,15 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     scannedFiles: normalFiles.length,
     scanDuration: Date.now() - startTime,
     stack,
+    filtered: dedupedFiltered,
+    execution,
+    aiTriage: {
+      enabled: aiEnabled,
+      applied: aiTriageApplied,
+      submitted: aiFindingsSubmitted,
+      capped: aiFindingsCapped,
+      failed: aiFindingsFailed,
+    },
     informationalArtifacts,
   };
 

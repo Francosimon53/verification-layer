@@ -22,6 +22,8 @@ Run the CLI after building:
 ```bash
 node dist/cli.js scan <path>              # Scan a directory
 node dist/cli.js scan . -f html -o report.html  # HTML report
+node dist/cli.js attest . --no-ai        # Deterministic attestation
+node dist/cli.js verify .vlayer/attestation.json
 ```
 
 ## Architecture
@@ -41,9 +43,60 @@ node dist/cli.js scan . -f html -o report.html  # HTML report
 
 **AI Triage** (`src/ai/`): after the static scanners run, findings are triaged by Claude Haiku 4.5 (`AI_CONFIG.triage.model`) to filter false positives. It's gated on `options.enableAI`, the config `ai.enableTriage`, and `ANTHROPIC_API_KEY` — the `--no-ai` CLI flag (or `enableAI: false` programmatically) disables it entirely for deterministic, offline runs. Triage is bounded: a hard cap of `AI_CONFIG.triage.maxFindings` (50) with a per-call timeout, and findings beyond the cap are returned regex-flagged (never dropped, with a `⚠️ Triage cap reached` warning). Calls run through a bounded `AI_CONFIG.triage.concurrency` (10) pool — ~21s for a 50-call scan, down from ~328s sequential. The 6 AI detection *rules* are a separate `ai-scan` command and stay on Sonnet.
 
+**Attestation / Evidence / Adjudication** (`src/attestation/`): attestation is a
+CORE ARCHITECTURAL PRIMITIVE, not a report format. `vlayer attest` turns a commit
+into an in-toto Statement v1 evidence document; `vlayer verify` checks it. The
+evidence model is the system of record — reports are views over it. Full
+reference: `docs/ATTESTATIONS.md`.
+
+Four invariants that must not be broken:
+
+1. **Nothing detected disappears.** The legacy scan pipeline deletes AI
+   false positives from `ScanResult.findings`; they are now ALSO recorded in
+   `ScanResult.filtered` so the evidence model preserves them with
+   `disposition: 'false_positive'`. `findings` keeps its legacy behavior.
+2. **Rule identity is declared, never inferred.** `Finding.id` is a display id
+   (scanners interpolate line numbers into it). Every scanner sets
+   `Finding.canonicalRuleId` at its emission point — the point where it still
+   holds the pattern object. Never derive a rule id by stripping affixes.
+   `tests/attestation/rule-identity-coverage.test.ts` fails CI if a scanner
+   forgets it.
+3. **Absence of findings is never coverage.** A control is only
+   `no_blocking_findings` when execution evidence proves its rules ran.
+   `Scanner.selectFiles()` (optional; same predicate `scan()` uses) reports how
+   many files each scanner was eligible to inspect. No `selectFiles` ⇒
+   `filesConsidered: null` ⇒ dependent controls become `not_evaluated`.
+4. **Severity is not policy effect.** `FindingEvaluation` carries `evidenceScope`
+   (`code` | `repository`) and `policyEffect` (`blocking` | `review_required` |
+   `none`). Scope is derived from whether the finding can point at a line — a
+   finding with no line is a repository/process observation, not a code defect,
+   and never auto-fails a release regardless of severity. `policy.ts` reads
+   `policyEffect` only; it must NEVER special-case a rule id.
+5. **AI triage metrics come from `TriagedFinding.triageOutcome`**, never from
+   `aiReasoning` prose. Reword copy freely; the metric is unaffected.
+6. **The privacy boundary is structural.** `FindingEvaluation` declares no field
+   that can hold source code, and every schema object is `.strict()`. Free text
+   (AI reasoning, acknowledgment reasons) is stored as a SHA-256 digest.
+
+Also: `.vlayer/attestation.json` is written as CANONICAL JSON and those exact
+bytes are what Sigstore signs (`sigstore.sign`/`verify`, not DSSE) — never
+re-serialize it. Numeric fields are integers only (fractions use scaled integers
+like `confidencePermille`). `src/version.ts` is the single source of version
+truth; never hardcode a version or a rule count.
+
 ## Type System
 
 Core types in `src/types.ts`:
 - `Finding` - Individual compliance issue with severity, location, HIPAA reference
-- `Scanner` - Interface for all category scanners
+- `Scanner` - Interface for all category scanners (with optional `selectFiles`)
 - `ComplianceCategory` - Union of the 5 HIPAA categories
+
+Attestation types in `src/attestation/types.ts`:
+- `FindingEvaluation` - An adjudicated finding: fingerprint, canonical rule id,
+  controls, disposition, blocking. Carries NO source code.
+- `FindingDisposition` - `active | false_positive | suppressed | exception |
+  acknowledged | baseline | low_confidence | remediated` (the last is reserved,
+  never emitted in M1). Resolved by ONE precedence ladder in `evaluate.ts`.
+  Note `low_confidence` is deliberately distinct from `baseline`.
+- `ControlState` - `not_evaluated | blocking_findings | review_required |
+  exception_present | no_blocking_findings`. Never "compliant".

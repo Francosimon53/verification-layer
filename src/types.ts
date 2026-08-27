@@ -30,8 +30,49 @@ export type FixType =
 
 export type Confidence = 'high' | 'medium' | 'low';
 
+/**
+ * WHY a finding was, or was not, verified by AI triage.
+ *
+ * This is the MACHINE-READABLE state. `aiReasoning` alongside it is user-facing
+ * prose and must never be parsed: deriving `aiFindingsCapped` / `aiFindingsFailed`
+ * by string-matching that copy coupled published evidence to wording, so a
+ * copy edit could silently change reported numbers.
+ *
+ * A boolean is deliberately insufficient — `cap_reached`, `error` and
+ * `ai_verified` must be independently distinguishable, because the attestation
+ * reports capped and failed counts separately.
+ */
+export type TriageOutcome =
+  /** A model call was made and returned a verdict. */
+  | 'ai_verified'
+  /** Beyond AI_CONFIG.triage.maxFindings — regex-flagged only, NOT AI-verified. */
+  | 'cap_reached'
+  /** The file's content was unavailable, so no call could be made. */
+  | 'no_content'
+  /** A model call was attempted and failed (timeout, bad JSON, API error). */
+  | 'error'
+  /** AI triage was unavailable entirely (no API key). */
+  | 'unavailable';
+
 export interface Finding {
   id: string;
+  /**
+   * Canonical rule identity, DECLARED by the emitting scanner at the moment it
+   * creates the finding — the scanner already holds the pattern/rule object and
+   * therefore knows this for a fact.
+   *
+   * `id` is a DISPLAY identity and is not reliable for rule lookup: several
+   * scanners interpolate a prefix and the line number into it (`phi-<pattern>-42`,
+   * `access-<issue>-17`, `custom-<rule>-<file>-3`), so it does not match
+   * `RULE_CATALOG`. Deriving a canonical id by stripping those affixes would be a
+   * heuristic and a second source of truth; declaring it here makes it factual.
+   *
+   * Built-in rules carry their RULE_CATALOG id verbatim. Custom rules use the
+   * `custom:<id>` namespace (`:` cannot occur in a built-in id, so the two can
+   * never collide). Absent means identity is UNKNOWN — consumers must never
+   * infer one, and the attestation records `ruleKnown: false`.
+   */
+  canonicalRuleId?: string;
   category: ComplianceCategory;
   severity: Severity;
   title: string;
@@ -50,6 +91,16 @@ export interface Finding {
     reason: string;
     acknowledgedBy: string;
     acknowledgedAt: string;
+    /**
+     * The configured expiry, when the acknowledgment is time-bounded.
+     *
+     * Previously only the derived `expired` boolean was propagated, which made a
+     * time-bounded acknowledgment indistinguishable from an open-ended one
+     * (`expired` is `false` in both cases). The evidence model needs that
+     * distinction: an acknowledgment WITH an expiry is a time-bounded exception
+     * that must resurface, an open-ended one is not. Additive and optional.
+     */
+    expiresAt?: string;
     ticketUrl?: string;
     expired?: boolean;
   };
@@ -59,6 +110,25 @@ export interface Finding {
     comment: string;
   };
   isBaseline?: boolean;
+  /**
+   * Why this finding was, or was not, AI-verified. Present only once triage has
+   * run. The SINGLE SOURCE OF TRUTH for triage metrics — never parse
+   * `aiReasoning`, which is display copy.
+   */
+  triageOutcome?: TriageOutcome;
+  /**
+   * Set when `--min-confidence` excluded this finding from blocking.
+   *
+   * The legacy pipeline signals this by ALSO setting `isBaseline: true`, which
+   * conflates two different things: a baseline is accepted historical debt that
+   * a human recorded and removes by editing the baseline file, whereas a
+   * below-threshold finding is a detector-confidence judgement that flips the
+   * moment the threshold changes. `isBaseline` keeps its legacy meaning for
+   * backwards compatibility; this flag lets the evidence model tell them apart.
+   */
+  belowMinConfidence?: boolean;
+  /** The `--min-confidence` threshold in force when this finding was evaluated. */
+  minConfidenceThreshold?: Confidence;
 }
 
 export interface Occurrence {
@@ -114,6 +184,68 @@ export interface ComplianceScore {
 }
 
 /**
+ * Why a finding was removed from `ScanResult.findings`.
+ *
+ * `informational-artifact` covers the asset inventory and PHI flow map, which
+ * are generated documentation rather than violations. They are lifted out of
+ * `findings` so they never count toward stats or the unacknowledged total — but
+ * they are still RECORDED here, because a value silently deleted upstream of
+ * the evidence model is a value the attestation can never account for.
+ */
+export type FilterReason = 'ai-false-positive' | 'informational-artifact';
+
+/**
+ * A finding that was detected and then removed from the active `findings`
+ * collection. NOTHING DETECTED MAY SILENTLY DISAPPEAR: the legacy pipeline
+ * deletes AI-classified false positives outright, so this parallel record is
+ * what lets the evidence model preserve them with an explicit disposition
+ * instead of losing them. `findings` is unchanged — nothing moves back in.
+ */
+export interface FilteredFinding {
+  finding: Finding;
+  reason: FilterReason;
+}
+
+/**
+ * AI triage provenance for a scan.
+ *
+ * AI triage is NOT deterministic: sampling, model updates, timeouts and the
+ * per-scan cap all mean a re-run can classify differently. Recording what
+ * actually happened is what lets an attestation distinguish deterministic
+ * detection evidence from AI-assisted adjudication.
+ */
+export interface ScanAiTriage {
+  /** The flags/config permitted triage to run. */
+  enabled: boolean;
+  /** It actually executed (an API key was present and calls were made). */
+  applied: boolean;
+  submitted: number;
+  /** Beyond the per-scan cap: returned regex-flagged only, NOT AI-verified. */
+  capped: number;
+  failed: number;
+}
+
+/**
+ * Evidence that detection ACTUALLY RAN. Absence of findings is never evidence
+ * that a control was evaluated: a scanner filters by extension, so a repository
+ * with no matching files gives it nothing to inspect. Without this record, a
+ * control with zero findings could not be distinguished from a control whose
+ * rules never executed.
+ */
+export interface ScanExecution {
+  categoriesRequested: ComplianceCategory[];
+  scanners: Array<{
+    key: string;
+    category: ComplianceCategory;
+    invoked: boolean;
+    /** Null when the scanner does not implement `selectFiles` — forces `not_evaluated`. */
+    filesConsidered: number | null;
+  }>;
+  customRuleIds: string[];
+  filesScanned: number;
+}
+
+/**
  * Informational report artifact (e.g. asset inventory, PHI flow map).
  * These are generated documentation, not compliance violations — they are
  * surfaced as report metadata and never count toward finding stats.
@@ -135,6 +267,12 @@ export interface ScanResult {
   scanDuration: number;
   stack?: StackInfo;
   complianceScore?: ComplianceScore;
+  /** Detected-then-removed findings, preserved for the evidence model. */
+  filtered?: FilteredFinding[];
+  /** Execution evidence for control-coverage adjudication. */
+  execution?: ScanExecution;
+  /** Whether AI triage was permitted, whether it ran, and what it left unverified. */
+  aiTriage?: ScanAiTriage;
   /** Generated documentation artifacts (asset inventory, PHI flow map) */
   informationalArtifacts?: InformationalArtifact[];
 }
@@ -161,6 +299,23 @@ export interface Scanner {
   name: string;
   category: ComplianceCategory;
   scan(files: string[], options: ScanOptions): Promise<Finding[]>;
+  /**
+   * The subset of `files` this scanner is eligible to inspect.
+   *
+   * EXECUTION EVIDENCE. Scanners filter by extension, so "the scanner was
+   * invoked" does not mean "its rules ran": a repository of pure YAML gives the
+   * PHI scanner nothing to read, and reporting its controls as
+   * `no_blocking_findings` would fabricate coverage. Attestation needs to know
+   * how many files each scanner actually considered.
+   *
+   * OPTIONAL, so every existing (and third-party) Scanner implementation stays
+   * valid. A scanner that omits it reports `filesConsidered: null`, which forces
+   * dependent controls to `not_evaluated` — the safe direction.
+   *
+   * Implementations MUST return exactly the set `scan()` iterates over; each
+   * built-in scanner calls this same function internally so the two cannot drift.
+   */
+  selectFiles?(files: string[]): string[];
 }
 
 export interface Report {
