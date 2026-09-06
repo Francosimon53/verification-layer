@@ -17,13 +17,18 @@ export interface MFAPattern {
 
 /**
  * MFA-001: Auth Provider Configuration Without MFA
- * Detects NextAuth, Clerk, Auth0, Supabase Auth configs without MFA enabled
+ * Detects code-local auth provider configuration without MFA enabled.
+ *
+ * Supabase runtime calls such as `supabase.auth.signUp()` and generic
+ * `createClient()` usage are intentionally excluded. Supabase MFA policy is
+ * provider/project configuration and cannot be inferred from an individual
+ * signup/login call site.
  */
 export const AUTH_CONFIG_NO_MFA: MFAPattern = {
   id: 'MFA-001',
   name: 'Authentication Configuration Without MFA Enabled',
   description:
-    'Auth provider configuration (NextAuth, Clerk, Auth0, Supabase) does not have MFA/2FA/TOTP enabled',
+    'Auth provider configuration (NextAuth, Clerk, Auth0) does not have MFA/2FA/TOTP enabled',
   severity: 'critical',
   hipaaReference: 'NPRM §164.312(d) - Person or Entity Authentication',
   patterns: [
@@ -40,10 +45,6 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /Auth0Provider/i,
     /auth0\.WebAuth/i,
     /new\s+Auth0Client/i,
-
-    // Supabase Auth configuration
-    /supabase\.auth\.signUp/i,
-    /createClient.*?supabase/i,
 
     // Generic auth configs
     /authConfig\s*[:=]/i,
@@ -62,7 +63,7 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /authenticator/i,
   ],
   recommendation:
-    'Enable MFA in your auth provider configuration. For NextAuth: add adapter with MFA support. For Clerk: enable MFA in dashboard. For Auth0: enable MFA in tenant settings. For Supabase: enable MFA in auth settings.',
+    'Enable MFA in your auth provider configuration. For NextAuth: add adapter with MFA support. For Clerk: enable MFA in dashboard. For Auth0: enable MFA in tenant settings. For Supabase, verify MFA policy at the project/provider configuration level rather than inferring it from runtime auth calls.',
   category: 'authentication',
 };
 
