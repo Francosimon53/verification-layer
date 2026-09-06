@@ -95,17 +95,23 @@ async function scanAuthConfig(
   pattern: MFAPattern,
   findings: Finding[]
 ): Promise<void> {
-  // A Supabase auth call (signUp/signIn/etc.) is a runtime call site, not proof
-  // that this file owns provider MFA configuration. Treat Supabase client usage
-  // as configuration evidence only when the file imports the SDK directly and
-  // constructs the client itself. Shared-client consumers therefore do not fire.
+  // A Supabase SDK client is used for database/storage/admin operations as well
+  // as authentication, so createClient() alone is not auth configuration evidence.
+  // Preserve the existing auth-config heuristic only when the file itself is
+  // auth-oriented or actually invokes a Supabase auth API. This prevents service-
+  // role clients in webhooks/background jobs from being mislabeled as missing MFA.
   const hasDirectSupabaseSdkImport =
     /(?:from\s+['"]@supabase\/supabase-js['"]|require\(\s*['"]@supabase\/supabase-js['"]\s*\))/i.test(content);
   const hasDirectClientConstruction = lines.some(
     (line) => !isImportLine(line) && /createClient\s*\(/i.test(line),
   );
+  const hasSupabaseAuthUsage = /\bsupabase\w*\.auth\./i.test(content);
+  const hasAuthOrSupabaseConfigFilename =
+    /(?:^|[\\/])(?:auth|supabase(?:-config)?)(?:[.\\/_-]|$)/i.test(file);
   const supabaseClientConfig =
-    hasDirectSupabaseSdkImport && hasDirectClientConstruction;
+    hasDirectSupabaseSdkImport &&
+    hasDirectClientConstruction &&
+    (hasSupabaseAuthUsage || hasAuthOrSupabaseConfigFilename);
 
   // Check if this is an auth-related file
   const isAuthFile =
@@ -135,7 +141,7 @@ async function scanAuthConfig(
     }
   }
 
-  // For direct Supabase config, anchor the finding to the client constructor.
+  // For direct Supabase auth config, anchor the finding to the client constructor.
   if (configLine === 0 && supabaseClientConfig) {
     for (let i = 0; i < lines.length; i++) {
       if (/createClient\s*\(/i.test(lines[i]) && !isImportLine(lines[i])) {
