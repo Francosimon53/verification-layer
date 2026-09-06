@@ -95,15 +95,23 @@ async function scanAuthConfig(
   pattern: MFAPattern,
   findings: Finding[]
 ): Promise<void> {
+  // A Supabase auth call (signUp/signIn/etc.) is not evidence that this file is
+  // the provider configuration surface. Only treat direct client construction
+  // with an explicit Supabase project URL as code-local configuration evidence.
+  const supabaseClientConfig =
+    /createClient\s*\(\s*['"`]https:\/\/[^'"`\s]+\.supabase\.co['"`]/i.test(content);
+
   // Check if this is an auth-related file
   const isAuthFile =
     /(?:auth|clerk|supabase|next-auth)/i.test(file) ||
-    pattern.patterns.some((p) => p.test(content));
+    pattern.patterns.some((p) => p.test(content)) ||
+    supabaseClientConfig;
 
   if (!isAuthFile) return;
 
   // Check if file has any auth provider configuration
-  const hasAuthConfig = pattern.patterns.some((p) => p.test(content));
+  const hasAuthConfig =
+    pattern.patterns.some((p) => p.test(content)) || supabaseClientConfig;
   if (!hasAuthConfig) return;
 
   // Check if MFA is configured
@@ -111,15 +119,23 @@ async function scanAuthConfig(
   if (hasMfaConfig) return;
 
   // Find the line with auth configuration. Skip import/require lines — anchoring
-  // an "auth config without MFA" finding to an `import { createClient } from
-  // '@supabase/...'` line is a false-positive-looking trigger. If the only
-  // evidence is an import, don't fire at all.
+  // an "auth config without MFA" finding to an import line is misleading.
   let configLine = 0;
   for (let i = 0; i < lines.length; i++) {
     if (isImportLine(lines[i])) continue;
     if (pattern.patterns.some((p) => p.test(lines[i]))) {
       configLine = i + 1;
       break;
+    }
+  }
+
+  // For direct Supabase config, anchor the finding to the client constructor.
+  if (configLine === 0 && supabaseClientConfig) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/createClient\s*\(/i.test(lines[i]) && !isImportLine(lines[i])) {
+        configLine = i + 1;
+        break;
+      }
     }
   }
 
