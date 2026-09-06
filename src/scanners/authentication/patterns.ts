@@ -45,7 +45,9 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
 
     // Supabase client configuration. Do not match supabase.auth.signUp here:
     // a signup call site is not proof that provider-level MFA is disabled.
-    /createClient.*?supabase/i,
+    // Allow a bounded multiline window so createClient(...) + a Supabase URL
+    // still counts as configuration in the existing rule model.
+    /createClient\s*\([\s\S]{0,300}?supabase/i,
 
     // Generic code-level auth configs
     /authConfig\s*[:=]/i,
