@@ -88,11 +88,12 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
   severity: 'high',
   hipaaReference: '45 CFR §164.312(a)(2)(iii) - Session Control (Required)',
   patterns: [
-    /(?:express-session|session)\.(?:configure|use)(?!.*?(?:maxAge|expires|timeout))/i,
+    // Match actual authentication/session configuration, not arbitrary uses of
+    // the word "session" (e.g. Stripe Checkout Session or provider SDK objects).
+    /(?:express-session|\bsession\b)\.(?:configure|use)(?!.*?(?:maxAge|expires|timeout))/i,
     /maxAge:\s*(?:9[0-9]{5}[0-9]+|[1-9][0-9]{6,})/i,
     /jwt\.sign\([^)]*(?!.*?expiresIn)/i,
     /cookie-session.*?(?!.*?maxAge)/i,
-    /session.*?(?!.*?(?:idle|inactivity).*?timeout)/i,
   ],
   negativePatterns: [
     /maxAge:\s*[1-9][0-9]{0,5}\b/i,
