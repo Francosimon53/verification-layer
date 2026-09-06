@@ -17,10 +17,9 @@ export interface MFAPattern {
 
 /**
  * MFA-001: Auth Provider Configuration Without MFA
- * Detects code-level auth-provider configuration surfaces where MFA can be
- * inferred from source. Provider APIs whose MFA policy lives outside the
- * application (for example Supabase dashboard settings) are intentionally
- * excluded: a signUp/createClient call site is not evidence that MFA is off.
+ * Detects code-level auth-provider configuration surfaces. A Supabase signUp
+ * call is intentionally not treated as provider configuration; createClient
+ * remains a configuration signal to preserve the rule's existing behavior.
  */
 export const AUTH_CONFIG_NO_MFA: MFAPattern = {
   id: 'MFA-001',
@@ -44,6 +43,10 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /auth0\.WebAuth/i,
     /new\s+Auth0Client/i,
 
+    // Supabase client configuration. Do not match supabase.auth.signUp here:
+    // a signup call site is not proof that provider-level MFA is disabled.
+    /createClient.*?supabase/i,
+
     // Generic code-level auth configs
     /authConfig\s*[:=]/i,
     /authentication\s*:\s*\{/i,
@@ -60,7 +63,7 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /authenticator/i,
   ],
   recommendation:
-    'Enable MFA in the auth provider configuration. For NextAuth, require a second factor in the credential flow. For Clerk/Auth0, enable MFA in the provider configuration or tenant settings. For externally managed providers such as Supabase, verify MFA policy at the provider level rather than inferring it from a sign-up call site.',
+    'Enable MFA in the auth provider configuration. For NextAuth, require a second factor in the credential flow. For Clerk/Auth0, enable MFA in the provider configuration or tenant settings. For Supabase, verify MFA policy at the provider level rather than inferring it from an individual sign-up call site.',
   category: 'authentication',
 };
 
