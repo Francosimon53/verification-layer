@@ -91,6 +91,7 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
     // Match actual authentication/session configuration, not arbitrary uses of
     // the word "session" (e.g. Stripe Checkout Session or provider SDK objects).
     /(?:express-session|\bsession\b)\.(?:configure|use)(?!.*?(?:maxAge|expires|timeout))/i,
+    /app\.use\s*\(\s*session\s*\(/i,
     /maxAge:\s*(?:9[0-9]{5}[0-9]+|[1-9][0-9]{6,})/i,
     /jwt\.sign\([^)]*(?!.*?expiresIn)/i,
     /cookie-session.*?(?!.*?maxAge)/i,
