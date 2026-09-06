@@ -1,0 +1,43 @@
+name: Vitest refresh
+
+on:
+  push:
+    branches: [chore/vitest4-security]
+    paths:
+      - '.github/workflows/vitest-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: chore/vitest4-security
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Update Vitest lockfile
+        run: npm install 'vitest@^4.1.11' --save-dev --package-lock-only
+
+      - name: Verify production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Commit dependency update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No dependency changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: update Vitest security release'
+          git push origin HEAD:chore/vitest4-security
