@@ -27,7 +27,7 @@
     "start": "node dist/cli.js",
     "test": "vitest",
     "test:run": "vitest run",
-    "lint": "eslint src/",
+    "lint": "eslint src/ --max-warnings 23",
     "typecheck": "tsc --noEmit",
     "prepare": "husky || true",
     "prepublishOnly": "npm run build"
