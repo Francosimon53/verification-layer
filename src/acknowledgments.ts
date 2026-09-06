@@ -48,17 +48,29 @@ export function checkAcknowledgment(
       continue;
     }
 
-    // Check if acknowledgment has expired
+    // Expired acknowledgments must never suppress findings. Return the match
+    // metadata so callers can still distinguish an expired exception from no
+    // matching exception at all.
     const expired = ack.expiresAt ? new Date(ack.expiresAt) < new Date() : false;
+    if (expired) {
+      return {
+        acknowledged: false,
+        reason: ack.reason,
+        acknowledgedBy: ack.acknowledgedBy,
+        acknowledgedAt: ack.acknowledgedAt,
+        ticketUrl: ack.ticketUrl,
+        expired: true,
+      };
+    }
 
-    // All criteria matched
+    // All criteria matched and the acknowledgment is still active.
     return {
       acknowledged: true,
       reason: ack.reason,
       acknowledgedBy: ack.acknowledgedBy,
       acknowledgedAt: ack.acknowledgedAt,
       ticketUrl: ack.ticketUrl,
-      expired,
+      expired: false,
     };
   }
 
@@ -97,37 +109,43 @@ export function applyAcknowledgments(
  * Validate acknowledged finding configuration
  */
 export function validateAcknowledgedFinding(
-  ack: any,
+  ack: unknown,
   index: number
 ): string[] {
   const errors: string[] = [];
+  const value: Record<string, unknown> =
+    typeof ack === 'object' && ack !== null ? (ack as Record<string, unknown>) : {};
 
-  if (!ack.pattern || typeof ack.pattern !== 'string') {
+  if (!value.pattern || typeof value.pattern !== 'string') {
     errors.push(`acknowledgedFindings[${index}]: 'pattern' is required and must be a string`);
   }
 
-  if (!ack.reason || typeof ack.reason !== 'string') {
+  if (!value.reason || typeof value.reason !== 'string') {
     errors.push(`acknowledgedFindings[${index}]: 'reason' is required and must be a string`);
   }
 
-  if (!ack.acknowledgedBy || typeof ack.acknowledgedBy !== 'string') {
+  if (!value.acknowledgedBy || typeof value.acknowledgedBy !== 'string') {
     errors.push(`acknowledgedFindings[${index}]: 'acknowledgedBy' is required and must be a string`);
   }
 
-  if (!ack.acknowledgedAt || typeof ack.acknowledgedAt !== 'string') {
+  if (!value.acknowledgedAt || typeof value.acknowledgedAt !== 'string') {
     errors.push(`acknowledgedFindings[${index}]: 'acknowledgedAt' is required and must be a string`);
   } else {
     // Validate ISO 8601 date format
-    const date = new Date(ack.acknowledgedAt);
+    const date = new Date(value.acknowledgedAt);
     if (isNaN(date.getTime())) {
       errors.push(`acknowledgedFindings[${index}]: 'acknowledgedAt' must be a valid ISO 8601 date`);
     }
   }
 
-  if (ack.expiresAt) {
-    const date = new Date(ack.expiresAt);
-    if (isNaN(date.getTime())) {
+  if (value.expiresAt !== undefined) {
+    if (typeof value.expiresAt !== 'string') {
       errors.push(`acknowledgedFindings[${index}]: 'expiresAt' must be a valid ISO 8601 date`);
+    } else {
+      const date = new Date(value.expiresAt);
+      if (isNaN(date.getTime())) {
+        errors.push(`acknowledgedFindings[${index}]: 'expiresAt' must be a valid ISO 8601 date`);
+      }
     }
   }
 
