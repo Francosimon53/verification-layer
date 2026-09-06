@@ -1,0 +1,43 @@
+name: Release tooling audit
+
+on:
+  push:
+    branches: [chore/release-tooling-security]
+    paths:
+      - '.github/workflows/release-tooling-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Inspect current and latest release tooling
+        run: |
+          echo '--- semantic-release ---'
+          npm view semantic-release version engines
+          echo '--- @semantic-release/npm ---'
+          npm view @semantic-release/npm version engines peerDependencies
+          echo '--- installed tree ---'
+          npm ci
+          npm ls semantic-release @semantic-release/npm npm || true
+          echo '--- audit summary ---'
+          npm audit --json > audit.json || true
+          node -e "const a=require('./audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
+          echo '--- audit paths mentioning semantic-release/npm ---'
+          node - <<'NODE'
+          const a = require('./audit.json');
+          for (const [name, v] of Object.entries(a.vulnerabilities || {})) {
+            const via = JSON.stringify(v.via || []);
+            const nodes = JSON.stringify(v.nodes || []);
+            if (/semantic-release|node_modules\/npm|sigstore|pacote|arborist|libnpm/i.test(name + via + nodes)) {
+              console.log(name, JSON.stringify({severity:v.severity,isDirect:v.isDirect,range:v.range,fixAvailable:v.fixAvailable,nodes:v.nodes}, null, 2));
+            }
+          }
+          NODE
