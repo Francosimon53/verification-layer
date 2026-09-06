@@ -16,21 +16,18 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22.22.2
           cache: 'npm'
-      - name: Inspect safe release tooling update path
+      - name: Compare semantic-release 25 dependency risk
         run: |
-          echo '--- latest npm ---'
-          npm view npm version engines
-          echo '--- npm 11.16.1 ---'
-          npm view npm@11.16.1 version engines
-          echo '--- semantic-release 24 dependency ---'
-          npm view semantic-release@24.2.9 dependencies.@semantic-release/npm engines
-          echo '--- plugin 12 npm dependency ---'
-          npm view @semantic-release/npm@12.0.2 dependencies.npm engines peerDependencies
-          echo '--- baseline install ---'
           npm ci
+          npm audit --json > baseline.json || true
+          echo '--- baseline ---'
+          node -e "const a=require('./baseline.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
+          npm install 'semantic-release@25.0.9' --save-dev --package-lock-only
+          npm audit --json > candidate.json || true
+          echo '--- semantic-release 25 candidate ---'
+          node -e "const a=require('./candidate.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
+          npm install --ignore-scripts
           npm ls semantic-release @semantic-release/npm npm || true
-          echo '--- baseline audit ---'
-          npm audit --json > audit.json || true
-          node -e "const a=require('./audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
+          npx semantic-release --version
