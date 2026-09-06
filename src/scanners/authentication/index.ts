@@ -96,15 +96,17 @@ async function scanAuthConfig(
   findings: Finding[]
 ): Promise<void> {
   // A Supabase client is also used for ordinary database/service-role access.
-  // Treat direct SDK construction as MFA configuration evidence only on an
-  // auth/Supabase configuration surface, never merely because createClient()
-  // appears in an unrelated API route (for example a Stripe webhook).
+  // Treat direct SDK construction as MFA configuration evidence only when the
+  // file itself is an explicit auth/Supabase surface. Avoid matching arbitrary
+  // parent directory names that merely contain those words.
   const hasDirectSupabaseSdkImport =
     /(?:from\s+['"]@supabase\/supabase-js['"]|require\(\s*['"]@supabase\/supabase-js['"]\s*\))/i.test(content);
   const hasDirectClientConstruction = lines.some(
     (line) => !isImportLine(line) && /createClient\s*\(/i.test(line),
   );
-  const isSupabaseAuthSurface = /(?:auth|supabase)/i.test(file);
+  const isSupabaseAuthSurface =
+    /(?:^|[\\/])(?:auth|supabase)(?:[\\/]|\.[^\\/]+$)/i.test(file) ||
+    /(?:^|[\\/])(?:auth|supabase)[-_](?:config|client|server)(?:\.[^\\/]+)?$/i.test(file);
   const supabaseClientConfig =
     hasDirectSupabaseSdkImport && hasDirectClientConstruction && isSupabaseAuthSurface;
 
