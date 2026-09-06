@@ -23,7 +23,7 @@ jobs:
       - name: Refresh development tooling
         run: |
           npm uninstall semantic-release @semantic-release/changelog @semantic-release/git --save-dev
-          npm install eslint@^9.39.0 --save-dev
+          npm install eslint@^9.39.0 @eslint/js@^9.39.0 typescript-eslint@^8.54.0 --save-dev
           cat > eslint.config.mjs <<'EOF'
           import eslint from '@eslint/js';
           import tseslint from 'typescript-eslint';
@@ -51,7 +51,7 @@ jobs:
           EOF
           rm .eslintrc.cjs
           npm audit --omit=dev --audit-level=high
-          npm audit --audit-level=critical || true
+          npm audit --audit-level=critical
           npm run lint
           npm run typecheck
           npm run build
