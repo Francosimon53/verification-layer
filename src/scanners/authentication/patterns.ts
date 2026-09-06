@@ -19,16 +19,16 @@ export interface MFAPattern {
  * MFA-001: Auth Provider Configuration Without MFA
  * Detects code-local auth provider configuration without MFA enabled.
  *
- * Supabase runtime calls such as `supabase.auth.signUp()` and generic
- * `createClient()` usage are intentionally excluded. Supabase MFA policy is
- * provider/project configuration and cannot be inferred from an individual
- * signup/login call site.
+ * Supabase runtime calls such as `supabase.auth.signUp()` are intentionally
+ * excluded. Direct Supabase client construction is retained as the nearest
+ * code-local configuration surface, while routes that consume a shared
+ * client are not treated as provider configuration.
  */
 export const AUTH_CONFIG_NO_MFA: MFAPattern = {
   id: 'MFA-001',
   name: 'Authentication Configuration Without MFA Enabled',
   description:
-    'Auth provider configuration (NextAuth, Clerk, Auth0) does not have MFA/2FA/TOTP enabled',
+    'Auth provider configuration (NextAuth, Clerk, Auth0, Supabase) does not have MFA/2FA/TOTP enabled',
   severity: 'critical',
   hipaaReference: 'NPRM §164.312(d) - Person or Entity Authentication',
   patterns: [
@@ -45,6 +45,10 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /Auth0Provider/i,
     /auth0\.WebAuth/i,
     /new\s+Auth0Client/i,
+
+    // Supabase client configuration. Do not use `supabase.auth.signUp` here:
+    // that is a runtime call site, not provider-level MFA configuration.
+    /(?:const|let|var)\s+\w+\s*=\s*createClient\s*\(/i,
 
     // Generic auth configs
     /authConfig\s*[:=]/i,
