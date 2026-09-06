@@ -146,7 +146,9 @@ export const SECURITY_PATTERNS: Array<{
     fixType: 'innerhtml-unsanitized',
   },
   {
-    regex: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:/i,
+    // Direct calls to established sanitizers are mitigation, not a violation.
+    // Keep flagging raw variables and arbitrary expressions passed to __html.
+    regex: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:\s*(?!(?:DOMPurify|domPurify|dompurify)\.sanitize\s*\(|sanitizeHtml\s*\()/i,
     id: 'dangerous-innerhtml-react',
     severity: 'high' as const,
     title: 'dangerouslySetInnerHTML usage',
