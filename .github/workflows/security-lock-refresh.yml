@@ -20,8 +20,8 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Refresh non-breaking security fixes in lockfile
-        run: npm audit fix --package-lock-only
+      - name: Refresh non-breaking production security fixes in lockfile
+        run: npm audit fix --package-lock-only --omit=dev --audit-level=high
 
       - name: Verify production dependency gate
         run: npm audit --omit=dev --audit-level=high
