@@ -1,0 +1,65 @@
+name: Finish maintenance
+
+on:
+  push:
+    branches: [chore/finish-maintenance]
+    paths:
+      - '.github/workflows/finish-maintenance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: chore/finish-maintenance
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - name: Refresh development tooling
+        run: |
+          npm uninstall semantic-release @semantic-release/changelog @semantic-release/git --save-dev
+          npm install eslint@^9.39.0 --save-dev
+          cat > eslint.config.mjs <<'EOF'
+          import eslint from '@eslint/js';
+          import tseslint from 'typescript-eslint';
+
+          export default tseslint.config(
+            { ignores: ['dist/**', 'node_modules/**', '*.js', '*.cjs'] },
+            eslint.configs.recommended,
+            ...tseslint.configs.recommended,
+            {
+              files: ['src/**/*.ts'],
+              languageOptions: {
+                parserOptions: {
+                  project: './tsconfig.json',
+                },
+              },
+              rules: {
+                '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+                '@typescript-eslint/no-explicit-any': 'warn',
+                '@typescript-eslint/explicit-function-return-type': 'off',
+                '@typescript-eslint/explicit-module-boundary-types': 'off',
+                'no-console': 'off',
+              },
+            },
+          );
+          EOF
+          rm .eslintrc.cjs
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=critical || true
+          npm run lint
+          npm run typecheck
+          npm run build
+          npm run test:run
+      - name: Commit maintenance update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json eslint.config.mjs .eslintrc.cjs
+          git commit -m 'chore: refresh development tooling'
+          git push origin HEAD:chore/finish-maintenance
