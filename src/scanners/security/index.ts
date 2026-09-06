@@ -275,6 +275,16 @@ export const securityScanner: Scanner = {
                 continue;
               }
 
+              // A direct call to an established sanitizer at the __html sink is
+              // explicit mitigation. Do not suppress custom helpers or variables
+              // whose sanitization provenance cannot be established here.
+              if (
+                pattern.id === 'dangerous-innerhtml-react' &&
+                /__html:\s*(?:(?:DOMPurify|domPurify|dompurify)\.sanitize|sanitizeHtml)\s*\(/i.test(line)
+              ) {
+                continue;
+              }
+
               findings.push({
                 id: `security-${pattern.id}-${lineNum}`,
                 category: 'access-control',
