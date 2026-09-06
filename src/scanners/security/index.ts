@@ -146,9 +146,7 @@ export const SECURITY_PATTERNS: Array<{
     fixType: 'innerhtml-unsanitized',
   },
   {
-    // Direct calls to established sanitizers are mitigation, not a violation.
-    // Keep flagging raw variables and arbitrary expressions passed to __html.
-    regex: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:\s*(?!(?:DOMPurify|domPurify|dompurify)\.sanitize\s*\(|sanitizeHtml\s*\()/i,
+    regex: /dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html:/i,
     id: 'dangerous-innerhtml-react',
     severity: 'high' as const,
     title: 'dangerouslySetInnerHTML usage',
@@ -274,6 +272,16 @@ export const securityScanner: Scanner = {
             if (pattern.regex.test(line)) {
               // Skip some false positives in test files
               if (isTestFile && ['hardcoded-password', 'hardcoded-secret'].includes(pattern.id)) {
+                continue;
+              }
+
+              // A direct call to an established sanitizer at the __html sink is
+              // explicit mitigation. Do not suppress custom helpers or variables
+              // whose sanitization provenance cannot be established here.
+              if (
+                pattern.id === 'dangerous-innerhtml-react' &&
+                /__html:\s*(?:(?:DOMPurify|domPurify|dompurify)\.sanitize|sanitizeHtml)\s*\(/i.test(line)
+              ) {
                 continue;
               }
 
