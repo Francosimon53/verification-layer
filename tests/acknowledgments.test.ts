@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkAcknowledgment, applyAcknowledgments } from '../src/acknowledgments.js';
+import { checkAcknowledgment, applyAcknowledgments, validateAcknowledgedFinding } from '../src/acknowledgments.js';
 import type { Finding, VlayerConfig, AcknowledgedFinding } from '../src/types.js';
 
 function makeFinding(overrides: Partial<Finding> = {}): Finding {
@@ -92,11 +92,12 @@ describe('checkAcknowledgment', () => {
       expect(checkAcknowledgment(makeFinding(), bySeverity).acknowledged).toBe(false);
     });
 
-    it('flags expired acknowledgments', () => {
+    it('does not suppress findings after an acknowledgment expires', () => {
       const config = makeConfig([makeAck({ expiresAt: '2020-01-01T00:00:00Z' })]);
       const result = checkAcknowledgment(makeFinding(), config);
-      expect(result.acknowledged).toBe(true);
+      expect(result.acknowledged).toBe(false);
       expect(result.expired).toBe(true);
+      expect(result.reason).toBe('documented false positive');
     });
 
     it('returns unacknowledged when config has no acknowledgments', () => {
@@ -123,5 +124,34 @@ describe('applyAcknowledgments', () => {
     expect(acked.acknowledged).toBe(true);
     expect(acked.acknowledgment?.reason).toBe('documented false positive');
     expect(untouched.acknowledged).toBeUndefined();
+  });
+
+  it('leaves a finding unacknowledged when its matching exception has expired', () => {
+    const [finding] = applyAcknowledgments(
+      [makeFinding()],
+      makeConfig([makeAck({ expiresAt: '2020-01-01T00:00:00Z' })])
+    );
+
+    expect(finding.acknowledged).toBeUndefined();
+    expect(finding.acknowledgment).toBeUndefined();
+  });
+});
+
+describe('validateAcknowledgedFinding', () => {
+  it('handles non-object input without relying on any', () => {
+    const errors = validateAcknowledgedFinding(null, 0);
+    expect(errors).toContain("acknowledgedFindings[0]: 'pattern' is required and must be a string");
+    expect(errors).toContain("acknowledgedFindings[0]: 'reason' is required and must be a string");
+  });
+
+  it('rejects a non-string expiresAt value', () => {
+    const errors = validateAcknowledgedFinding({
+      pattern: '**/*.ts',
+      reason: 'test',
+      acknowledgedBy: 'Security Team',
+      acknowledgedAt: '2026-07-20T00:00:00Z',
+      expiresAt: 123,
+    }, 0);
+    expect(errors).toContain("acknowledgedFindings[0]: 'expiresAt' must be a valid ISO 8601 date");
   });
 });
