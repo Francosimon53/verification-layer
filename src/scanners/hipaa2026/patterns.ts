@@ -28,8 +28,10 @@ export const MFA_PATTERNS: HIPAA2026Pattern = {
   severity: 'critical',
   hipaaReference: '45 CFR §164.312(a)(2)(i) - Access Control (Required)',
   patterns: [
-    // Login/auth without MFA
-    /(?:login|authenticate|signin|auth).*?(?:patient|phi|medical|health)(?!.*?(?:mfa|multi.?factor|2fa|totp|authenticator))/i,
+    // Login/sign-in/authentication flows that also access PHI. Deliberately avoid
+    // the generic token "auth": provider namespaces such as supabase.auth.signUp
+    // and metadata keys such as "authors" are not evidence of a PHI login flow.
+    /(?:\blogin\b|\bauthenticate(?:User)?\b|\bsign(?:-|_)?in\b).*?(?:patient|phi|medical|health)(?!.*?(?:mfa|multi.?factor|2fa|totp|authenticator))/i,
     // Auth configs without MFA
     /(?:passport|auth0|okta|cognito)\.(?:use|configure).*?(?!.*?(?:mfa|multiFactor|requireMFA))/i,
     // Admin endpoints without MFA
@@ -60,17 +62,11 @@ export const ENCRYPTION_AT_REST_PATTERNS: HIPAA2026Pattern = {
   severity: 'critical',
   hipaaReference: '45 CFR §164.312(a)(2)(iv) - Encryption (Required)',
   patterns: [
-    // Database without encryption
     /(?:mongoose|sequelize|typeorm|prisma)\.(?:connect|createConnection).*?(?!.*?(?:encrypt|ssl|tls))/i,
-    // File storage without encryption
     /(?:fs\.writeFile|writeFileSync|s3\.putObject).*?(?:patient|phi|medical)(?!.*?(?:encrypt|cipher))/i,
-    // LocalStorage with PHI
     /localStorage\.setItem.*?(?:patient|ssn|mrn|phi)/i,
-    // Cookie with PHI unencrypted
     /(?:res\.cookie|setCookie).*?(?:patient|phi|medical)(?!.*?(?:encrypt|secure|httpOnly))/i,
-    // MongoDB without encryption
     /MongoClient\.connect.*?(?!.*?(?:ssl|tls|encryption))/i,
-    // PostgreSQL without encryption
     /(?:pg|postgres)\.(?:connect|Pool).*?(?!.*?ssl)/i,
   ],
   negativePatterns: [
@@ -84,9 +80,7 @@ export const ENCRYPTION_AT_REST_PATTERNS: HIPAA2026Pattern = {
   category: 'encryption',
 };
 
-/**
- * HIPAA-SESSION-001: Automatic Session Timeout
- */
+/** HIPAA-SESSION-001: Automatic Session Timeout */
 export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-SESSION-001',
   name: 'Missing Automatic Session Timeout',
@@ -94,22 +88,13 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
   severity: 'high',
   hipaaReference: '45 CFR §164.312(a)(2)(iii) - Session Control (Required)',
   patterns: [
-    // Session config without expiration
     /(?:express-session|session)\.(?:configure|use)(?!.*?(?:maxAge|expires|timeout))/i,
-    // Session with timeout > 15 min (900000 ms)
     /maxAge:\s*(?:9[0-9]{5}[0-9]+|[1-9][0-9]{6,})/i,
-    // JWT without expiration
     /jwt\.sign\([^)]*(?!.*?expiresIn)/i,
-    // Cookie session without expiration
     /cookie-session.*?(?!.*?maxAge)/i,
-    // Missing idle timeout
     /session.*?(?!.*?(?:idle|inactivity).*?timeout)/i,
   ],
   negativePatterns: [
-    // Compliant session length: maxAge with a 1–6 digit value (≤ 999999 ms,
-    // i.e. ≤ ~16 min). The \b stops it matching a prefix of a longer (>15 min)
-    // value, which the positive pattern above flags. Includes the exact 900000
-    // (15 min) boundary the autofix recommends — the old [1-8][0-9]{5} excluded it.
     /maxAge:\s*[1-9][0-9]{0,5}\b/i,
     /expiresIn:\s*['"](?:1[0-5]m|[1-9]m)['"]/i,
     /idleTimeout/i,
@@ -119,9 +104,7 @@ export const SESSION_TIMEOUT_PATTERNS: HIPAA2026Pattern = {
   category: 'access-control',
 };
 
-/**
- * HIPAA-REVOKE-001: Immediate Access Revocation
- */
+/** HIPAA-REVOKE-001: Immediate Access Revocation */
 export const ACCESS_REVOCATION_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-REVOKE-001',
   name: 'Missing Immediate Access Revocation',
@@ -129,15 +112,9 @@ export const ACCESS_REVOCATION_PATTERNS: HIPAA2026Pattern = {
   severity: 'critical',
   hipaaReference: '45 CFR §164.308(a)(3)(ii)(C) - Termination Procedures (Required)',
   patterns: [
-    // Deactivate user without token revocation
     /(?:deactivate|disable|remove)User(?!.*?(?:revoke|invalidate|blacklist).*?(?:token|session))/i,
-    // Delete user without session cleanup
     /(?:deleteUser|removeUser).*?(?!.*?(?:logout|invalidate|clearSessions))/i,
-    // Termination/deactivation as an actual operation — identifier or method call.
-    // Must NOT match prose/log strings like console.log('User deactivated ...'),
-    // which describe an action rather than perform one (false positive).
     /(?:deactivat|terminat|disabl)e?(?:User|Account|Member|Employee)|(?:user|account|member|employee)(?:Deactivation|Termination)|(?:user|account|member)\.(?:deactivate|terminate|disable)\b/i,
-    // Role change without re-auth
     /(?:updateRole|changePermissions)(?!.*?(?:logout|reauth|invalidate))/i,
   ],
   negativePatterns: [
@@ -151,9 +128,7 @@ export const ACCESS_REVOCATION_PATTERNS: HIPAA2026Pattern = {
   category: 'access-control',
 };
 
-/**
- * HIPAA-BREACH-001: 24-Hour Breach Notification
- */
+/** HIPAA-BREACH-001: 24-Hour Breach Notification */
 export const BREACH_NOTIFICATION_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-BREACH-001',
   name: 'Missing Breach Notification Mechanism',
@@ -163,8 +138,9 @@ export const BREACH_NOTIFICATION_PATTERNS: HIPAA2026Pattern = {
   patterns: [
     // Security errors without breach handler
     /catch\s*\(.*?error.*?\).*?(?:security|unauthorized|breach)(?!.*?(?:notifyBreach|incidentResponse|alertSecurity))/i,
-    // Failed login attempts without monitoring
-    /(?:failed|invalid).*?(?:login|auth)(?!.*?(?:monitor|alert|notify))/i,
+    // Repeated/aggregated failed-login signals without monitoring. A single
+    // "invalid credentials" response is an authentication outcome, not a breach.
+    /(?:failed|invalid).*?(?:login|auth).*?(?:attempts?|count|threshold|rate|repeated|multiple)(?!.*?(?:monitor|alert|notify))/i,
     // Data access anomaly without alert
     /(?:unusual|suspicious).*?access(?!.*?(?:alert|notify|incident))/i,
   ],
@@ -179,9 +155,7 @@ export const BREACH_NOTIFICATION_PATTERNS: HIPAA2026Pattern = {
   category: 'audit-logging',
 };
 
-/**
- * HIPAA-SEGMENT-001: Network Segmentation
- */
+/** HIPAA-SEGMENT-001: Network Segmentation */
 export const NETWORK_SEGMENTATION_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-SEGMENT-001',
   name: 'Missing Network Segmentation for PHI',
@@ -189,25 +163,16 @@ export const NETWORK_SEGMENTATION_PATTERNS: HIPAA2026Pattern = {
   severity: 'critical',
   hipaaReference: '45 CFR §164.312(e)(1) - Transmission Security (Required)',
   patterns: [
-    // CORS allowing all origins for PHI
     /cors\(\{?\s*origin:\s*['"]?\*['"]?.*?(?:patient|phi|medical)/i,
-    // PHI API without network restrictions
     /\/api.*?(?:patient|phi|medical)(?!.*?(?:firewall|vpc|subnet|private))/i,
-    // Internal PHI service publicly accessible
     /(?:express|fastify|koa)\.listen.*?(?:patient|phi)(?!.*?(?:localhost|127\.0\.0\.1|private))/i,
-    // Missing VPC/subnet config on a backend database/storage service.
-    // `storage` is guarded against client-side browser APIs (localStorage,
-    // sessionStorage) — network segmentation does not apply to those.
     /(?:database|(?<!local)(?<!session)storage).*?(?:patient|phi)(?!.*?(?:vpc|subnet|securityGroup))/i,
   ],
   negativePatterns: [
-    /origin:\s*\[.*?\]/i, // Whitelist
+    /origin:\s*\[.*?\]/i,
     /private.*?subnet/i,
     /securityGroup/i,
     /firewall.*?rules/i,
-    // Client-side HTTP *consumption* (fetch/axios) is not an exposed PHI
-    // service. Network segmentation applies to the server/infra that exposes
-    // the endpoint, not to a frontend call that reads from it.
     /\bfetch\s*\(/i,
     /\baxios\b/i,
   ],
@@ -216,10 +181,7 @@ export const NETWORK_SEGMENTATION_PATTERNS: HIPAA2026Pattern = {
   category: 'access-control',
 };
 
-/**
- * HIPAA-ASSET-001: Technology Asset Inventory
- * Special pattern - triggers asset inventory generation
- */
+/** HIPAA-ASSET-001: Technology Asset Inventory */
 export const ASSET_INVENTORY_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-ASSET-001',
   name: 'Generate ePHI Technology Asset Inventory',
@@ -227,13 +189,9 @@ export const ASSET_INVENTORY_PATTERNS: HIPAA2026Pattern = {
   severity: 'high',
   hipaaReference: '45 CFR §164.308(a)(1)(ii)(A) - Risk Analysis (Required)',
   patterns: [
-    // Databases
     /(?:mongoose|sequelize|prisma|typeorm|knex)\.(?:connect|model)/i,
-    // Storage services
     /(?:s3|azure\.storage|gcs)\./i,
-    // Third-party integrations
     /(?:stripe|twilio|sendgrid|mailgun)\.(?:api|client)/i,
-    // APIs
     /(?:axios|fetch|got|request)\./i,
   ],
   autoFix: 'Asset inventory will be generated automatically in scan report',
@@ -241,10 +199,7 @@ export const ASSET_INVENTORY_PATTERNS: HIPAA2026Pattern = {
   category: 'data-retention',
 };
 
-/**
- * HIPAA-FLOW-001: ePHI Flow Mapping
- * Special pattern - triggers flow map generation
- */
+/** HIPAA-FLOW-001: ePHI Flow Mapping */
 export const PHI_FLOW_MAPPING_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-FLOW-001',
   name: 'Generate ePHI Flow Map',
@@ -252,13 +207,9 @@ export const PHI_FLOW_MAPPING_PATTERNS: HIPAA2026Pattern = {
   severity: 'high',
   hipaaReference: '45 CFR §164.308(a)(1)(ii)(A) - Risk Analysis (Required)',
   patterns: [
-    // Input points
     /(?:req\.body|req\.params|req\.query).*?(?:patient|phi|medical)/i,
-    // Processing
     /(?:process|transform|validate).*?(?:patient|phi)/i,
-    // Storage
     /(?:save|insert|update).*?(?:patient|phi)/i,
-    // Output
     /(?:res\.(?:send|json)|return).*?(?:patient|phi)/i,
   ],
   autoFix: 'PHI flow map will be generated automatically in scan report',
@@ -266,9 +217,7 @@ export const PHI_FLOW_MAPPING_PATTERNS: HIPAA2026Pattern = {
   category: 'data-retention',
 };
 
-/**
- * HIPAA-PENTEST-001: Vulnerability Scanning Configuration
- */
+/** HIPAA-PENTEST-001: Vulnerability Scanning Configuration */
 export const VULNERABILITY_SCANNING_PATTERNS: HIPAA2026Pattern = {
   id: 'HIPAA-PENTEST-001',
   name: 'Missing Vulnerability Scanning Configuration',
@@ -276,7 +225,6 @@ export const VULNERABILITY_SCANNING_PATTERNS: HIPAA2026Pattern = {
   severity: 'high',
   hipaaReference: '45 CFR §164.308(a)(8) - Evaluation (Required)',
   patterns: [
-    // Missing security scanning configs
     /package\.json(?!.*?(?:snyk|audit|vulnerability))/i,
   ],
   negativePatterns: [
