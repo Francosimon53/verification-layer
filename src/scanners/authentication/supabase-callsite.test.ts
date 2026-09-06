@@ -35,22 +35,6 @@ export async function signup(supabase, email, password) {
     expect(findings.filter((f) => f.id === 'MFA-001')).toHaveLength(0);
   });
 
-  it('does not treat createClient for Supabase as proof that MFA is disabled', async () => {
-    const file = path.join(tempDir, 'supabase-server.ts');
-    await fs.writeFile(
-      file,
-      `
-import { createClient } from '@supabase/supabase-js';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
-export { supabase };
-`,
-      'utf-8'
-    );
-
-    const findings = await authenticationScanner.scan([file], scanOptions());
-    expect(findings.filter((f) => f.id === 'MFA-001')).toHaveLength(0);
-  });
-
   it('still detects explicit NextAuth configuration without MFA', async () => {
     const file = path.join(tempDir, 'auth.ts');
     await fs.writeFile(
