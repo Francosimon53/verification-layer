@@ -20,24 +20,15 @@ jobs:
         with:
           node-version: 22.22.2
           cache: 'npm'
-      - name: Update semantic-release and release runtime
+      - name: Update semantic-release dependency
         run: |
           npm install 'semantic-release@25.0.9' --save-dev --package-lock-only
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('.github/workflows/ci.yml')
-          s = p.read_text()
-          marker = "  release:\n"
-          before, after = s.split(marker, 1)
-          after = after.replace("          node-version: 20\n", "          node-version: 22.22.2\n", 1)
-          p.write_text(before + marker + after)
-          PY
           npm audit --omit=dev --audit-level=high
-      - name: Commit release tooling update
+      - name: Commit dependency update
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json .github/workflows/ci.yml
+          git add package.json package-lock.json
           if git diff --cached --quiet; then
             echo 'No changes to commit.'
             exit 0
