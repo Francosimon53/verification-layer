@@ -20,9 +20,8 @@ export interface MFAPattern {
  * Detects code-local auth provider configuration without MFA enabled.
  *
  * Supabase runtime calls such as `supabase.auth.signUp()` are intentionally
- * excluded. Direct Supabase client construction is retained as the nearest
- * code-local configuration surface, while routes that consume a shared
- * client are not treated as provider configuration.
+ * excluded. Supabase configuration is handled in the scanner with stronger
+ * evidence: a direct client construction that contains a Supabase project URL.
  */
 export const AUTH_CONFIG_NO_MFA: MFAPattern = {
   id: 'MFA-001',
@@ -45,10 +44,6 @@ export const AUTH_CONFIG_NO_MFA: MFAPattern = {
     /Auth0Provider/i,
     /auth0\.WebAuth/i,
     /new\s+Auth0Client/i,
-
-    // Supabase client configuration. Do not use `supabase.auth.signUp` here:
-    // that is a runtime call site, not provider-level MFA configuration.
-    /(?:const|let|var)\s+\w+\s*=\s*createClient\s*\(/i,
 
     // Generic auth configs
     /authConfig\s*[:=]/i,
