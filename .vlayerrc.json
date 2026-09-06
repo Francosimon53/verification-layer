@@ -164,6 +164,14 @@
       "expiresAt": "2026-12-19T00:00:00Z"
     },
     {
+      "pattern": "**/dashboard/lib/supabase/server.ts",
+      "id": "MFA-001",
+      "reason": "This file constructs the dashboard's Supabase client but does not control tenant-level MFA policy. The vlayer dashboard stores project and scan metadata, not patient PHI; Supabase MFA policy is configured at the provider/project level rather than in this server client factory.",
+      "acknowledgedBy": "Self-audit reconciliation (PR #88)",
+      "acknowledgedAt": "2026-09-06T00:00:00Z",
+      "expiresAt": "2026-12-06T00:00:00Z"
+    },
+    {
       "pattern": "**/dashboard/lib/github/auth.ts",
       "reason": "GitHub App machine-to-machine JWT (jwt.sign with exp = now + 600, GitHub's 10-minute maximum) used to mint installation tokens — not a PHI-bearing user session. SESSION/REVOKE keyword-match jwt.sign; revocation is moot for a 10-minute app JWT.",
       "acknowledgedBy": "Self-audit reconciliation (PR)",

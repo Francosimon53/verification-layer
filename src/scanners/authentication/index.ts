@@ -95,15 +95,29 @@ async function scanAuthConfig(
   pattern: MFAPattern,
   findings: Finding[]
 ): Promise<void> {
+  // A Supabase auth call (signUp/signIn/etc.) is a runtime call site, not proof
+  // that this file owns provider MFA configuration. Treat Supabase client usage
+  // as configuration evidence only when the file imports the SDK directly and
+  // constructs the client itself. Shared-client consumers therefore do not fire.
+  const hasDirectSupabaseSdkImport =
+    /(?:from\s+['"]@supabase\/supabase-js['"]|require\(\s*['"]@supabase\/supabase-js['"]\s*\))/i.test(content);
+  const hasDirectClientConstruction = lines.some(
+    (line) => !isImportLine(line) && /createClient\s*\(/i.test(line),
+  );
+  const supabaseClientConfig =
+    hasDirectSupabaseSdkImport && hasDirectClientConstruction;
+
   // Check if this is an auth-related file
   const isAuthFile =
     /(?:auth|clerk|supabase|next-auth)/i.test(file) ||
-    pattern.patterns.some((p) => p.test(content));
+    pattern.patterns.some((p) => p.test(content)) ||
+    supabaseClientConfig;
 
   if (!isAuthFile) return;
 
   // Check if file has any auth provider configuration
-  const hasAuthConfig = pattern.patterns.some((p) => p.test(content));
+  const hasAuthConfig =
+    pattern.patterns.some((p) => p.test(content)) || supabaseClientConfig;
   if (!hasAuthConfig) return;
 
   // Check if MFA is configured
@@ -111,15 +125,23 @@ async function scanAuthConfig(
   if (hasMfaConfig) return;
 
   // Find the line with auth configuration. Skip import/require lines — anchoring
-  // an "auth config without MFA" finding to an `import { createClient } from
-  // '@supabase/...'` line is a false-positive-looking trigger. If the only
-  // evidence is an import, don't fire at all.
+  // an "auth config without MFA" finding to an import line is misleading.
   let configLine = 0;
   for (let i = 0; i < lines.length; i++) {
     if (isImportLine(lines[i])) continue;
     if (pattern.patterns.some((p) => p.test(lines[i]))) {
       configLine = i + 1;
       break;
+    }
+  }
+
+  // For direct Supabase config, anchor the finding to the client constructor.
+  if (configLine === 0 && supabaseClientConfig) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/createClient\s*\(/i.test(lines[i]) && !isImportLine(lines[i])) {
+        configLine = i + 1;
+        break;
+      }
     }
   }
 
