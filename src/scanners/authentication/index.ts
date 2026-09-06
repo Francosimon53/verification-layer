@@ -95,17 +95,18 @@ async function scanAuthConfig(
   pattern: MFAPattern,
   findings: Finding[]
 ): Promise<void> {
-  // A Supabase auth call (signUp/signIn/etc.) is a runtime call site, not proof
-  // that this file owns provider MFA configuration. Treat Supabase client usage
-  // as configuration evidence only when the file imports the SDK directly and
-  // constructs the client itself. Shared-client consumers therefore do not fire.
+  // A Supabase client is also used for ordinary database/service-role access.
+  // Treat direct SDK construction as MFA configuration evidence only on an
+  // auth/Supabase configuration surface, never merely because createClient()
+  // appears in an unrelated API route (for example a Stripe webhook).
   const hasDirectSupabaseSdkImport =
     /(?:from\s+['"]@supabase\/supabase-js['"]|require\(\s*['"]@supabase\/supabase-js['"]\s*\))/i.test(content);
   const hasDirectClientConstruction = lines.some(
     (line) => !isImportLine(line) && /createClient\s*\(/i.test(line),
   );
+  const isSupabaseAuthSurface = /(?:auth|supabase)/i.test(file);
   const supabaseClientConfig =
-    hasDirectSupabaseSdkImport && hasDirectClientConstruction;
+    hasDirectSupabaseSdkImport && hasDirectClientConstruction && isSupabaseAuthSurface;
 
   // Check if this is an auth-related file
   const isAuthFile =
