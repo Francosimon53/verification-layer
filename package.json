@@ -1,11 +1,12 @@
 {
   "name": "verification-layer",
   "version": "0.27.3",
-  "description": "Open-source HIPAA compliance scanner for healthcare code. 143 rules, 5 HIPAA categories. CLI + CI/CD + VS Code.",
+  "description": "Open-source HIPAA compliance scanner and compliance delivery gate for healthcare code. 143 rules, evidence packages, policy gates, CLI + CI/CD.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "vlayer": "dist/cli.js"
+    "vlayer": "dist/cli.js",
+    "vlayer-ci": "dist/delivery-cli.js"
   },
   "type": "module",
   "exports": {
@@ -18,6 +19,7 @@
     "dist",
     "templates",
     "README.md",
+    "COMPLIANCE_DELIVERY.md",
     "LICENSE"
   ],
   "scripts": {
@@ -52,7 +54,11 @@
     "suppression",
     "github-action",
     "devsecops",
-    "healthtech"
+    "healthtech",
+    "compliance-as-code",
+    "policy-gate",
+    "audit-evidence",
+    "software-supply-chain"
   ],
   "author": "Simon Franco",
   "license": "MIT",
