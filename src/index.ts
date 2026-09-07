@@ -8,10 +8,22 @@ export {
   getCategoryCounts,
 } from './rules/catalog.js';
 export type { CatalogRule, CatalogSeverity, Category } from './rules/catalog.js';
-export { loadBaseline, saveBaseline, applyBaseline, generateFindingHash } from './baseline.js';
+export {
+  BASELINE_VERSION,
+  applyBaseline,
+  canonicalRuleId,
+  createBaselineEntry,
+  generateFindingHash,
+  getFindingAnchor,
+  inferProjectRoot,
+  loadBaseline,
+  normalizeFindingFile,
+  saveBaseline,
+} from './baseline.js';
 export { checkInlineSuppression, applyInlineSuppressions } from './suppression.js';
 export { checkAcknowledgment, applyAcknowledgments } from './acknowledgments.js';
 export { calculateComplianceScore, formatScore, getScoreColor, getScoreSummary } from './compliance-score.js';
+export * from './delivery/index.js';
 export type {
   Finding,
   ScanResult,

@@ -663,7 +663,7 @@
       "severity": "critical",
       "title": "Authentication Configuration Without MFA Enabled",
       "description": "Auth provider configuration (NextAuth, Clerk, Auth0, Supabase) does not have MFA/2FA/TOTP enabled",
-      "recommendation": "Enable MFA in your auth provider configuration. For NextAuth: add adapter with MFA support. For Clerk: enable MFA in dashboard. For Auth0: enable MFA in tenant settings. For Supabase: enable MFA in auth settings.",
+      "recommendation": "Enable MFA in your auth provider configuration. For NextAuth: add adapter with MFA support. For Clerk: enable MFA in dashboard. For Auth0: enable MFA in tenant settings. For Supabase, verify MFA policy at the project/provider configuration level rather than inferring it from runtime auth calls.",
       "hipaaReference": "NPRM §164.312(d) - Person or Entity Authentication",
       "source": "pattern",
       "scanner": "authentication"
