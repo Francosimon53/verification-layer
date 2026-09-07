@@ -1,4 +1,4 @@
-import { resolve } from 'path';
+import { isAbsolute, resolve } from 'path';
 import { access } from 'fs/promises';
 import { scan } from '../scan.js';
 import { loadBaseline, type Baseline } from '../baseline.js';
@@ -39,7 +39,7 @@ async function existingFile(path: string): Promise<string | undefined> {
 
 async function resolveBaselinePath(root: string, explicit?: string): Promise<string | undefined> {
   if (explicit) {
-    const candidate = resolve(root, explicit);
+    const candidate = isAbsolute(explicit) ? explicit : resolve(root, explicit);
     return existingFile(candidate);
   }
   return existingFile(resolve(root, '.vlayer-baseline.json'));
@@ -64,20 +64,23 @@ export async function runComplianceGuard(options: RunGuardOptions): Promise<Guar
   const git = await getGitContext(projectPath, options.baseRef, options.headRef ?? 'HEAD');
   const scanRoot = git.available ? git.root : projectPath;
   const baselinePath = await resolveBaselinePath(scanRoot, options.baselineFile);
+  const configPath = options.configFile
+    ? (isAbsolute(options.configFile) ? options.configFile : resolve(scanRoot, options.configFile))
+    : undefined;
   let baseline: Baseline | null = null;
   if (baselinePath) baseline = await loadBaseline(baselinePath);
 
   const scanOptions: ScanOptions = {
     path: scanRoot,
-    configFile: options.configFile,
+    configFile: configPath,
     baselineFile: baselinePath,
     enableAI: options.enableAI === true,
     minConfidence: options.minConfidence,
   };
   const result = await scan(scanOptions);
   const delta = buildFindingDelta(result.findings, scanRoot, git.changedFiles, baseline);
-  const loadedPolicy = await loadDeliveryPolicy(scanRoot, options.policyFile, options.configFile);
-  const acknowledgmentLifecycle = await getAcknowledgmentLifecycle(scanRoot, options.configFile);
+  const loadedPolicy = await loadDeliveryPolicy(scanRoot, options.policyFile, configPath);
+  const acknowledgmentLifecycle = await getAcknowledgmentLifecycle(scanRoot, configPath);
 
   let policy = mergePolicy(loadedPolicy.policy, options.policy);
   if (options.changedFilesOnly !== undefined) {
@@ -99,6 +102,7 @@ export async function runComplianceGuard(options: RunGuardOptions): Promise<Guar
     delta,
     decision,
     findings: result.findings,
+    scannedFiles: result.scannedFiles,
     complianceScore: result.complianceScore?.score,
     baselineLoaded: baseline !== null,
     baselinePath,
