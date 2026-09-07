@@ -22,6 +22,10 @@ export {
   verifyEvidencePackage,
 } from './evidence.js';
 export {
+  uploadEvidenceFile,
+  uploadEvidencePackage,
+} from './upload.js';
+export {
   buildRemediationPlan,
   remediationToMarkdown,
 } from './remediation.js';
@@ -45,3 +49,4 @@ export type {
 } from './types.js';
 export type { GuardExecution, RunGuardOptions } from './runner.js';
 export type { AcknowledgmentLifecycle, LoadedDeliveryPolicy } from './governance.js';
+export type { UploadEvidenceOptions, UploadEvidenceResult } from './upload.js';
