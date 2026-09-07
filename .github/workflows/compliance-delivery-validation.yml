@@ -1,0 +1,44 @@
+name: Validate compliance delivery v1
+
+on:
+  push:
+    branches: [feat/compliance-delivery-v1]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:run
+      - name: Exercise compliance delivery CLI
+        run: |
+          node dist/delivery-cli.js --help
+          node dist/cli.js baseline . -o /tmp/vlayer-baseline-v2.json --config .vlayerrc.json || true
+          test "$(jq -r '.version' /tmp/vlayer-baseline-v2.json)" = "2.0"
+          jq -e '[.findings[] | select((.file | startswith("/")) and (.file != "project-level"))] | length == 0' /tmp/vlayer-baseline-v2.json
+          set +e
+          node dist/delivery-cli.js guard . --baseline /tmp/vlayer-baseline-v2.json --all-files -o /tmp/vlayer-guard.json
+          code=$?
+          set -e
+          test "$code" -eq 0 -o "$code" -eq 2
+          jq -e '.decision.deployAllowed == true or .decision.deployAllowed == false' /tmp/vlayer-guard.json
+          set +e
+          node dist/delivery-cli.js evidence . --baseline /tmp/vlayer-baseline-v2.json --all-files -o /tmp/vlayer-evidence.json
+          code=$?
+          set -e
+          test "$code" -eq 0 -o "$code" -eq 2
+          node dist/delivery-cli.js verify-evidence /tmp/vlayer-evidence.json
