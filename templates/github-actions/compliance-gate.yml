@@ -1,0 +1,61 @@
+name: vlayer compliance gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Evaluate changed-code compliance
+        id: guard
+        continue-on-error: true
+        run: |
+          npm exec --yes --package=verification-layer -- \
+            vlayer-ci guard . \
+            --baseline .vlayer-baseline.json \
+            --policy vlayer.policy.json \
+            --base "${{ github.base_ref }}" \
+            --output vlayer-guard.json
+
+      - name: Generate evidence package
+        if: always()
+        continue-on-error: true
+        run: |
+          npm exec --yes --package=verification-layer -- \
+            vlayer-ci evidence . \
+            --baseline .vlayer-baseline.json \
+            --policy vlayer.policy.json \
+            --base "${{ github.base_ref }}" \
+            --output vlayer-evidence.json
+
+      - name: Upload compliance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vlayer-compliance-${{ github.run_number }}
+          path: |
+            vlayer-guard.json
+            vlayer-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Enforce delivery decision
+        if: steps.guard.outcome != 'success'
+        run: |
+          echo "vlayer compliance policy blocked this change or the guard failed."
+          exit 1
