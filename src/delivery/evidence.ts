@@ -73,7 +73,7 @@ export function buildEvidencePackage(
     },
     decision: guard.decision,
     summary: {
-      scannedFiles: new Set(guard.findings.map(finding => normalizeFindingFile(finding, root))).size,
+      scannedFiles: guard.scannedFiles,
       totalFindings: guard.findings.length,
       newFindings: guard.delta.newFindings.length,
       resolvedFindings: guard.delta.resolvedFindings.length,
