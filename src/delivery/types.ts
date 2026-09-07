@@ -175,6 +175,7 @@ export interface GuardResult {
   delta: FindingDelta;
   decision: PolicyDecision;
   findings: Finding[];
+  scannedFiles: number;
   complianceScore?: number;
   baselineLoaded: boolean;
 }
