@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'crypto';
 import { mkdtemp, readFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -118,7 +119,6 @@ describe('baseline v2 fingerprints', () => {
   it('keeps exact v1 hashes readable', () => {
     const current = finding('/repo/src/crypto.ts', 20, 'enc-des-19');
     // Old v1 key: file:line:id:title
-    const { createHash } = require('crypto') as typeof import('crypto');
     const legacy = createHash('sha256')
       .update(`${current.file}:${current.line || 0}:${current.id}:${current.title}`)
       .digest('hex')
