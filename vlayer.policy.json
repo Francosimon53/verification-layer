@@ -1,0 +1,7 @@
+{
+  "blockOn": ["critical", "high"],
+  "changedFilesOnly": true,
+  "minimumScore": 0,
+  "requireBaseline": true,
+  "failOnExpiredAcknowledgments": true
+}
