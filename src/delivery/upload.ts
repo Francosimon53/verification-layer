@@ -21,8 +21,11 @@ function resolveIngestUrl(value?: string): URL {
   const raw = value || process.env.VLAYER_INGEST_URL || 'https://vlayer.app/api/ingest';
   const url = new URL(raw);
   const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-  if (url.protocol !== 'https:' && !local) {
+  if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) {
     throw new Error('Evidence uploads require HTTPS (except localhost development)');
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error('Ingest URL must not contain credentials, query parameters, or fragments');
   }
   return url;
 }
@@ -49,6 +52,7 @@ export async function uploadEvidencePackage(
   try {
     const response = await fetch(url, {
       method: 'POST',
+      redirect: 'error',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -68,22 +72,18 @@ export async function uploadEvidencePackage(
     const record = payload && typeof payload === 'object'
       ? payload as Record<string, unknown>
       : {};
-    const message = typeof record.message === 'string'
-      ? record.message
-      : typeof record.error === 'string'
-        ? record.error
-        : undefined;
-
     if (!response.ok) {
-      throw new Error(`Workspace upload failed with HTTP ${response.status}${message ? `: ${message}` : ''}`);
+      throw new Error(`Workspace upload failed with HTTP ${response.status}`);
     }
+    const safeValue = (value: unknown): string | undefined =>
+      typeof value === 'string' && !value.includes(token) ? value : undefined;
 
     return {
       ok: true,
       status: response.status,
-      scanId: typeof record.scanId === 'string' ? record.scanId : undefined,
-      projectId: typeof record.projectId === 'string' ? record.projectId : undefined,
-      message,
+      scanId: safeValue(record.scanId),
+      projectId: safeValue(record.projectId),
+      message: safeValue(record.message),
     };
   } finally {
     clearTimeout(timeout);
