@@ -1,0 +1,65 @@
+name: Compliance Delivery Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build local vlayer
+        run: npm run build
+
+      - name: Evaluate delivery policy
+        id: guard
+        continue-on-error: true
+        run: |
+          node dist/delivery-cli.js guard . \
+            --baseline .vlayer-baseline.json \
+            --policy vlayer.policy.json \
+            --base "${{ github.event.pull_request.base.sha || 'HEAD^' }}" \
+            --output vlayer-guard.json
+
+      - name: Generate evidence
+        if: always()
+        continue-on-error: true
+        run: |
+          node dist/delivery-cli.js evidence . \
+            --baseline .vlayer-baseline.json \
+            --policy vlayer.policy.json \
+            --base "${{ github.event.pull_request.base.sha || 'HEAD^' }}" \
+            --output vlayer-evidence.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compliance-delivery-${{ github.run_number }}
+          path: |
+            vlayer-guard.json
+            vlayer-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Enforce decision
+        if: steps.guard.outcome != 'success'
+        run: exit 1
