@@ -21,10 +21,10 @@ export default function AwsLandingPage() {
               AWS-first validation
             </div>
             <h1 className="mt-7 max-w-3xl text-4xl font-semibold tracking-[-0.035em] text-white sm:text-6xl sm:leading-[1.05]">
-              Prove how your PHI workloads are protected in AWS
+              Show reviewers how one PHI workload is protected in AWS
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Turn the observable state of one AWS workload into reusable evidence for customer security reviews, procurement, and internal assurance.
+              Get a reviewer-ready evidence report for one PHI workload in AWS — what is in scope, what was observed, where the proof came from, and what is still unproven — ready to attach to your next customer security review, in 10 business days, for $499.
             </p>
             <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <AwsStartButton />

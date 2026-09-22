@@ -43,6 +43,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute = !pathname.startsWith('/login') &&
     !pathname.startsWith('/signup') &&
     !pathname.startsWith('/pricing') &&
+    !pathname.startsWith('/legal') &&
     !pathname.startsWith('/_next') &&
     !pathname.startsWith('/api');
 

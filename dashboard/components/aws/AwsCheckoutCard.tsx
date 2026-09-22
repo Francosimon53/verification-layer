@@ -57,7 +57,7 @@ export function AwsCheckoutCard({ checkoutState }: { checkoutState: 'success' | 
           </svg>
         </div>
         <h2 className="mt-5 text-2xl font-semibold text-white">Your founding pilot is reserved</h2>
-        <p className="mt-3 leading-7 text-slate-300">Stripe will send your receipt. We will use the checkout email to send the pilot intake and agree the AWS scope before any evidence is collected.</p>
+        <p className="mt-3 leading-7 text-slate-300">Stripe will send your receipt. The pilot intake email arrives at your checkout address within 1 business day, so we can agree the AWS scope before any evidence is collected.</p>
       </div>
     );
   }

@@ -32,6 +32,20 @@ export default function AwsValidationLayout({ children }: { children: React.Reac
         </div>
       </header>
       <main>{children}</main>
+      <footer className="border-t border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>© 2026 FPI Enterprises, Inc. · VLayer</span>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:support@vlayer.app" className="transition hover:text-slate-300">support@vlayer.app</a>
+            <span aria-hidden="true">·</span>
+            <Link href="/legal/terms" className="transition hover:text-slate-300">Terms of Service</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/legal/privacy" className="transition hover:text-slate-300">Privacy Policy</Link>
+          </div>
+          <p>VLayer is a developer tool, not a legal compliance service.</p>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -7,6 +7,25 @@ export const metadata: Metadata = {
   description: 'Reserve a founding vLayer pilot for one scoped AWS PHI Infrastructure Evidence Report.',
 };
 
+const pilotTerms = [
+  {
+    label: 'Delivery',
+    body: 'Delivery: the report is delivered within 10 business days of agreeing the scope in writing.',
+  },
+  {
+    label: 'Access',
+    body: 'Access: Option A — you run our read-only collection script (AWS CLI describe and get calls only) and send us the output. Option B — a read-only IAM role scoped to the agreed services. We never request write permissions, and no PHI contents are collected.',
+  },
+  {
+    label: 'Who does the work',
+    body: 'Who does the work: Simón Franco, founder of FPI Enterprises, Inc. (VLayer). You deal with the same person from intake to delivery.',
+  },
+  {
+    label: 'Refund',
+    body: 'Refund: if we cannot deliver the agreed pilot, the payment is refunded in full.',
+  },
+];
+
 export default async function AwsEarlyAccessPage({
   searchParams,
 }: {
@@ -25,7 +44,7 @@ export default async function AwsEarlyAccessPage({
       <section className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div className="lg:sticky lg:top-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-400">Early access</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">Buy the evidence outcome before we build the full connector</h1>
+          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">One PHI workload, one reviewer-ready evidence report</h1>
           <p className="mt-5 text-lg leading-8 text-slate-300">The founding pilot is deliberately assisted. We agree one PHI workload, collect only the evidence required for that boundary, and produce the report you previewed.</p>
 
           <div className="mt-8 space-y-5 border-l border-slate-700 pl-5">
@@ -35,7 +54,21 @@ export default async function AwsEarlyAccessPage({
           </div>
         </div>
 
-        <AwsCheckoutCard checkoutState={checkoutState} />
+        <div className="space-y-8">
+          <section aria-labelledby="how-the-pilot-works" className="rounded-2xl border border-white/10 bg-slate-950/60 p-6 sm:p-8">
+            <h2 id="how-the-pilot-works" className="text-xl font-semibold text-white">How the pilot works</h2>
+            <dl className="mt-5 space-y-5 text-sm leading-6 text-slate-300">
+              {pilotTerms.map((item) => (
+                <div key={item.label}>
+                  <dt className="font-semibold text-white">{item.label}</dt>
+                  <dd className="mt-1">{item.body}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <AwsCheckoutCard checkoutState={checkoutState} />
+        </div>
       </section>
     </>
   );
