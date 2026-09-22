@@ -17,7 +17,7 @@ export default function TermsOfServicePage() {
             Back to Dashboard
           </Link>
           <h1 className="text-3xl font-bold text-white mt-2">Terms of Service</h1>
-          <p className="text-slate-400 mt-1">Last updated: February 14, 2026</p>
+          <p className="text-slate-400 mt-1">Last updated: September 22, 2026</p>
         </div>
       </header>
 
@@ -28,7 +28,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-white border-b border-slate-800 pb-3">1. Acceptance of Terms</h2>
             <p className="text-slate-300 mt-4 leading-relaxed">
-              By accessing or using VLayer (&quot;the Service&quot;), operated by VLayer Inc. (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;),
+              By accessing or using VLayer (&quot;the Service&quot;), operated by FPI Enterprises, Inc. (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;),
               you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
               These terms apply to all users, including visitors, registered users, and paying subscribers.
             </p>
@@ -107,7 +107,7 @@ export default function TermsOfServicePage() {
               </p>
               <p>
                 <strong className="text-white">Our Software:</strong> The VLayer scanner, dashboard, algorithms, reports,
-                documentation, and all associated trademarks are the exclusive property of VLayer Inc. You are granted a
+                documentation, and all associated trademarks are the exclusive property of FPI Enterprises, Inc. You are granted a
                 limited, non-exclusive, non-transferable license to use the Service for its intended purpose during the term
                 of your subscription.
               </p>
@@ -154,7 +154,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-white border-b border-slate-800 pb-3">7. Indemnification</h2>
             <p className="text-slate-300 mt-4 leading-relaxed">
-              You agree to indemnify, defend, and hold harmless VLayer Inc. and its officers, directors, employees, and
+              You agree to indemnify, defend, and hold harmless FPI Enterprises, Inc. and its officers, directors, employees, and
               agents from any claims, liabilities, damages, losses, and expenses (including reasonable attorneys&apos; fees)
               arising from your use of the Service, your violation of these Terms, or your violation of any third-party
               rights, including HIPAA or other regulatory requirements.

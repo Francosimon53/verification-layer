@@ -10,6 +10,8 @@ export default defineConfig({
       '**/.claude/**',
       '**/.claude-worktrees/**',
       '**/worktrees/**',
+      // The dashboard has its own vitest config and node_modules.
+      'dashboard/**',
     ],
   },
 });

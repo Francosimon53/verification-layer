@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AwsCheckoutCard } from '@/components/aws/AwsCheckoutCard';
+import { AwsIntakeForm } from '@/components/aws/AwsIntakeForm';
 import { AwsEventTracker } from '@/components/aws/AwsEventTracker';
 
 export const metadata: Metadata = {
@@ -10,19 +11,19 @@ export const metadata: Metadata = {
 const pilotTerms = [
   {
     label: 'Delivery',
-    body: 'Delivery: the report is delivered within 10 business days of agreeing the scope in writing.',
+    body: 'The report is delivered within 10 business days of agreeing the scope in writing.',
   },
   {
     label: 'Access',
-    body: 'Access: Option A — you run our read-only collection script (AWS CLI describe and get calls only) and send us the output. Option B — a read-only IAM role scoped to the agreed services. We never request write permissions, and no PHI contents are collected.',
+    body: 'Option A — you run our read-only collection script (AWS CLI describe and get calls only) and send us the output. Option B — a read-only IAM role scoped to the agreed services. We never request write permissions, and no PHI contents are collected.',
   },
   {
     label: 'Who does the work',
-    body: 'Who does the work: Simón Franco, founder of FPI Enterprises, Inc. (VLayer). You deal with the same person from intake to delivery.',
+    body: 'Simón Franco, founder of FPI Enterprises, Inc. (VLayer). You deal with the same person from intake to delivery.',
   },
   {
     label: 'Refund',
-    body: 'Refund: if we cannot deliver the agreed pilot, the payment is refunded in full.',
+    body: 'If we cannot deliver the agreed pilot, the payment is refunded in full.',
   },
 ];
 
@@ -68,6 +69,8 @@ export default async function AwsEarlyAccessPage({
           </section>
 
           <AwsCheckoutCard checkoutState={checkoutState} />
+
+          <AwsIntakeForm />
         </div>
       </section>
     </>

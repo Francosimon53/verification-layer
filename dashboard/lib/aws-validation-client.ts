@@ -1,11 +1,16 @@
 'use client';
 
 import {
+  AWS_ATTRIBUTION_VALUE_MAX_LENGTH,
   sanitizeAwsAnswers,
+  sanitizeAwsAttribution,
   type AwsValidationAnswers,
+  type AwsValidationAttribution,
   type AwsValidationEventName,
   type AwsValidationEventPayload,
 } from '@/lib/aws-validation';
+
+export type { AwsValidationAttribution } from '@/lib/aws-validation';
 
 const SESSION_KEY = 'vlayer.aws-validation.session';
 const ANSWERS_KEY = 'vlayer.aws-validation.answers';
@@ -13,14 +18,7 @@ const ATTRIBUTION_KEY = 'vlayer.aws-validation.attribution';
 
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'] as const;
 // Keep attribution well inside the 4,000-character event property budget.
-const ATTRIBUTION_VALUE_MAX_LENGTH = 200;
-
-export interface AwsValidationAttribution {
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  referrer_host?: string;
-}
+const ATTRIBUTION_VALUE_MAX_LENGTH = AWS_ATTRIBUTION_VALUE_MAX_LENGTH;
 
 function createUuid(): string {
   return globalThis.crypto.randomUUID();
@@ -56,25 +54,6 @@ function sanitizeAttributionValue(value: string | null | undefined): string | un
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function sanitizeAttribution(value: unknown): AwsValidationAttribution {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-
-  const input = value as Record<string, unknown>;
-  const attribution: AwsValidationAttribution = {};
-
-  for (const key of UTM_KEYS) {
-    const sanitized = sanitizeAttributionValue(typeof input[key] === 'string' ? (input[key] as string) : undefined);
-    if (sanitized) attribution[key] = sanitized;
-  }
-
-  const referrerHost = sanitizeAttributionValue(
-    typeof input.referrer_host === 'string' ? (input.referrer_host as string) : undefined
-  );
-  if (referrerHost) attribution.referrer_host = referrerHost;
-
-  return attribution;
-}
-
 function readAttributionFromPage(): AwsValidationAttribution {
   const attribution: AwsValidationAttribution = {};
   const params = new URLSearchParams(globalThis.location.search);
@@ -106,7 +85,7 @@ export function getAwsValidationAttribution(): AwsValidationAttribution {
   const stored = globalThis.sessionStorage.getItem(ATTRIBUTION_KEY);
   if (stored) {
     try {
-      return sanitizeAttribution(JSON.parse(stored));
+      return sanitizeAwsAttribution(JSON.parse(stored));
     } catch {
       // Corrupt entry: fall through and capture again.
     }

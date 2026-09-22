@@ -6,6 +6,7 @@ import {
   isUuid,
 } from '@/lib/aws-validation';
 import { recordAwsValidationEvent } from '@/lib/aws-validation-server';
+import { notifyFounder } from '@/lib/aws-validation-notify';
 import Stripe from 'stripe';
 
 export async function POST(req: NextRequest) {
@@ -60,6 +61,16 @@ export async function POST(req: NextRequest) {
               activeEvidenceRequest: session.metadata.active_evidence_request === 'true',
             },
           });
+
+          await notifyFounder(
+            [
+              'AWS PHI pilot: payment received',
+              `amount: ${session.amount_total ?? 'unknown'} ${session.currency ?? ''}`.trim(),
+              `evidence_reason: ${session.metadata.evidence_reason ?? 'not_provided'}`,
+              `active_evidence_request: ${session.metadata.active_evidence_request ?? 'unknown'}`,
+              `stripe_checkout_session: ${session.id}`,
+            ].join('\n')
+          );
 
           console.log('Recorded AWS validation payment:', session.id);
           break;
