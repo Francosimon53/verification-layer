@@ -7,7 +7,10 @@ import { Footer } from './Footer';
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/signup';
-  const isPublicPage = pathname.startsWith('/legal') || pathname.startsWith('/github') || pathname === '/pricing';
+  const isPublicPage = pathname.startsWith('/legal') ||
+    pathname.startsWith('/github') ||
+    pathname.startsWith('/aws') ||
+    pathname === '/pricing';
 
   // Auth pages: no sidebar, no footer
   if (isAuthPage) {

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
+import {
+  AWS_VALIDATION_EXPERIMENT,
+  isUuid,
+} from '@/lib/aws-validation';
+import { recordAwsValidationEvent } from '@/lib/aws-validation-server';
 import Stripe from 'stripe';
 
 export async function POST(req: NextRequest) {
@@ -14,8 +19,9 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown signature error';
+    console.error('Webhook signature verification failed:', message);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -25,10 +31,39 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.supabase_user_id ||
-          session.subscription
-            ? undefined
-            : undefined;
+
+        if (session.metadata?.experiment === AWS_VALIDATION_EXPERIMENT) {
+          const validationSessionId = session.metadata.aws_validation_session_id ?? session.client_reference_id;
+
+          if (!isUuid(validationSessionId)) {
+            console.error('AWS validation payment is missing a valid session ID:', session.id);
+            break;
+          }
+
+          if (session.payment_status !== 'paid') {
+            console.warn('AWS validation checkout completed without a paid status:', session.id);
+            break;
+          }
+
+          await recordAwsValidationEvent({
+            eventId: `stripe:${event.id}`,
+            sessionId: validationSessionId,
+            eventName: 'payment',
+            source: 'stripe',
+            path: '/api/webhooks/stripe',
+            properties: {
+              amountCents: session.amount_total,
+              currency: session.currency,
+              stripeCheckoutSessionId: session.id,
+              paymentStatus: session.payment_status,
+              evidenceReason: session.metadata.evidence_reason,
+              activeEvidenceRequest: session.metadata.active_evidence_request === 'true',
+            },
+          });
+
+          console.log('Recorded AWS validation payment:', session.id);
+          break;
+        }
 
         // Get the subscription details
         const subscriptionId = session.subscription as string;

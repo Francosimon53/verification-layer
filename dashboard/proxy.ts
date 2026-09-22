@@ -2,6 +2,14 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // The AWS validation funnel is intentionally public and anonymous. Avoid
+  // adding auth latency or an account requirement to the experiment.
+  if (pathname.startsWith('/aws') || pathname.startsWith('/api/aws')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -15,7 +23,7 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
           });
@@ -32,11 +40,11 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes - redirect to login if not authenticated
-  const isProtectedRoute = !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/pricing') &&
-    !request.nextUrl.pathname.startsWith('/_next') &&
-    !request.nextUrl.pathname.startsWith('/api');
+  const isProtectedRoute = !pathname.startsWith('/login') &&
+    !pathname.startsWith('/signup') &&
+    !pathname.startsWith('/pricing') &&
+    !pathname.startsWith('/_next') &&
+    !pathname.startsWith('/api');
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
@@ -45,7 +53,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect to home if already logged in and trying to access login/signup
-  if ((request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')) && user) {
+  if ((pathname.startsWith('/login') || pathname.startsWith('/signup')) && user) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
