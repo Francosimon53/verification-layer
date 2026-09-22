@@ -82,27 +82,39 @@ export async function POST(req: NextRequest) {
       throw new Error(`Could not persist AWS pilot intake: ${error.message}`);
     }
 
-    // The events table only receives non-identifying properties.
-    await recordAwsValidationEvent({
-      eventId: globalThis.crypto.randomUUID(),
-      sessionId: body.sessionId,
-      eventName: 'intake_requested',
-      source: 'server',
-      path: '/aws/early-access',
-      properties: { review_due: reviewDue, ...answers, ...attribution },
-    });
+    // The intake is saved. From here on, failures are logged but never
+    // surfaced to the user: an error would make them resubmit and create a
+    // duplicate intake.
 
-    await notifyFounder(
-      [
-        'AWS PHI pilot: intake requested',
-        `company: ${company}`,
-        `email: ${email}`,
-        `review_due: ${reviewDue}`,
-        `evidence_reason: ${answers.evidenceReason ?? 'not_provided'}`,
-        `customer_requested: ${answers.customerRequested === undefined ? 'unknown' : String(answers.customerRequested)}`,
-        `utm_source: ${attribution.utm_source ?? 'none'}`,
-      ].join('\n')
-    );
+    // The events table only receives non-identifying properties.
+    try {
+      await recordAwsValidationEvent({
+        eventId: globalThis.crypto.randomUUID(),
+        sessionId: body.sessionId,
+        eventName: 'intake_requested',
+        source: 'server',
+        path: '/aws/early-access',
+        properties: { review_due: reviewDue, ...answers, ...attribution },
+      });
+    } catch (error: unknown) {
+      console.error('AWS pilot intake saved but the event could not be recorded:', error);
+    }
+
+    try {
+      await notifyFounder(
+        [
+          'AWS PHI pilot: intake requested',
+          `company: ${company}`,
+          `email: ${email}`,
+          `review_due: ${reviewDue}`,
+          `evidence_reason: ${answers.evidenceReason ?? 'not_provided'}`,
+          `customer_requested: ${answers.customerRequested === undefined ? 'unknown' : String(answers.customerRequested)}`,
+          `utm_source: ${attribution.utm_source ?? 'none'}`,
+        ].join('\n')
+      );
+    } catch (error: unknown) {
+      console.error('AWS pilot intake saved but the founder notification failed:', error);
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error: unknown) {

@@ -25,6 +25,10 @@ const pilotTerms = [
     label: 'Refund',
     body: 'If we cannot deliver the agreed pilot, the payment is refunded in full.',
   },
+  {
+    label: 'Format',
+    body: 'The founding pilot runs entirely in writing — intake, scoping, questions and delivery. No calls are offered.',
+  },
 ];
 
 export default async function AwsEarlyAccessPage({

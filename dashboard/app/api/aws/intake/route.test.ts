@@ -105,4 +105,17 @@ describe('POST /api/aws/intake', () => {
     expect(message).toContain('customer_security_review');
     expect(message).toContain('linkedin');
   });
+
+  it('returns 204 when the intake is saved but the funnel event fails', async () => {
+    recordEventMock.mockRejectedValueOnce(new Error('event_name check constraint'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await POST(request(validPayload()));
+
+    expect(response.status).toBe(204);
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });
